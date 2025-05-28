@@ -1,17 +1,15 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
-import { ChatHistoryService } from '../../src/services/ChatHistoryService';
-import { AutoSaveService } from '../../src/services/AutoSaveService';
-import { ConfigService } from '../../src/services/ConfigService';
-import { ExportService } from '../../src/services/ExportService';
-import { ChatHistoryConfig } from '../../src/types';
+import { ChatHistoryService } from './services/ChatHistoryService';
+import { AutoSaveService } from './services/AutoSaveService';
+import { ExportService } from './services/ExportService';
+import { ChatHistoryConfig } from './types';
 
 export class CursorChatHistoryExtension {
-  private chatHistoryService: ChatHistoryService;
-  private autoSaveService: AutoSaveService;
-  private configService: ConfigService;
-  private exportService: ExportService;
+  private chatHistoryService!: ChatHistoryService;
+  private autoSaveService!: AutoSaveService;
+  private exportService!: ExportService;
   private statusBarItem: vscode.StatusBarItem;
   private isInitialized = false;
 
@@ -30,13 +28,10 @@ export class CursorChatHistoryExtension {
       const config = this.getConfiguration();
       
       // サービスを初期化
-      this.configService = new ConfigService();
-      await this.configService.initialize();
-      
       this.chatHistoryService = new ChatHistoryService(config);
       await this.chatHistoryService.initialize();
       
-      this.autoSaveService = new AutoSaveService(this.chatHistoryService, this.configService);
+      this.autoSaveService = new AutoSaveService(this.chatHistoryService, config.autoSave);
       this.exportService = new ExportService(this.chatHistoryService);
 
       this.isInitialized = true;
@@ -86,7 +81,7 @@ export class CursorChatHistoryExtension {
     }
 
     const status = this.autoSaveService?.getStatus();
-    if (status?.isRunning) {
+    if (status?.running) {
       this.statusBarItem.text = `$(record) Chat History (${status.saveCount})`;
       this.statusBarItem.tooltip = `自動保存実行中 - 保存回数: ${status.saveCount}`;
     } else {
@@ -131,7 +126,7 @@ export class CursorChatHistoryExtension {
     const stats = await this.chatHistoryService.getStats();
 
     const message = [
-      `🤖 自動保存: ${status.isRunning ? '実行中' : '停止中'}`,
+      `🤖 自動保存: ${status.running ? '実行中' : '停止中'}`,
       `📊 総セッション数: ${stats.totalSessions}`,
       `💬 総メッセージ数: ${stats.totalMessages}`,
       `💾 ストレージサイズ: ${(stats.storageSize / 1024 / 1024).toFixed(2)} MB`,
@@ -198,21 +193,21 @@ export class CursorChatHistoryExtension {
 
       if (!keyword) return;
 
-      const result = await this.chatHistoryService.searchSessions({
+      const sessions = await this.chatHistoryService.searchSessions({
         keyword,
         limit: 20
       });
 
-      if (result.sessions.length === 0) {
+      if (sessions.length === 0) {
         vscode.window.showInformationMessage('検索結果が見つかりませんでした');
         return;
       }
 
       // 検索結果を表示
-      const items = result.sessions.map(session => ({
-        label: session.title || `セッション ${session.id}`,
-        description: `${session.startTime.toLocaleString()} - ${session.messages.length}メッセージ`,
-        detail: session.messages[0]?.content.substring(0, 100) + '...',
+      const items = sessions.map(session => ({
+        label: session.title,
+        description: `${session.messages.length}件のメッセージ`,
+        detail: `作成: ${session.createdAt.toLocaleString('ja-JP')} | タグ: ${session.tags.join(', ')}`,
         session
       }));
 
@@ -223,6 +218,7 @@ export class CursorChatHistoryExtension {
       if (selected) {
         await this.showSessionDetails(selected.session);
       }
+
     } catch (error) {
       vscode.window.showErrorMessage(`検索エラー: ${error}`);
     }
@@ -230,27 +226,33 @@ export class CursorChatHistoryExtension {
 
   private async showSessionDetails(session: any): Promise<void> {
     const content = [
-      `# ${session.title || `セッション ${session.id}`}`,
-      `**開始時刻:** ${session.startTime.toLocaleString()}`,
+      `# ${session.title}`,
+      '',
+      `**作成日:** ${session.createdAt.toLocaleString('ja-JP')}`,
+      `**更新日:** ${session.updatedAt.toLocaleString('ja-JP')}`,
+      `**タグ:** ${session.tags.join(', ')}`,
       `**メッセージ数:** ${session.messages.length}`,
-      session.metadata?.tags ? `**タグ:** ${session.metadata.tags.join(', ')}` : '',
       '',
       '## メッセージ',
-      '',
-      ...session.messages.map((msg: any, index: number) => [
-        `### ${index + 1}. [${msg.role.toUpperCase()}] ${msg.timestamp.toLocaleString()}`,
-        '',
-        msg.content,
-        ''
-      ]).flat()
-    ].filter(Boolean).join('\n');
+      ''
+    ];
 
-    const doc = await vscode.workspace.openTextDocument({
-      content,
+    for (const message of session.messages) {
+      content.push(`### ${message.role === 'user' ? 'ユーザー' : 'アシスタント'}`);
+      content.push(`**時刻:** ${message.timestamp.toLocaleString('ja-JP')}`);
+      content.push('');
+      content.push(message.content);
+      content.push('');
+      content.push('---');
+      content.push('');
+    }
+
+    const document = await vscode.workspace.openTextDocument({
+      content: content.join('\n'),
       language: 'markdown'
     });
 
-    await vscode.window.showTextDocument(doc);
+    await vscode.window.showTextDocument(document);
   }
 
   async exportHistory(): Promise<void> {
@@ -259,27 +261,32 @@ export class CursorChatHistoryExtension {
     }
 
     try {
-      const format = await vscode.window.showQuickPick(
-        [
-          { label: 'JSON', value: 'json' },
-          { label: 'Markdown', value: 'markdown' },
-          { label: 'Text', value: 'txt' }
-        ],
-        { placeHolder: 'エクスポート形式を選択してください' }
-      );
+      // エクスポート形式を選択
+      const format = await vscode.window.showQuickPick([
+        { label: 'JSON', value: 'json', description: 'JSON形式でエクスポート' },
+        { label: 'Markdown', value: 'markdown', description: 'Markdown形式でエクスポート' },
+        { label: 'Text', value: 'txt', description: 'テキスト形式でエクスポート' }
+      ], {
+        placeHolder: 'エクスポート形式を選択してください'
+      });
 
       if (!format) return;
 
+      // 保存先を選択
       const uri = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.file(`chat-history-${new Date().toISOString().split('T')[0]}.${format.value}`),
+        defaultUri: vscode.Uri.file(`chat-history.${format.value}`),
         filters: {
-          [format.label]: [format.value]
+          'All Files': ['*']
         }
       });
 
       if (!uri) return;
 
-      await this.exportService.exportAll(uri.fsPath, format.value as any);
+      // 全セッションを取得
+      const sessions = await this.chatHistoryService.searchSessions({ limit: 1000 });
+      
+      await this.exportService.exportSessions(sessions, uri.fsPath, format.value as any);
+
       vscode.window.showInformationMessage(`履歴をエクスポートしました: ${uri.fsPath}`);
     } catch (error) {
       vscode.window.showErrorMessage(`エクスポートエラー: ${error}`);
@@ -314,10 +321,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('cursor-chat-history.openSettings', () => extension.openSettings())
   ];
 
-  context.subscriptions.push(...commands, extension);
-
-  // 拡張機能を初期化
-  extension.initialize();
+  commands.forEach(command => context.subscriptions.push(command));
+  context.subscriptions.push(extension);
 }
 
 export function deactivate() {

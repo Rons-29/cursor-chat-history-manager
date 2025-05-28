@@ -25,16 +25,16 @@
     "development",
     "tools"
   ],
-  "author": "shirokki22",
+  "author": "Rons-29",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shirokki22/cursor-chat-history-manager.git"
+    "url": "git+https://github.com/Rons-29/cursor-chat-history-manager.git"
   },
   "bugs": {
-    "url": "https://github.com/shirokki22/cursor-chat-history-manager/issues"
+    "url": "https://github.com/Rons-29/cursor-chat-history-manager/issues"
   },
-  "homepage": "https://github.com/shirokki22/cursor-chat-history-manager#readme",
+  "homepage": "https://github.com/Rons-29/cursor-chat-history-manager#readme",
   "dependencies": {
     "commander": "^14.0.0",
     "date-fns": "^3.6.0",

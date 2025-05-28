@@ -28,7 +28,7 @@ Cursorエディタのチャット履歴を管理・検索・分析するため�
 ### GitHubからクローン
 ```bash
 # リポジトリをクローン
-git clone https://github.com/shirokki22/cursor-chat-history-manager.git
+git clone https://github.com/Rons-29/cursor-chat-history-manager.git
 cd cursor-chat-history-manager
 
 # 依存関係をインストール
@@ -398,9 +398,29 @@ node dist/index.js auto-save-config
 node dist/index.js auto-save-config --enable
 ```
 
-## �� ライセンス
+## 📞 サポート
 
-MIT License - 詳細は [LICENSE](./LICENSE) ファイルを参照してください。
+### ヘルプが必要な場合
+- 📋 **GitHub Issues**: [バグレポート・機能リクエスト](https://github.com/Rons-29/cursor-chat-history-manager/issues)
+- 💬 **GitHub Discussions**: [一般的な質問・議論](https://github.com/Rons-29/cursor-chat-history-manager/discussions)
+
+### よくある質問
+1. **Q: Cursorの履歴が見つからない**
+   - A: `node dist/index.js cursor-config`でパスを確認してください
+
+2. **Q: 機密情報が含まれているか心配**
+   - A: `node dist/index.js search --keyword "password"`等で事前確認してください
+
+3. **Q: 自動保存が動作しない**
+   - A: `node dist/index.js auto-save-config --enable`で有効化してください
+
+## 🔗 関連リンク
+
+- 📦 **GitHub Repository**: https://github.com/Rons-29/cursor-chat-history-manager
+- 📋 **Issues**: https://github.com/Rons-29/cursor-chat-history-manager/issues
+- 💬 **Discussions**: https://github.com/Rons-29/cursor-chat-history-manager/discussions
+- 📚 **Documentation**: このREADMEファイル
+- 🔒 **Security Policy**: [SECURITY.md](./SECURITY.md)
 
 ## 🤝 コントリビューション
 
@@ -419,32 +439,12 @@ MIT License - 詳細は [LICENSE](./LICENSE) ファイルを参照してくだ�
 - 実装状況: [TODO.md](./TODO.md)
 
 ### バグレポート・機能リクエスト
-- [Issues](https://github.com/shirokki22/cursor-chat-history-manager/issues)でバグレポートや機能リクエストを作成してください
+- [Issues](https://github.com/Rons-29/cursor-chat-history-manager/issues)でバグレポートや機能リクエストを作成してください
 - テンプレートに従って詳細な情報を提供してください
 
-## 📞 サポート
+## 📄 ライセンス
 
-### ヘルプが必要な場合
-- 📋 **GitHub Issues**: [バグレポート・機能リクエスト](https://github.com/shirokki22/cursor-chat-history-manager/issues)
-- 💬 **GitHub Discussions**: [一般的な質問・議論](https://github.com/shirokki22/cursor-chat-history-manager/discussions)
-
-### よくある質問
-1. **Q: Cursorの履歴が見つからない**
-   - A: `node dist/index.js cursor-config`でパスを確認してください
-
-2. **Q: 機密情報が含まれているか心配**
-   - A: `node dist/index.js search --keyword "password"`等で事前確認してください
-
-3. **Q: 自動保存が動作しない**
-   - A: `node dist/index.js auto-save-config --enable`で有効化してください
-
-## 🔗 関連リンク
-
-- 📦 **GitHub Repository**: https://github.com/shirokki22/cursor-chat-history-manager
-- 📋 **Issues**: https://github.com/shirokki22/cursor-chat-history-manager/issues
-- 💬 **Discussions**: https://github.com/shirokki22/cursor-chat-history-manager/discussions
-- 📚 **Documentation**: このREADMEファイル
-- 🔒 **Security Policy**: [SECURITY.md](./SECURITY.md)
+MIT License - 詳細は [LICENSE](./LICENSE) ファイルを参照してください。
 
 ## 🔄 更新履歴
 

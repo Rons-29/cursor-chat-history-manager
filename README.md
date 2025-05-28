@@ -19,21 +19,46 @@ Cursorエディタのチャット履歴を管理・検索・分析するため�
 - 📤 **エクスポート**: JSON、Markdown、テキスト形式での出力
 - ⚙️ **設定管理**: 詳細な設定とカスタマイズ
 
-## 🚀 クイックスタート
+## 🚀 インストール
 
-### 1. インストール
+### 前提条件
+- Node.js 16.0.0以上
+- npm 7.0.0以上
+
+### GitHubからクローン
 ```bash
+# リポジトリをクローン
+git clone https://github.com/shirokki22/cursor-chat-history-manager.git
+cd cursor-chat-history-manager
+
+# 依存関係をインストール
 npm install
+
+# ビルド
 npm run build
 ```
 
-### 2. Cursorチャット履歴をインポート
+### または、ローカルでの開発
+```bash
+# 開発モードで実行
+npm run dev
+
+# テスト実行
+npm test
+
+# カバレッジ確認
+npm run test:coverage
+```
+
+## 🚀 クイックスタート
+
+### 1. Cursorチャット履歴をインポート
 ```bash
 # 一度だけ実行してCursorの履歴をインポート
 node dist/index.js cursor-scan
 ```
 
-### 3. 基本的な使用方法
+### 2. 基本的な使用方法
 ```bash
 # Cursorセッションを検索
 node dist/index.js search --tags cursor
@@ -373,14 +398,65 @@ node dist/index.js auto-save-config
 node dist/index.js auto-save-config --enable
 ```
 
-## 📝 ライセンス
+## �� ライセンス
 
-MIT License
+MIT License - 詳細は [LICENSE](./LICENSE) ファイルを参照してください。
+
+## 🤝 コントリビューション
+
+このプロジェクトへの貢献を歓迎します！
+
+### 貢献方法
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを作成
+
+### 開発ガイドライン
+- 詳細な開発ガイドライン: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- セキュリティガイドライン: [SECURITY.md](./SECURITY.md)
+- 実装状況: [TODO.md](./TODO.md)
+
+### バグレポート・機能リクエスト
+- [Issues](https://github.com/shirokki22/cursor-chat-history-manager/issues)でバグレポートや機能リクエストを作成してください
+- テンプレートに従って詳細な情報を提供してください
+
+## 📞 サポート
+
+### ヘルプが必要な場合
+- 📋 **GitHub Issues**: [バグレポート・機能リクエスト](https://github.com/shirokki22/cursor-chat-history-manager/issues)
+- 💬 **GitHub Discussions**: [一般的な質問・議論](https://github.com/shirokki22/cursor-chat-history-manager/discussions)
+
+### よくある質問
+1. **Q: Cursorの履歴が見つからない**
+   - A: `node dist/index.js cursor-config`でパスを確認してください
+
+2. **Q: 機密情報が含まれているか心配**
+   - A: `node dist/index.js search --keyword "password"`等で事前確認してください
+
+3. **Q: 自動保存が動作しない**
+   - A: `node dist/index.js auto-save-config --enable`で有効化してください
+
+## 🔗 関連リンク
+
+- 📦 **GitHub Repository**: https://github.com/shirokki22/cursor-chat-history-manager
+- 📋 **Issues**: https://github.com/shirokki22/cursor-chat-history-manager/issues
+- 💬 **Discussions**: https://github.com/shirokki22/cursor-chat-history-manager/discussions
+- 📚 **Documentation**: このREADMEファイル
+- 🔒 **Security Policy**: [SECURITY.md](./SECURITY.md)
 
 ## 🔄 更新履歴
 
-- v1.0.0: 初回リリース
-  - Cursor統合機能
-  - 自動保存機能
-  - 検索・分析機能
-  - エクスポート機能 
+### v1.0.0 (2025-01-XX)
+- 🎉 **初回リリース**
+- ✨ **Cursor統合機能**: 自動監視・インポート
+- 💾 **自動保存機能**: 開発セッションの自動管理
+- 🔎 **検索・分析機能**: 高度な検索とレポート
+- 📤 **エクスポート機能**: 複数形式での出力
+- 🛡️ **セキュリティ**: 機密情報保護ガイドライン
+- 📚 **包括的ドキュメント**: 使用方法からコントリビューションまで
+
+---
+
+**⭐ このプロジェクトが役に立った場合は、GitHubでスターを付けていただけると嬉しいです！** 

@@ -1,0 +1,45 @@
+{
+  "name": "chat-history-manager",
+  "version": "1.0.0",
+  "description": "Chat履歴管理システム - 過去の会話を保存・検索・管理するためのツール",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix"
+  },
+  "keywords": [
+    "chat",
+    "history",
+    "conversation",
+    "storage",
+    "search"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.0",
+    "date-fns": "^3.6.0",
+    "fs-extra": "^11.2.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/commander": "^2.12.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.11.0",
+    "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

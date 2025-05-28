@@ -1,0 +1,150 @@
+{
+  "name": "cursor-chat-history-manager",
+  "displayName": "Cursor Chat History Manager",
+  "description": "Cursorチャット履歴を自動保存・管理する拡張機能",
+  "version": "1.0.0",
+  "publisher": "cursor-chat-history",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "cursor",
+    "chat",
+    "history",
+    "ai",
+    "assistant"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursor-chat-history.startAutoSave",
+        "title": "自動保存を開始",
+        "category": "Chat History"
+      },
+      {
+        "command": "cursor-chat-history.stopAutoSave",
+        "title": "自動保存を停止",
+        "category": "Chat History"
+      },
+      {
+        "command": "cursor-chat-history.showStatus",
+        "title": "保存状態を表示",
+        "category": "Chat History"
+      },
+      {
+        "command": "cursor-chat-history.saveCurrentChat",
+        "title": "現在のチャットを保存",
+        "category": "Chat History"
+      },
+      {
+        "command": "cursor-chat-history.searchHistory",
+        "title": "履歴を検索",
+        "category": "Chat History"
+      },
+      {
+        "command": "cursor-chat-history.exportHistory",
+        "title": "履歴をエクスポート",
+        "category": "Chat History"
+      },
+      {
+        "command": "cursor-chat-history.openSettings",
+        "title": "設定を開く",
+        "category": "Chat History"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "cursor-chat-history.startAutoSave"
+        },
+        {
+          "command": "cursor-chat-history.stopAutoSave"
+        },
+        {
+          "command": "cursor-chat-history.showStatus"
+        },
+        {
+          "command": "cursor-chat-history.saveCurrentChat"
+        },
+        {
+          "command": "cursor-chat-history.searchHistory"
+        },
+        {
+          "command": "cursor-chat-history.exportHistory"
+        },
+        {
+          "command": "cursor-chat-history.openSettings"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Cursor Chat History Manager",
+      "properties": {
+        "cursorChatHistory.autoSave.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "自動保存を有効にする"
+        },
+        "cursorChatHistory.autoSave.interval": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "自動保存間隔（分）"
+        },
+        "cursorChatHistory.autoSave.idleTimeout": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 120,
+          "description": "アイドルタイムアウト（分）"
+        },
+        "cursorChatHistory.storage.path": {
+          "type": "string",
+          "default": "",
+          "description": "保存先パス（空の場合はデフォルト）"
+        },
+        "cursorChatHistory.storage.maxSessions": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 10,
+          "maximum": 10000,
+          "description": "最大セッション数"
+        },
+        "cursorChatHistory.export.defaultFormat": {
+          "type": "string",
+          "enum": ["json", "markdown", "txt"],
+          "default": "markdown",
+          "description": "デフォルトエクスポート形式"
+        },
+        "cursorChatHistory.notifications.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "通知を有効にする"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "fs-extra": "^11.1.1",
+    "uuid": "^9.0.0",
+    "date-fns": "^2.30.0"
+  }
+} 

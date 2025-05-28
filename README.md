@@ -467,5 +467,32 @@ MIT License - 詳細は [LICENSE](./LICENSE) ファイルを参照してくだ�
 ### 1. コマンドラインツール（推奨）
 包括的な機能を提供するメインツールです。
 
-### 2. VS Code拡張機能
-エディタ内での直接操作が可能です。詳細は[extension/README.md](./extension/README.md)を参照してください。 
+### 2. VS Code/Cursor拡張機能
+エディタ内での直接操作が可能です。
+
+#### 🎯 VS Code & Cursor 両対応
+この拡張機能はVS CodeとCursorの両方で動作します！
+
+**Cursorでの特別な利点:**
+- ネイティブなCursorチャット履歴管理
+- AI開発ワークフローとの自然な統合
+- リアルタイムでの履歴保存・管理
+- Cursorエディタ内での直接操作
+
+**インストール方法:**
+```bash
+# リポジトリをクローン
+git clone https://github.com/Rons-29/cursor-chat-history-manager.git
+cd cursor-chat-history-manager/extension
+
+# 依存関係をインストール
+npm install && npm run compile
+
+# VS Code または Cursor で開く
+code .    # VS Code の場合
+cursor .  # Cursor の場合
+
+# F5キーで拡張機能をデバッグ実行
+```
+
+詳細は[extension/README.md](./extension/README.md)を参照してください。 

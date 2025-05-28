@@ -1,7 +1,7 @@
 {
   "name": "cursor-chat-history-manager",
   "displayName": "Cursor Chat History Manager",
-  "description": "Cursorチャット履歴を自動保存・管理する拡張機能",
+  "description": "Cursorチャット履歴を自動保存・管理する拡張機能（VS Code & Cursor 両対応）",
   "version": "1.0.0",
   "publisher": "cursor-chat-history",
   "engines": {
@@ -15,7 +15,12 @@
     "chat",
     "history",
     "ai",
-    "assistant"
+    "assistant",
+    "vscode",
+    "claude",
+    "gpt",
+    "copilot",
+    "auto-save"
   ],
   "activationEvents": [
     "onStartupFinished"

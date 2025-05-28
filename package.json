@@ -1,7 +1,7 @@
 {
   "name": "chat-history-manager",
   "version": "1.0.0",
-  "description": "Chat履歴管理システム - 過去の会話を保存・検索・管理するためのツール",
+  "description": "Cursorエディタのチャット履歴を管理・検索・分析するための包括的なツール",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -9,18 +9,32 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix"
   },
   "keywords": [
+    "cursor",
     "chat",
     "history",
     "conversation",
     "storage",
-    "search"
+    "search",
+    "ai",
+    "assistant",
+    "development",
+    "tools"
   ],
-  "author": "Your Name",
+  "author": "shirokki22",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shirokki22/cursor-chat-history-manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shirokki22/cursor-chat-history-manager/issues"
+  },
+  "homepage": "https://github.com/shirokki22/cursor-chat-history-manager#readme",
   "dependencies": {
     "commander": "^14.0.0",
     "date-fns": "^3.6.0",
@@ -41,5 +55,9 @@
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
   }
 }

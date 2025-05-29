@@ -12,7 +12,6 @@ import { ConfigService } from './services/ConfigService.js'
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { ExportService } from './services/ExportService.js'
 import { AutoSaveService } from './services/AutoSaveService.js'
-import { RealTimeSaveService } from './services/RealTimeSaveService.js'
 import { CursorWatcherService } from './services/CursorWatcherService.js'
 import type { 
   ChatHistoryFilter, 
@@ -31,7 +30,6 @@ let configService: ConfigService
 let analyticsService: AnalyticsService
 let exportService: ExportService
 let autoSaveService: AutoSaveService
-let realTimeSaveService: RealTimeSaveService
 let cursorWatcherService: CursorWatcherService
 
 // サービス初期化
@@ -47,7 +45,6 @@ async function initializeServices(): Promise<void> {
     exportService = new ExportService()
     autoSaveService = new AutoSaveService(chatHistoryService, configService)
     cursorWatcherService = new CursorWatcherService(chatHistoryService, configService)
-    realTimeSaveService = new RealTimeSaveService(chatHistoryService, configService, autoSaveService)
     
     console.log(chalk.green('✅ サービス初期化完了'))
   } catch (error) {

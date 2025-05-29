@@ -1,15 +1,38 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* TailwindCSS v4 テーマ設定 */
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-900: #1e3a8a;
+  
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Consolas', monospace;
+}
 
 /* カスタムベーススタイル */
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-family-sans);
   }
   
   body {
-    @apply antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   /* スクロールバーのカスタマイズ */
@@ -18,37 +41,150 @@
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100;
+    background-color: var(--color-gray-100);
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+    background-color: var(--color-gray-300);
+    border-radius: 9999px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+    background-color: var(--color-gray-400);
+  }
+}
+
+/* 基本的なユーティリティクラス */
+@layer utilities {
+  /* 背景色 */
+  .bg-gray-50 { background-color: var(--color-gray-50); }
+  .bg-gray-100 { background-color: var(--color-gray-100); }
+  .bg-gray-200 { background-color: var(--color-gray-200); }
+  .bg-gray-800 { background-color: var(--color-gray-800); }
+  .bg-gray-900 { background-color: var(--color-gray-900); }
+  .bg-white { background-color: white; }
+  .bg-primary-600 { background-color: var(--color-primary-600); }
+  
+  /* テキスト色 */
+  .text-gray-50 { color: var(--color-gray-50); }
+  .text-gray-600 { color: var(--color-gray-600); }
+  .text-gray-700 { color: var(--color-gray-700); }
+  .text-gray-800 { color: var(--color-gray-800); }
+  .text-gray-900 { color: var(--color-gray-900); }
+  .text-white { color: white; }
+  .text-primary-600 { color: var(--color-primary-600); }
+  
+  /* フレックスボックス */
+  .flex { display: flex; }
+  .flex-1 { flex: 1 1 0%; }
+  .flex-col { flex-direction: column; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .justify-center { justify-content: center; }
+  
+  /* パディング・マージン */
+  .p-4 { padding: 1rem; }
+  .p-6 { padding: 1.5rem; }
+  .px-4 { padding-left: 1rem; padding-right: 1rem; }
+  .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .mb-4 { margin-bottom: 1rem; }
+  .mb-6 { margin-bottom: 1.5rem; }
+  .ml-64 { margin-left: 16rem; }
+  
+  /* サイズ */
+  .w-full { width: 100%; }
+  .w-64 { width: 16rem; }
+  .h-full { height: 100%; }
+  .h-screen { height: 100vh; }
+  .min-h-screen { min-height: 100vh; }
+  .max-w-7xl { max-width: 80rem; }
+  
+  /* ポジション */
+  .fixed { position: fixed; }
+  .relative { position: relative; }
+  .absolute { position: absolute; }
+  .top-0 { top: 0px; }
+  .left-0 { left: 0px; }
+  .z-10 { z-index: 10; }
+  
+  /* その他 */
+  .antialiased { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+  .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+  .border { border-width: 1px; }
+  .border-gray-200 { border-color: var(--color-gray-200); }
+  .rounded-lg { border-radius: 0.5rem; }
+  .mx-auto { margin-left: auto; margin-right: auto; }
+  
+  /* レスポンシブ */
+  @media (min-width: 1024px) {
+    .lg\\:ml-64 { margin-left: 16rem; }
   }
 }
 
 /* カスタムコンポーネントスタイル */
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors duration-200;
+    background-color: var(--color-primary-600);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 200ms;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--color-primary-700);
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200;
+    background-color: var(--color-gray-200);
+    color: var(--color-gray-900);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 200ms;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--color-gray-300);
   }
   
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 0.5rem;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  
+  .input-field:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--color-gray-200);
+    padding: 1.5rem;
   }
   
   .card-hover {
-    @apply card hover:shadow-md transition-shadow duration-200 cursor-pointer;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--color-gray-200);
+    padding: 1.5rem;
+    transition: box-shadow 200ms;
+    cursor: pointer;
+  }
+  
+  .card-hover:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 } 

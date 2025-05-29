@@ -3,6 +3,15 @@ import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
+import { 
+  initializeRealDataMiddleware,
+  realDataMiddleware,
+  healthHandler,
+  getSessionsHandler,
+  getSessionHandler,
+  getStatsHandler,
+  searchHandler
+} from './middleware/real-data-middleware.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -31,88 +40,56 @@ app.use(
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
+// 実データMiddleware適用
+app.use(realDataMiddleware)
+
 // ヘルスチェックエンドポイント
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  })
-})
+app.get('/health', healthHandler)
 
-// 基本的なAPIエンドポイント（仮実装）
-app.get('/api/sessions', (req, res) => {
-  res.json({
-    sessions: [
-      {
-        id: '1',
-        title: 'サンプルセッション',
-        startTime: new Date().toISOString(),
-        metadata: { totalMessages: 5, tags: ['開発'] },
-        messages: [],
-      },
-    ],
-    pagination: {
-      page: 1,
-      limit: 20,
-      total: 1,
-      totalPages: 1,
-    },
-  })
-})
+// セッション一覧取得API
+app.get('/api/sessions', getSessionsHandler)
 
-app.get('/api/stats', (req, res) => {
-  res.json({
-    totalSessions: 1,
-    totalMessages: 5,
-    thisMonthMessages: 5,
-    activeProjects: 1,
-    lastUpdated: new Date().toISOString(),
-  })
-})
+// 特定セッション取得API
+app.get('/api/sessions/:id', getSessionHandler)
 
-app.post('/api/search', (req, res) => {
-  res.json({
-    keyword: req.body.keyword || '',
-    results: [],
-    total: 0,
-  })
-})
+// 統計情報取得API
+app.get('/api/stats', getStatsHandler)
+
+// 検索API
+app.post('/api/search', searchHandler)
 
 // 404ハンドラー
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'API endpoint not found',
-    path: req.originalUrl,
-    method: req.method,
-  })
+app.use((req, res, next) => {
+  if (!res.headersSent) {
+    res.status(404).json({
+      error: 'API endpoint not found',
+      path: req.originalUrl,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    })
+  }
 })
 
 // グローバルエラーハンドラー
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.error('Server error:', err)
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        process.env.NODE_ENV === 'development'
-          ? err.message
-          : 'Something went wrong',
-    })
-  }
-)
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Server error:', err)
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    timestamp: new Date().toISOString()
+  })
+})
 
 // サーバー起動
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`🚀 サーバーがポート ${PORT} で起動しました`)
+  app.listen(PORT, async () => {
+    console.log(`🚀 APIサーバーがポート ${PORT} で起動しました`)
     console.log(`📋 ヘルスチェック: http://localhost:${PORT}/health`)
     console.log(`🌐 API エンドポイント: http://localhost:${PORT}/api`)
+    console.log(`🔄 Middleware方式: 実データ統合 + Express型安全性確保`)
+    
+    // 実データサービス初期化（非ブロッキング）
+    initializeRealDataMiddleware()
   })
 }
 

@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:real-data": "tsc && tsx scripts/test-real-data.ts",
     "server": "tsc && node dist/server/app.js",
     "web": "cd web && vite",
     "web:build": "cd web && vite build",
@@ -44,6 +45,7 @@
   },
   "homepage": "https://github.com/Rons-29/cursor-chat-history-manager#readme",
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.8",
     "@tanstack/react-query": "^5.79.0",
     "@types/compression": "^1.8.0",
     "@types/cors": "^2.8.18",
@@ -88,6 +90,7 @@
     "prettier": "^3.5.3",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
     "typescript": "^5.3.3"
   },
   "engines": {

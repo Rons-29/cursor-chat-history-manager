@@ -44,7 +44,7 @@ export class AutoSaveService extends EventEmitter {
    */
   async start(): Promise<void> {
     const config = await this.getConfig();
-    
+
     if (!config.enabled) {
       console.log('自動保存が無効になっています');
       return;
@@ -66,7 +66,7 @@ export class AutoSaveService extends EventEmitter {
     if (this.currentSession) {
       await this.endCurrentSession();
     }
-    
+
     this.emit('stopped');
     console.log('自動保存を停止しました');
   }
@@ -184,7 +184,7 @@ export class AutoSaveService extends EventEmitter {
    */
   private async startSaveTimer(): Promise<void> {
     const config = await this.getConfig();
-    
+
     this.saveTimer = setInterval(async () => {
       await this.checkSessionLimits();
     }, config.interval * 60 * 1000); // 分を秒に変換
@@ -263,7 +263,7 @@ export class AutoSaveService extends EventEmitter {
     };
 
     await this.configService.saveConfig(updatedConfig);
-    
+
     // 実行中の場合はタイマーを再起動
     if (this.saveTimer || this.idleTimer) {
       this.stopTimers();

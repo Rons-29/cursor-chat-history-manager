@@ -239,7 +239,7 @@ export class RealTimeSaveService extends EventEmitter {
     const session = await this.chatHistoryService.createSession(
       sessionTitle,
       {
-        tags: ['realtime', 'auto-capture'],
+      tags: ['realtime', 'auto-capture'],
         projectId: undefined,
         userId: undefined,
         summary: 'cursor-realtime'

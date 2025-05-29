@@ -58,7 +58,7 @@ async function initializeService(): Promise<void> {
   configService = new ConfigService()
   await configService.initialize()
 
-  const config = await configService.loadConfig()
+  const config = await configService.getConfig()
   historyService = new ChatHistoryService(config)
   await historyService.initialize()
 
@@ -239,9 +239,7 @@ program
       console.log(
         `   平均メッセージ数/セッション: ${stats.averageMessagesPerSession.toFixed(1)}`
       )
-      console.log(
-        `   ストレージサイズ: ${(stats.storageSize / 1024 / 1024).toFixed(2)} MB`
-      )
+      console.log(`   ストレージサイズ: ${stats.storageSize}`)
 
       if (stats.oldestSession) {
         console.log(
@@ -577,7 +575,7 @@ program
       }
 
       // デフォルトは設定表示
-      const config = await configService.loadConfig()
+      const config = await configService.getConfig()
       console.log('⚙️  現在の設定:')
       console.log(`   設定ファイル: ${configService.getConfigPath()}`)
       console.log(`   ストレージパス: ${config.storagePath}`)
@@ -595,14 +593,20 @@ program
       )
       console.log(`   バックアップ間隔: ${config.backupInterval}時間`)
 
-      if (config.excludeKeywords && config.excludeKeywords.length > 0) {
-        console.log(`   除外キーワード: ${config.excludeKeywords.join(', ')}`)
-      }
-      if (config.theme) {
-        console.log(`   テーマ: ${config.theme}`)
-      }
-      if (config.language) {
-        console.log(`   言語: ${config.language}`)
+      if (config.autoSave) {
+        console.log('\n自動保存設定:')
+        console.log(`   有効: ${config.autoSave.enabled ? '✅ はい' : '❌ いいえ'}`)
+        console.log(`   間隔: ${config.autoSave.interval}分`)
+        console.log(`   アイドルタイムアウト: ${config.autoSave.idleTimeout}分`)
+        console.log(`   最大セッション時間: ${config.autoSave.maxSessionDuration}分`)
+
+        if (config.autoSave.watchDirectories && config.autoSave.watchDirectories.length > 0) {
+          console.log(`   監視ディレクトリ: ${config.autoSave.watchDirectories.join(', ')}`)
+        }
+
+        if (config.autoSave.filePatterns && config.autoSave.filePatterns.length > 0) {
+          console.log(`   ファイルパターン: ${config.autoSave.filePatterns.join(', ')}`)
+        }
       }
     } catch (error) {
       console.error('❌ 設定エラー:', error)
@@ -818,7 +822,7 @@ program
         updates.maxSessionDuration = parseInt(options.maxDuration)
 
       if (options.addDirectory) {
-        const config = await configService.loadConfig()
+        const config = await configService.getConfig()
         updates.watchDirectories = [
           ...(config.autoSave?.watchDirectories || []),
           options.addDirectory,
@@ -826,7 +830,7 @@ program
       }
 
       if (options.addPattern) {
-        const config = await configService.loadConfig()
+        const config = await configService.getConfig()
         updates.filePatterns = [
           ...(config.autoSave?.filePatterns || []),
           options.addPattern,
@@ -919,25 +923,16 @@ program
       )
 
       const status = cursorService.getStatus()
-      const config = await configService.loadConfig()
+      const config = await configService.getConfig()
 
       console.log('\n📊 Cursor統合状態')
       console.log('='.repeat(30))
-      console.log(`有効: ${config.cursor?.enabled ? '✅ はい' : '❌ いいえ'}`)
-      console.log(`監視中: ${status.isWatching ? '✅ はい' : '❌ いいえ'}`)
-      console.log(
-        `最終スキャン: ${status.lastScanTime ? status.lastScanTime.toLocaleString() : '未実行'}`
-      )
-      console.log(`発見タスク数: ${status.foundTasks}`)
-      console.log(`インポート済み: ${status.importedSessions}`)
-      console.log(
-        `データパス: ${config.cursor?.cursorDataPath || 'デフォルト'}`
-      )
+      console.log(`Cursor統合: ${config.cursor?.enabled ? '✅ 有効' : '❌ 無効'}`)
       console.log(
         `自動インポート: ${config.cursor?.autoImport ? '✅ はい' : '❌ いいえ'}`
       )
       console.log(
-        `起動時インポート: ${config.cursor?.importOnStartup ? '✅ はい' : '❌ いいえ'}`
+        `監視パス: ${config.cursor?.watchPath || 'デフォルト'}`
       )
     } catch (error) {
       console.error('❌ Cursor統合状態の取得に失敗しました:', error)
@@ -967,7 +962,7 @@ program
         updates.enabled = false
       }
       if (options.path) {
-        updates.cursorDataPath = options.path
+        updates.watchPath = options.path
       }
       if (options.autoImport !== undefined) {
         updates.autoImport = options.autoImport === 'true'
@@ -981,13 +976,13 @@ program
 
       if (Object.keys(updates).length === 0) {
         // 設定表示
-        const config = await configService.loadConfig()
+        const config = await configService.getConfig()
         console.log('\n⚙️  Cursor統合設定')
         console.log('='.repeat(30))
         console.log(JSON.stringify(config.cursor || {}, null, 2))
       } else {
         // 設定更新
-        const currentConfig = await configService.loadConfig()
+        const currentConfig = await configService.getConfig()
         const newConfig = {
           ...currentConfig,
           cursor: {

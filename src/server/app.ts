@@ -3,14 +3,14 @@ import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
 import morgan from 'morgan'
-import { 
+import {
   initializeRealDataMiddleware,
   realDataMiddleware,
   healthHandler,
   getSessionsHandler,
   getSessionHandler,
   getStatsHandler,
-  searchHandler
+  searchHandler,
 } from './middleware/real-data-middleware.js'
 
 const app = express()
@@ -28,9 +28,10 @@ app.use(morgan('combined'))
 // CORS設定
 app.use(
   cors({
-    origin: process.env.NODE_ENV === 'production'
-      ? process.env.FRONTEND_URL
-      : ['http://localhost:3000', 'http://localhost:5173'],
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL
+        : ['http://localhost:3000', 'http://localhost:5173'],
     credentials: true,
   })
 )
@@ -64,20 +65,30 @@ app.use((req, res, next) => {
       error: 'API endpoint not found',
       path: req.originalUrl,
       method: req.method,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   }
 })
 
 // グローバルエラーハンドラー
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Server error:', err)
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-    timestamp: new Date().toISOString()
-  })
-})
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error('Server error:', err)
+    res.status(500).json({
+      error: 'Internal server error',
+      message:
+        process.env.NODE_ENV === 'development'
+          ? err.message
+          : 'Something went wrong',
+      timestamp: new Date().toISOString(),
+    })
+  }
+)
 
 // サーバー起動
 if (process.env.NODE_ENV !== 'test') {
@@ -86,7 +97,7 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`📋 ヘルスチェック: http://localhost:${PORT}/health`)
     console.log(`🌐 API エンドポイント: http://localhost:${PORT}/api`)
     console.log(`🔄 Middleware方式: 実データ統合 + Express型安全性確保`)
-    
+
     // 実データサービス初期化（非ブロッキング）
     initializeRealDataMiddleware()
   })

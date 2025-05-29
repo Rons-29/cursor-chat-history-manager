@@ -8,27 +8,24 @@ const Settings: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // システム情報取得（statsを使用してサーバー状態確認）
-  const { 
-    data: healthData, 
-    isLoading: healthLoading 
-  } = useQuery({
+  const { data: healthData, isLoading: healthLoading } = useQuery({
     queryKey: ['health'],
     queryFn: async () => {
       const stats = await apiClient.getStats()
       return {
         status: 'OK',
         timestamp: stats.lastUpdated,
-        uptime: Math.floor((new Date().getTime() - new Date('2025-05-29T00:00:00Z').getTime()) / 1000)
+        uptime: Math.floor(
+          (new Date().getTime() - new Date('2025-05-29T00:00:00Z').getTime()) /
+            1000
+        ),
       }
     },
     refetchInterval: 30000,
   })
 
   // 統計情報取得
-  const { 
-    data: stats, 
-    isLoading: statsLoading 
-  } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: queryKeys.stats(),
     queryFn: () => apiClient.getStats(),
   })
@@ -52,14 +49,14 @@ const Settings: React.FC = () => {
       const sessions = await apiClient.getSessions({ limit: 1000 })
       const dataStr = JSON.stringify(sessions, null, 2)
       const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      
+
       const url = URL.createObjectURL(dataBlob)
       const link = document.createElement('a')
       link.href = url
       link.download = `chat-history-export-${new Date().toISOString().split('T')[0]}.json`
       link.click()
       URL.revokeObjectURL(url)
-      
+
       alert('データをエクスポートしました')
     } catch (error) {
       alert('エクスポートに失敗しました: ' + (error as Error).message)
@@ -89,7 +86,7 @@ const Settings: React.FC = () => {
     const days = Math.floor(seconds / 86400)
     const hours = Math.floor((seconds % 86400) / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
-    
+
     if (days > 0) return `${days}日 ${hours}時間`
     if (hours > 0) return `${hours}時間 ${minutes}分`
     return `${minutes}分`
@@ -105,7 +102,9 @@ const Settings: React.FC = () => {
 
       {/* システム情報 */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">システム情報</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          システム情報
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="font-medium text-gray-900 mb-2">サーバー状態</h3>
@@ -116,13 +115,17 @@ const Settings: React.FC = () => {
             ) : healthData ? (
               <div className="space-y-1">
                 <p className="text-sm text-gray-600">
-                  状態: <span className="text-green-600 font-medium">{healthData.status}</span>
+                  状態:{' '}
+                  <span className="text-green-600 font-medium">
+                    {healthData.status}
+                  </span>
                 </p>
                 <p className="text-sm text-gray-600">
                   稼働時間: {formatUptime(healthData.uptime)}
                 </p>
                 <p className="text-sm text-gray-600">
-                  最終確認: {new Date(healthData.timestamp).toLocaleString('ja-JP')}
+                  最終確認:{' '}
+                  {new Date(healthData.timestamp).toLocaleString('ja-JP')}
                 </p>
               </div>
             ) : (
@@ -160,46 +163,88 @@ const Settings: React.FC = () => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">データ管理</h2>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button 
+            <button
               className="btn-primary flex items-center justify-center space-x-2"
               onClick={handleRefreshAll}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
               <span>全データ更新</span>
             </button>
 
-            <button 
+            <button
               className="btn-secondary flex items-center justify-center space-x-2"
               onClick={handleClearCache}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
               <span>キャッシュクリア</span>
             </button>
           </div>
 
           <div className="border-t border-gray-200 pt-4">
-            <h3 className="font-medium text-gray-900 mb-3">エクスポート・インポート</h3>
+            <h3 className="font-medium text-gray-900 mb-3">
+              エクスポート・インポート
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button 
+              <button
                 className="btn-secondary flex items-center justify-center space-x-2"
                 onClick={handleExport}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
                 </svg>
                 <span>データエクスポート</span>
               </button>
 
-              <button 
+              <button
                 className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
                 disabled
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
                 </svg>
                 <span>データインポート (準備中)</span>
               </button>
@@ -215,14 +260,24 @@ const Settings: React.FC = () => {
           <p className="text-sm text-red-700">
             以下の操作は慎重に行ってください。データの復旧はできません。
           </p>
-          
+
           {!showDeleteConfirm ? (
-            <button 
+            <button
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
               onClick={handleDeleteAllData}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
               <span>全データ削除</span>
             </button>
@@ -232,14 +287,14 @@ const Settings: React.FC = () => {
                 本当に全データを削除しますか？この操作は取り消せません。
               </p>
               <div className="flex space-x-3">
-                <button 
+                <button
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
                   onClick={handleDeleteAllData}
                   disabled={isDataClearing}
                 >
                   {isDataClearing ? '削除中...' : '削除実行'}
                 </button>
-                <button 
+                <button
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg text-sm"
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDataClearing}
@@ -278,4 +333,4 @@ const Settings: React.FC = () => {
   )
 }
 
-export default Settings 
+export default Settings

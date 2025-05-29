@@ -71,17 +71,48 @@ export class ChatHistoryService {
    * 新しいチャットセッションを作成
    */
   async createSession(
-    title?: string,
+    titleOrOptions?: string | { 
+      id?: string
+      title?: string
+      tags?: string[]
+      metadata?: ChatSession['metadata']
+    },
     metadata?: ChatSession['metadata']
   ): Promise<ChatSession> {
+    let sessionId: string
+    let title: string
+    let tags: string[]
+    let sessionMetadata: ChatSession['metadata'] = {}
+
+    // 引数の処理
+    if (typeof titleOrOptions === 'string') {
+      sessionId = uuidv4()
+      title = titleOrOptions || `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
+      tags = []
+      sessionMetadata = metadata || {}
+    } else if (typeof titleOrOptions === 'object' && titleOrOptions !== null) {
+      sessionId = titleOrOptions.id || uuidv4()
+      title = titleOrOptions.title || `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
+      tags = titleOrOptions.tags || []
+      sessionMetadata = titleOrOptions.metadata || {}
+    } else {
+      sessionId = uuidv4()
+      title = `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
+      tags = []
+      sessionMetadata = {}
+    }
+
     const session: ChatSession = {
-      id: uuidv4(),
-      title: title || `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
+      id: sessionId,
+      title,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       startTime: new Date(),
+      tags,
       messages: [],
       metadata: {
         totalMessages: 0,
-        ...metadata,
+        ...sessionMetadata,
       },
     }
 
@@ -181,7 +212,7 @@ export class ChatHistoryService {
     const limit = filter.limit || 20
     const offset = filter.offset || 0
 
-    let filteredSessions: ChatSession[] = []
+    const filteredSessions = []
 
     for (const sessionId of sessionIds) {
       const session = await this.getSession(sessionId)
@@ -317,14 +348,29 @@ export class ChatHistoryService {
   async getStats(): Promise<ChatHistoryStats> {
     const sessionIds = await this.loadIndex()
     let totalMessages = 0
+    let thisMonthMessages = 0
     let oldestSession: Date | undefined
     let newestSession: Date | undefined
+    const activeProjects = new Set<number>()
+
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
     for (const sessionId of sessionIds) {
       const session = await this.getSession(sessionId)
       if (!session) continue
 
       totalMessages += session.messages.length
+
+      // 今月のメッセージ数を計算
+      if (session.startTime >= monthStart) {
+        thisMonthMessages += session.messages.length
+      }
+
+      // プロジェクトIDを記録
+      if (session.metadata?.projectId) {
+        activeProjects.add(session.metadata.projectId)
+      }
 
       if (!oldestSession || session.startTime < oldestSession) {
         oldestSession = session.startTime
@@ -334,11 +380,12 @@ export class ChatHistoryService {
       }
     }
 
-    // ストレージサイズを計算
-    let storageSize = 0
+    // ストレージサイズを計算（文字列として）
+    let storageSizeString = '0 B'
     try {
-      const stats = await fs.stat(this.config.storagePath)
-      storageSize = await this.calculateDirectorySize(this.config.storagePath)
+      const storageSize = await this.calculateDirectorySize(this.config.storagePath)
+      const sizeInMB = storageSize / 1024 / 1024
+      storageSizeString = `${sizeInMB.toFixed(2)} MB`
     } catch (error) {
       console.warn('ストレージサイズの計算に失敗しました:', error)
     }
@@ -346,11 +393,13 @@ export class ChatHistoryService {
     return {
       totalSessions: sessionIds.length,
       totalMessages,
-      averageMessagesPerSession:
-        sessionIds.length > 0 ? totalMessages / sessionIds.length : 0,
+      thisMonthMessages,
+      activeProjects: activeProjects.size,
+      storageSize: storageSizeString,
+      lastActivity: newestSession,
+      averageMessagesPerSession: sessionIds.length > 0 ? totalMessages / sessionIds.length : 0,
       oldestSession,
       newestSession,
-      storageSize,
     }
   }
 

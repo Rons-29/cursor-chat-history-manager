@@ -9,10 +9,10 @@ const Dashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   // 統計データ取得
-  const { 
-    data: stats, 
-    isLoading: statsLoading, 
-    error: statsError 
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
   } = useQuery({
     queryKey: queryKeys.stats(),
     queryFn: () => apiClient.getStats(),
@@ -20,10 +20,10 @@ const Dashboard: React.FC = () => {
   })
 
   // セッション一覧取得（最近の5件）
-  const { 
-    data: sessionsData, 
-    isLoading: sessionsLoading, 
-    error: sessionsError 
+  const {
+    data: sessionsData,
+    isLoading: sessionsLoading,
+    error: sessionsError,
   } = useQuery({
     queryKey: queryKeys.sessions({ limit: 5 }),
     queryFn: () => apiClient.getSessions({ limit: 5 }),
@@ -39,7 +39,7 @@ const Dashboard: React.FC = () => {
       // 強制的にデータを再取得
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['stats'] }),
-        queryClient.refetchQueries({ queryKey: ['sessions'] })
+        queryClient.refetchQueries({ queryKey: ['sessions'] }),
       ])
     } catch (error) {
       console.error('データ更新エラー:', error)
@@ -73,7 +73,7 @@ const Dashboard: React.FC = () => {
       const now = new Date()
       const diffMs = now.getTime() - date.getTime()
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-      
+
       if (diffHours < 1) return '1時間未満'
       if (diffHours < 24) return `${diffHours}時間前`
       return `${Math.floor(diffHours / 24)}日前`
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       })
     } catch {
       return '--'
@@ -102,17 +102,15 @@ const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
-          <p className="text-gray-600">
-            Chat History Manager - システム概要
-          </p>
+          <p className="text-gray-600">Chat History Manager - システム概要</p>
         </div>
-        <button 
+        <button
           className="btn-primary flex items-center space-x-2"
           onClick={handleRefresh}
           disabled={statsLoading || sessionsLoading || isRefreshing}
         >
           <svg
-            className={`w-4 h-4 ${(statsLoading || sessionsLoading || isRefreshing) ? 'animate-spin' : ''}`}
+            className={`w-4 h-4 ${statsLoading || sessionsLoading || isRefreshing ? 'animate-spin' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -125,9 +123,11 @@ const Dashboard: React.FC = () => {
             />
           </svg>
           <span>
-            {isRefreshing ? '更新中...' : 
-             (statsLoading || sessionsLoading) ? '読み込み中...' : 
-             'データ更新'}
+            {isRefreshing
+              ? '更新中...'
+              : statsLoading || sessionsLoading
+                ? '読み込み中...'
+                : 'データ更新'}
           </span>
         </button>
       </div>
@@ -141,7 +141,7 @@ const Dashboard: React.FC = () => {
                 総セッション数
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {statsLoading ? '...' : stats?.totalSessions ?? '--'}
+                {statsLoading ? '...' : (stats?.totalSessions ?? '--')}
               </p>
             </div>
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
                 今月のメッセージ
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {statsLoading ? '...' : stats?.thisMonthMessages ?? '--'}
+                {statsLoading ? '...' : (stats?.thisMonthMessages ?? '--')}
               </p>
             </div>
             <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
@@ -197,7 +197,7 @@ const Dashboard: React.FC = () => {
                 アクティブプロジェクト
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {statsLoading ? '...' : stats?.activeProjects ?? '--'}
+                {statsLoading ? '...' : (stats?.activeProjects ?? '--')}
               </p>
             </div>
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -223,7 +223,11 @@ const Dashboard: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">最終更新</p>
               <p className="text-2xl font-bold text-gray-900">
-                {statsLoading ? '...' : stats?.lastUpdated ? formatLastUpdated(stats.lastUpdated) : '--'}
+                {statsLoading
+                  ? '...'
+                  : stats?.lastUpdated
+                    ? formatLastUpdated(stats.lastUpdated)
+                    : '--'}
               </p>
             </div>
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -249,15 +253,25 @@ const Dashboard: React.FC = () => {
       {(statsError || sessionsError) && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex">
-            <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <svg
+              className="w-5 h-5 text-red-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
             </svg>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
                 データの読み込みエラー
               </h3>
               <p className="text-sm text-red-700 mt-1">
-                {statsError?.message || sessionsError?.message || 'APIサーバーに接続できませんでした'}
+                {statsError?.message ||
+                  sessionsError?.message ||
+                  'APIサーバーに接続できませんでした'}
               </p>
             </div>
           </div>
@@ -270,7 +284,9 @@ const Dashboard: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900">
             最近のセッション
           </h2>
-          <button className="btn-secondary" onClick={handleNavigateToSessions}>すべて見る</button>
+          <button className="btn-secondary" onClick={handleNavigateToSessions}>
+            すべて見る
+          </button>
         </div>
 
         <div className="space-y-3">
@@ -282,15 +298,17 @@ const Dashboard: React.FC = () => {
                   <p className="font-medium text-gray-900">
                     セッション読み込み中...
                   </p>
-                  <p className="text-sm text-gray-500">データを取得しています</p>
+                  <p className="text-sm text-gray-500">
+                    データを取得しています
+                  </p>
                 </div>
               </div>
               <span className="text-sm text-gray-400">--</span>
             </div>
           ) : sessionsData?.sessions && sessionsData.sessions.length > 0 ? (
-            sessionsData.sessions.map((session) => (
-              <div 
-                key={session.id} 
+            sessionsData.sessions.map(session => (
+              <div
+                key={session.id}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                 onClick={() => handleSessionClick(session.id)}
               >
@@ -302,9 +320,9 @@ const Dashboard: React.FC = () => {
                     </p>
                     <p className="text-sm text-gray-500">
                       {session.metadata.totalMessages}件のメッセージ
-                      {session.metadata.tags && session.metadata.tags.length > 0 && 
-                        ` • ${session.metadata.tags.slice(0, 2).join(', ')}`
-                      }
+                      {session.metadata.tags &&
+                        session.metadata.tags.length > 0 &&
+                        ` • ${session.metadata.tags.slice(0, 2).join(', ')}`}
                     </p>
                   </div>
                 </div>

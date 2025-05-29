@@ -10,25 +10,32 @@ export interface ChatMessage {
     sessionId?: string
     tags?: string[]
     attachments?: string[]
+    source?: string
+    originalTimestamp?: string
   }
 }
 
 export interface ChatSession {
   id: string
-  title?: string
+  title: string
+  createdAt: Date
+  updatedAt: Date
   startTime: Date
   endTime?: Date
   messages: ChatMessage[]
+  tags: string[]
   metadata?: {
     projectId?: number
     userId?: number
-    tags?: string[]
     summary?: string
     totalMessages?: number
     source?: string
     taskId?: string
     projectPath?: string
     importedAt?: string
+    originalCreatedAt?: string
+    originalUpdatedAt?: string
+    tags?: string[]
   }
 }
 
@@ -58,21 +65,22 @@ export interface AutoSaveConfig {
   interval: number // 分単位
   watchDirectories: string[]
   filePatterns: string[]
-  maxSessionDuration: number // 分単位
-  idleTimeout: number // 分単位
+  maxSessionDuration: number // ミリ秒
+  idleTimeout: number // ミリ秒
 }
 
 export interface AutoSaveStatus {
-  isRunning: boolean
+  isActive: boolean
   lastSaveTime: Date | null
   currentSessionId: string | null
+  currentSession?: ChatSession | null
   watchedFiles: string[]
   saveCount: number
 }
 
 export interface ChatHistoryConfig {
-  storageType: 'file' | 'database'
   storagePath: string
+  storageType: 'file' | 'database'
   maxSessions?: number
   maxMessagesPerSession?: number
   autoCleanup?: boolean
@@ -81,16 +89,63 @@ export interface ChatHistoryConfig {
   enableBackup?: boolean
   backupInterval?: number // hours
   autoSave?: AutoSaveConfig
+  cursor?: {
+    enabled: boolean
+    watchPath?: string
+    autoImport: boolean
+  }
 }
 
 export interface ChatHistoryStats {
   totalSessions: number
   totalMessages: number
+  thisMonthMessages: number
+  activeProjects: number
+  storageSize: string
+  lastActivity?: Date
   averageMessagesPerSession: number
   oldestSession?: Date
   newestSession?: Date
-  storageSize: number // bytes
 }
+
+export interface UsageStats {
+  averageSessionLength: number
+  averageMessagesPerSession: number
+  mostActiveHour: number
+  topTags: string[]
+  weeklyActivity?: Array<{
+    day: string
+    sessions: number
+    messages: number
+  }>
+}
+
+// エクスポート形式
+export type ExportFormat = 'json' | 'markdown' | 'txt'
 
 // 既存のMessage型をChatMessageのエイリアスとして追加
 export type Message = ChatMessage
+
+// SessionSearchResult型を追加
+export interface SessionSearchResult {
+  sessions: ChatSession[]
+  totalCount: number
+  hasMore: boolean
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasMore: boolean
+  }
+}
+
+// WebUIで使用される統計データ型
+export interface SystemStats {
+  totalSessions: number
+  totalMessages: number
+  thisMonthMessages: number
+  activeProjects: number
+  storageSize: string
+  lastActivity?: string
+}

@@ -281,23 +281,24 @@ export class AutoSaveService extends EventEmitter {
    * 設定を更新
    */
   async updateConfig(newConfig: Partial<AutoSaveConfig>): Promise<void> {
-    const currentConfig = await this.configService.loadConfig()
-
+    const currentUserConfig = await this.configService.loadConfig()
+    
+    // 必要なデフォルト値を設定
     const updatedConfig = {
-      ...currentConfig,
+      ...currentUserConfig,
       autoSave: {
-        ...(await this.getConfig()),
-        ...newConfig,
-      },
+        enabled: false,
+        interval: 30,
+        idleTimeout: 60,
+        maxSessionDuration: 480,
+        watchDirectories: [],
+        filePatterns: [],
+        ...currentUserConfig.autoSave,
+        ...newConfig
+      }
     }
-
-    await this.configService.saveConfig(updatedConfig)
-
-    // 実行中の場合はタイマーを再起動
-    if (this.saveTimer || this.idleTimer) {
-      this.stopTimers()
-      this.startTimers()
-    }
+    
+    await this.configService.saveUserConfig(updatedConfig)
   }
 
   /**

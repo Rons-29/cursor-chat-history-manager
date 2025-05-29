@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import os from 'os'
-import { ChatHistoryConfig } from '../types/index.js'
+import { ChatHistoryConfig, AutoSaveConfig } from '../types/index.js'
 
 export interface CursorConfig {
   enabled?: boolean
@@ -11,7 +11,18 @@ export interface CursorConfig {
   importOnStartup?: boolean
 }
 
-export interface UserConfig extends ChatHistoryConfig {
+export interface UserConfig {
+  storagePath: string
+  storageType: 'file' | 'database'
+  maxSessions?: number
+  maxMessagesPerSession?: number
+  autoCleanup?: boolean
+  cleanupDays?: number
+  enableSearch?: boolean
+  enableBackup?: boolean
+  backupInterval?: number
+  autoSave?: AutoSaveConfig
+  cursor?: CursorConfig
   // 追加の設定項目
   excludeKeywords?: string[]
   autoSaveInterval?: number // 分単位
@@ -19,7 +30,6 @@ export interface UserConfig extends ChatHistoryConfig {
   exportFormats?: ('json' | 'markdown' | 'txt')[]
   theme?: 'light' | 'dark' | 'auto'
   language?: 'ja' | 'en'
-  cursor?: CursorConfig
 }
 
 export class ConfigService {
@@ -31,8 +41,8 @@ export class ConfigService {
       configPath ||
       path.join(os.homedir(), '.cursor-chat-history', 'config.json')
     this.defaultConfig = {
-      storageType: 'file' as const,
       storagePath: path.join(os.homedir(), '.cursor-chat-history'),
+      storageType: 'file' as const,
       maxSessions: 1000,
       maxMessagesPerSession: 500,
       autoCleanup: true,
@@ -56,7 +66,7 @@ export class ConfigService {
     await fs.ensureDir(path.dirname(this.configPath))
 
     if (!(await fs.pathExists(this.configPath))) {
-      await this.saveConfig(this.defaultConfig)
+      await this.saveUserConfig(this.defaultConfig)
     }
   }
 
@@ -86,9 +96,9 @@ export class ConfigService {
   }
 
   /**
-   * 設定を保存
+   * UserConfig形式で設定を保存
    */
-  async saveConfig(config: Partial<UserConfig>): Promise<void> {
+  async saveUserConfig(config: Partial<UserConfig>): Promise<void> {
     try {
       const currentConfig = await this.loadConfig()
       const newConfig = {
@@ -122,14 +132,15 @@ export class ConfigService {
   ): Promise<void> {
     const config = await this.loadConfig()
     config[key] = value
-    await this.saveConfig(config)
+    await this.saveUserConfig(config)
   }
 
   /**
    * 設定をデフォルトにリセット
    */
   async resetToDefault(): Promise<void> {
-    await this.saveConfig(this.defaultConfig)
+    await fs.remove(this.configPath)
+    await this.initialize()
   }
 
   /**
@@ -249,7 +260,7 @@ export class ConfigService {
         }
       }
 
-      await this.saveConfig(importedConfig)
+      await this.saveUserConfig(importedConfig)
       return { success: true, errors: [] }
     } catch (error) {
       return {
@@ -257,5 +268,67 @@ export class ConfigService {
         errors: [`設定のインポートに失敗しました: ${error}`],
       }
     }
+  }
+
+  /**
+   * ChatHistoryConfig形式で設定を取得
+   */
+  async getConfig(): Promise<ChatHistoryConfig> {
+    const userConfig = await this.loadConfig()
+    
+    // UserConfigをChatHistoryConfigに変換
+    return {
+      storagePath: userConfig.storagePath,
+      storageType: userConfig.storageType,
+      maxSessions: userConfig.maxSessions,
+      maxMessagesPerSession: userConfig.maxMessagesPerSession,
+      autoCleanup: userConfig.autoCleanup,
+      cleanupDays: userConfig.cleanupDays,
+      enableSearch: userConfig.enableSearch,
+      enableBackup: userConfig.enableBackup,
+      backupInterval: userConfig.backupInterval,
+      autoSave: userConfig.autoSave || {
+        enabled: true,
+        interval: userConfig.autoSaveInterval || 5,
+        watchDirectories: [],
+        filePatterns: ['*.md', '*.ts', '*.js', '*.tsx', '*.jsx'],
+        maxSessionDuration: 2 * 60 * 60 * 1000, // 2時間
+        idleTimeout: (userConfig.autoSaveInterval || 5) * 60 * 1000 // 分をミリ秒に変換
+      },
+      cursor: userConfig.cursor ? {
+        enabled: userConfig.cursor.enabled ?? false,
+        watchPath: userConfig.cursor.cursorDataPath,
+        autoImport: userConfig.cursor.autoImport ?? false
+      } : {
+        enabled: false,
+        autoImport: false
+      }
+    }
+  }
+
+  /**
+   * ChatHistoryConfig形式で設定を保存
+   */
+  async saveConfig(config: ChatHistoryConfig): Promise<void> {
+    // ChatHistoryConfigをUserConfigに変換
+    const userConfig: Partial<UserConfig> = {
+      storagePath: config.storagePath,
+      storageType: config.storageType,
+      maxSessions: config.maxSessions,
+      maxMessagesPerSession: config.maxMessagesPerSession,
+      autoCleanup: config.autoCleanup,
+      cleanupDays: config.cleanupDays,
+      enableSearch: config.enableSearch,
+      enableBackup: config.enableBackup,
+      backupInterval: config.backupInterval,
+      autoSave: config.autoSave,
+      cursor: config.cursor ? {
+        enabled: config.cursor.enabled,
+        cursorDataPath: config.cursor.watchPath,
+        autoImport: config.cursor.autoImport
+      } : undefined
+    }
+
+    await this.saveUserConfig(userConfig)
   }
 }

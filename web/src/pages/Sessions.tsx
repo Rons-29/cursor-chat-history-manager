@@ -7,25 +7,28 @@ const Sessions: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isRefreshing, setIsRefreshing] = useState(false)
-  
+
   // フィルター状態
   const [keyword, setKeyword] = useState('')
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'messages'>('newest')
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'messages'>(
+    'newest'
+  )
   const [currentPage, setCurrentPage] = useState(1)
   const [limit] = useState(10)
 
   // セッション一覧取得
-  const { 
-    data: sessionsData, 
-    isLoading, 
-    error 
+  const {
+    data: sessionsData,
+    isLoading,
+    error,
   } = useQuery({
     queryKey: queryKeys.sessions({ page: currentPage, limit, keyword }),
-    queryFn: () => apiClient.getSessions({ 
-      page: currentPage,
-      limit,
-      keyword: keyword || undefined
-    }),
+    queryFn: () =>
+      apiClient.getSessions({
+        page: currentPage,
+        limit,
+        keyword: keyword || undefined,
+      }),
     refetchInterval: 60000, // 1分ごとに更新
   })
 
@@ -57,7 +60,7 @@ const Sessions: React.FC = () => {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       })
     } catch {
       return '不明'
@@ -65,11 +68,13 @@ const Sessions: React.FC = () => {
   }
 
   // フィルタリングされたセッション
-  const filteredSessions = sessionsData?.sessions?.filter(session => {
-    if (!keyword) return true
-    const searchText = `${session.title || ''} ${session.metadata.tags?.join(' ') || ''}`.toLowerCase()
-    return searchText.includes(keyword.toLowerCase())
-  }) || []
+  const filteredSessions =
+    sessionsData?.sessions?.filter(session => {
+      if (!keyword) return true
+      const searchText =
+        `${session.title || ''} ${session.metadata.tags?.join(' ') || ''}`.toLowerCase()
+      return searchText.includes(keyword.toLowerCase())
+    }) || []
 
   // ソートされたセッション
   const sortedSessions = [...filteredSessions].sort((a, b) => {
@@ -113,13 +118,13 @@ const Sessions: React.FC = () => {
             {isLoading ? '読み込み中...' : `全 ${totalSessions} 件のセッション`}
           </p>
         </div>
-        <button 
+        <button
           className="btn-primary flex items-center space-x-2"
           onClick={handleRefresh}
           disabled={isLoading || isRefreshing}
         >
           <svg
-            className={`w-4 h-4 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`}
+            className={`w-4 h-4 ${isLoading || isRefreshing ? 'animate-spin' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -131,7 +136,9 @@ const Sessions: React.FC = () => {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span>{isRefreshing ? '更新中...' : isLoading ? '読み込み中...' : '更新'}</span>
+          <span>
+            {isRefreshing ? '更新中...' : isLoading ? '読み込み中...' : '更新'}
+          </span>
         </button>
       </div>
 
@@ -147,17 +154,19 @@ const Sessions: React.FC = () => {
               placeholder="セッションを検索..."
               className="input-field"
               value={keyword}
-              onChange={(e) => handleKeywordChange(e.target.value)}
+              onChange={e => handleKeywordChange(e.target.value)}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               ソート
             </label>
-            <select 
+            <select
               className="input-field"
               value={sortOrder}
-              onChange={(e) => handleSortChange(e.target.value as typeof sortOrder)}
+              onChange={e =>
+                handleSortChange(e.target.value as typeof sortOrder)
+              }
             >
               <option value="newest">最新順</option>
               <option value="oldest">古い順</option>
@@ -166,9 +175,9 @@ const Sessions: React.FC = () => {
           </div>
           <div className="flex items-end">
             <div className="text-sm text-gray-500">
-              {keyword && filteredSessions.length !== totalSessions && 
-                `${filteredSessions.length} / ${totalSessions} 件表示`
-              }
+              {keyword &&
+                filteredSessions.length !== totalSessions &&
+                `${filteredSessions.length} / ${totalSessions} 件表示`}
             </div>
           </div>
         </div>
@@ -178,8 +187,16 @@ const Sessions: React.FC = () => {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex">
-            <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <svg
+              className="w-5 h-5 text-red-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
             </svg>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
@@ -211,9 +228,9 @@ const Sessions: React.FC = () => {
             </div>
           ))
         ) : paginatedSessions.length > 0 ? (
-          paginatedSessions.map((session) => (
-            <div 
-              key={session.id} 
+          paginatedSessions.map(session => (
+            <div
+              key={session.id}
               className="card-hover"
               onClick={() => handleSessionClick(session.id)}
             >
@@ -238,11 +255,12 @@ const Sessions: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {session.metadata.tags && session.metadata.tags.length > 0 && (
-                    <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
-                      {session.metadata.tags[0]}
-                    </span>
-                  )}
+                  {session.metadata.tags &&
+                    session.metadata.tags.length > 0 && (
+                      <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
+                        {session.metadata.tags[0]}
+                      </span>
+                    )}
                   <svg
                     className="w-5 h-5 text-gray-400"
                     fill="none"
@@ -279,7 +297,9 @@ const Sessions: React.FC = () => {
               セッションが見つかりません
             </h3>
             <p className="text-gray-500">
-              {keyword ? '検索条件に一致するセッションがありません' : 'セッションデータがありません'}
+              {keyword
+                ? '検索条件に一致するセッションがありません'
+                : 'セッションデータがありません'}
             </p>
           </div>
         )}
@@ -289,14 +309,16 @@ const Sessions: React.FC = () => {
       {!isLoading && sortedSessions.length > limit && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            <span className="font-medium">{startIndex + 1}</span> - 
-            <span className="font-medium">{Math.min(endIndex, sortedSessions.length)}</span> 件 / 
-            全 <span className="font-medium">{sortedSessions.length}</span> 件
-            {keyword && ` (検索結果: ${filteredSessions.length} 件)`}
+            <span className="font-medium">{startIndex + 1}</span> -
+            <span className="font-medium">
+              {Math.min(endIndex, sortedSessions.length)}
+            </span>{' '}
+            件 / 全 <span className="font-medium">{sortedSessions.length}</span>{' '}
+            件{keyword && ` (検索結果: ${filteredSessions.length} 件)`}
           </p>
           <div className="flex items-center space-x-2">
-            <button 
-              className="btn-secondary" 
+            <button
+              className="btn-secondary"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             >
@@ -305,10 +327,12 @@ const Sessions: React.FC = () => {
             <span className="text-sm text-gray-600">
               {currentPage} / {totalPages}
             </span>
-            <button 
-              className="btn-secondary" 
+            <button
+              className="btn-secondary"
               disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() =>
+                setCurrentPage(prev => Math.min(totalPages, prev + 1))
+              }
             >
               次へ
             </button>

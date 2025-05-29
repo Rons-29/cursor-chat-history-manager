@@ -192,7 +192,7 @@ async function main() {
           console.log(`   ID: ${session.id}`)
           console.log(`   作成: ${new Date(session.createdAt).toLocaleString()}`)
           console.log(`   メッセージ数: ${session.messages.length}`)
-          console.log(`   タグ: ${session.tags.join(', ')}`)
+          console.log(`   タグ: ${session.tags ? session.tags.join(', ') : 'なし'}`)
         })
 
         if (result.hasMore) {

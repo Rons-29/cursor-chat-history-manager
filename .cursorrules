@@ -1,0 +1,147 @@
+# Chat History Manager - Cursor AI Development Rules
+# このファイルはCursor AIがプロジェクト開発時に自動的に遵守すべきルールを定義します
+
+## 🎯 基本開発方針
+- TypeScript Firstで開発し、any型の使用を最小限に抑制
+- すべての非同期処理にtry-catch実装必須
+- 関数型プログラミングを重視し、純粋関数とイミュータブルデータ構造を使用
+- レイヤード構造でプレゼンテーション・ビジネスロジック・データアクセス層を分離
+
+## 📝 命名規則の厳守
+- ファイル・ディレクトリ: kebab-case (例: chat-history-service.ts)
+- クラス・インターフェース・型: PascalCase (例: ChatHistoryService, ApiResponse)
+- 変数・関数・メソッド: camelCase (例: getUserSessions, totalMessages)
+- 定数: SCREAMING_SNAKE_CASE (例: MAX_SESSIONS, API_BASE_URL)
+- プライベートメンバー: _prefix (例: _handleError, _validateInput)
+
+## 💅 コードスタイル
+- Prettierによる自動フォーマット: セミコロンなし、シングルクォート、2タブインデント
+- 1行80文字以内、1ファイル500行以下を目安
+- ESLint設定に準拠し、エラー0件を維持
+
+## 🏗️ ファイル構造ルール
+```
+src/                    # バックエンドソース
+├── services/          # ビジネスロジック
+├── types/             # 型定義
+├── utils/             # ユーティリティ
+├── server/            # Express.js API
+└── tests/             # テストファイル
+
+web/src/               # フロントエンドソース
+├── components/        # Reactコンポーネント
+├── pages/             # ページコンポーネント
+├── api/               # APIクライアント
+├── hooks/             # カスタムフック
+├── utils/             # ユーティリティ
+└── types/             # フロントエンド型定義
+```
+
+## ⚛️ React開発ルール
+- 関数コンポーネントとTypeScriptでProps型定義必須
+- カスタムフックの活用
+- React Query(@tanstack/react-query)でデータ取得
+- TailwindCSSでスタイリング
+- アクセシビリティ(a11y)準拠
+
+## 🔒 セキュリティ必須事項
+- 機密情報のハードコード禁止
+- すべてのユーザー入力をサニタイズ
+- 環境変数でAPI Key管理
+- パスワード・token・secretの自動マスキング
+- CORS設定の明示的オリジン指定
+
+## 📚 ドキュメント・コメント
+- JSDocで関数・メソッドの詳細説明必須
+- 複雑なロジックには日本語コメント
+- 例外処理時の@throws記述
+- 実用的な@exampleの提供
+
+## 🔄 Git・コミット規約
+- Conventional Commitsに準拠
+- type(scope): subject形式
+- Types: feat, fix, docs, style, refactor, test, chore
+- ブランチ: feature/機能名, bugfix/修正内容
+
+## 🧪 テスト・品質管理
+- 新機能には必ずテストコード作成
+- テストカバレッジ80%以上維持
+- 単体テスト: *.test.ts, 統合テスト: *.spec.ts
+- エラーハンドリングの適切な実装
+
+## 🎨 具体的コード例
+```typescript
+// 良い例: 型安全なAPI呼び出し
+interface ApiResponse<T> {
+  readonly data: T
+  readonly status: 'success' | 'error'
+  readonly message?: string
+}
+
+async function fetchSessions(): Promise<ApiResponse<Session[]>> {
+  try {
+    const response = await apiClient.getSessions()
+    return {
+      data: response.sessions,
+      status: 'success'
+    }
+  } catch (error) {
+    logger.error('セッション取得エラー:', error)
+    throw new SessionFetchError('セッションの取得に失敗しました')
+  }
+}
+
+// React コンポーネント例
+interface SessionCardProps {
+  readonly session: Session
+  readonly onSelect: (id: string) => void
+}
+
+const SessionCard: React.FC<SessionCardProps> = ({ session, onSelect }) => {
+  return (
+    <div 
+      className="card-hover cursor-pointer"
+      onClick={() => onSelect(session.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect(session.id)}
+    >
+      <h3 className="font-semibold text-gray-900">{session.title}</h3>
+      <p className="text-sm text-gray-500">{session.metadata.description}</p>
+    </div>
+  )
+}
+```
+
+## 🚨 絶対に避けること
+- any型の多用
+- try-catchなしの非同期処理
+- 機密情報のコンソール出力
+- HTMLの直接操作(React使用時)
+- 不適切なキー設定(React lists)
+- メモリリークを引き起こすコード
+
+## 📋 開発前・中・後チェックリスト
+**開発前:**
+- [ ] Issue確認・ブランチ作成(命名規則準拠)
+- [ ] 設計レビュー(必要に応じて)
+
+**開発中:**
+- [ ] TypeScript型定義
+- [ ] エラーハンドリング実装  
+- [ ] テストコード作成
+- [ ] ドキュメント更新
+
+**開発完了:**
+- [ ] `npm run quality`通過(lint + format + build)
+- [ ] テスト実行・通過
+- [ ] コードレビュー準備
+
+## 🔧 品質管理コマンド
+- `npm run build` - TypeScriptコンパイル
+- `npm run lint` - ESLintチェック
+- `npm run format` - Prettierフォーマット
+- `npm run quality` - 包括的品質チェック
+- `npm run dev:full` - フロント・バック同時起動
+
+このルールに従って、高品質で保守しやすいChat History Managerの開発を行ってください。不明な点があれば、PROJECT_RULES.mdやCONTRIBUTING.mdを参照してください。 

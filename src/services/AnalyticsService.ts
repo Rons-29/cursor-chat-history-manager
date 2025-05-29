@@ -1,47 +1,58 @@
-import { ChatHistoryService } from './ChatHistoryService.js';
-import { ChatSession, ChatMessage } from '../types/index.js';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from 'date-fns';
+import { ChatHistoryService } from './ChatHistoryService.js'
+import { ChatSession, ChatMessage } from '../types/index.js'
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  eachWeekOfInterval,
+  eachMonthOfInterval,
+} from 'date-fns'
 
 export interface UsageStats {
-  totalSessions: number;
-  totalMessages: number;
-  averageSessionLength: number; // メッセージ数
-  averageSessionDuration: number; // 分
-  mostActiveHour: number;
-  mostActiveDay: string;
-  userMessageCount: number;
-  assistantMessageCount: number;
-  systemMessageCount: number;
+  totalSessions: number
+  totalMessages: number
+  averageSessionLength: number // メッセージ数
+  averageSessionDuration: number // 分
+  mostActiveHour: number
+  mostActiveDay: string
+  userMessageCount: number
+  assistantMessageCount: number
+  systemMessageCount: number
 }
 
 export interface PeriodActivity {
-  date: string;
-  sessionCount: number;
-  messageCount: number;
-  userMessages: number;
-  assistantMessages: number;
-  averageSessionLength: number;
+  date: string
+  sessionCount: number
+  messageCount: number
+  userMessages: number
+  assistantMessages: number
+  averageSessionLength: number
 }
 
 export interface ActivityReport {
-  period: 'daily' | 'weekly' | 'monthly';
-  startDate: Date;
-  endDate: Date;
-  activities: PeriodActivity[];
-  summary: UsageStats;
+  period: 'daily' | 'weekly' | 'monthly'
+  startDate: Date
+  endDate: Date
+  activities: PeriodActivity[]
+  summary: UsageStats
   trends: {
-    sessionTrend: 'increasing' | 'decreasing' | 'stable';
-    messageTrend: 'increasing' | 'decreasing' | 'stable';
-    engagementTrend: 'increasing' | 'decreasing' | 'stable';
-  };
+    sessionTrend: 'increasing' | 'decreasing' | 'stable'
+    messageTrend: 'increasing' | 'decreasing' | 'stable'
+    engagementTrend: 'increasing' | 'decreasing' | 'stable'
+  }
 }
 
 export interface KeywordAnalysis {
-  keyword: string;
-  frequency: number;
-  sessions: string[];
-  firstUsed: Date;
-  lastUsed: Date;
+  keyword: string
+  frequency: number
+  sessions: string[]
+  firstUsed: Date
+  lastUsed: Date
 }
 
 export class AnalyticsService {
@@ -54,11 +65,11 @@ export class AnalyticsService {
     const filter = {
       startDate,
       endDate,
-      limit: 10000 // 大きな値を設定して全データを取得
-    };
+      limit: 10000, // 大きな値を設定して全データを取得
+    }
 
-    const searchResult = await this.chatHistoryService.searchSessions(filter);
-    const sessions = searchResult.sessions;
+    const searchResult = await this.chatHistoryService.searchSessions(filter)
+    const sessions = searchResult.sessions
 
     if (sessions.length === 0) {
       return {
@@ -70,66 +81,73 @@ export class AnalyticsService {
         mostActiveDay: 'Monday',
         userMessageCount: 0,
         assistantMessageCount: 0,
-        systemMessageCount: 0
-      };
+        systemMessageCount: 0,
+      }
     }
 
     // 基本統計
-    const totalSessions = sessions.length;
-    const totalMessages = sessions.reduce((sum, session) => sum + session.messages.length, 0);
-    const averageSessionLength = totalMessages / totalSessions;
+    const totalSessions = sessions.length
+    const totalMessages = sessions.reduce(
+      (sum, session) => sum + session.messages.length,
+      0
+    )
+    const averageSessionLength = totalMessages / totalSessions
 
     // セッション継続時間の計算
     const sessionDurations = sessions
       .filter(session => session.endTime)
       .map(session => {
-        const duration = session.endTime!.getTime() - session.startTime.getTime();
-        return duration / (1000 * 60); // 分に変換
-      });
-    
-    const averageSessionDuration = sessionDurations.length > 0 
-      ? sessionDurations.reduce((sum, duration) => sum + duration, 0) / sessionDurations.length
-      : 0;
+        const duration =
+          session.endTime!.getTime() - session.startTime.getTime()
+        return duration / (1000 * 60) // 分に変換
+      })
+
+    const averageSessionDuration =
+      sessionDurations.length > 0
+        ? sessionDurations.reduce((sum, duration) => sum + duration, 0) /
+          sessionDurations.length
+        : 0
 
     // 時間別活動分析
-    const hourlyActivity = new Array(24).fill(0);
-    const dailyActivity = new Map<string, number>();
+    const hourlyActivity = new Array(24).fill(0)
+    const dailyActivity = new Map<string, number>()
 
     // メッセージタイプ別カウント
-    let userMessageCount = 0;
-    let assistantMessageCount = 0;
-    let systemMessageCount = 0;
+    let userMessageCount = 0
+    let assistantMessageCount = 0
+    let systemMessageCount = 0
 
     sessions.forEach(session => {
       session.messages.forEach(message => {
         // 時間別活動
-        const hour = message.timestamp.getHours();
-        hourlyActivity[hour]++;
+        const hour = message.timestamp.getHours()
+        hourlyActivity[hour]++
 
         // 曜日別活動
-        const dayName = format(message.timestamp, 'EEEE');
-        dailyActivity.set(dayName, (dailyActivity.get(dayName) || 0) + 1);
+        const dayName = format(message.timestamp, 'EEEE')
+        dailyActivity.set(dayName, (dailyActivity.get(dayName) || 0) + 1)
 
         // メッセージタイプ別カウント
         switch (message.role) {
           case 'user':
-            userMessageCount++;
-            break;
+            userMessageCount++
+            break
           case 'assistant':
-            assistantMessageCount++;
-            break;
+            assistantMessageCount++
+            break
           case 'system':
-            systemMessageCount++;
-            break;
+            systemMessageCount++
+            break
         }
-      });
-    });
+      })
+    })
 
     // 最も活発な時間と曜日を特定
-    const mostActiveHour = hourlyActivity.indexOf(Math.max(...hourlyActivity));
-    const mostActiveDay = Array.from(dailyActivity.entries())
-      .reduce((max, [day, count]) => count > max.count ? { day, count } : max, { day: 'Monday', count: 0 })
-      .day;
+    const mostActiveHour = hourlyActivity.indexOf(Math.max(...hourlyActivity))
+    const mostActiveDay = Array.from(dailyActivity.entries()).reduce(
+      (max, [day, count]) => (count > max.count ? { day, count } : max),
+      { day: 'Monday', count: 0 }
+    ).day
 
     return {
       totalSessions,
@@ -140,8 +158,8 @@ export class AnalyticsService {
       mostActiveDay,
       userMessageCount,
       assistantMessageCount,
-      systemMessageCount
-    };
+      systemMessageCount,
+    }
   }
 
   /**
@@ -152,52 +170,60 @@ export class AnalyticsService {
     endDate: Date,
     period: 'daily' | 'weekly' | 'monthly' = 'daily'
   ): Promise<ActivityReport> {
-    const sessions = await this.getSessionsInPeriod(startDate, endDate);
-    
-    let intervals: Date[];
-    let formatString: string;
+    const sessions = await this.getSessionsInPeriod(startDate, endDate)
+
+    let intervals: Date[]
+    let formatString: string
 
     switch (period) {
       case 'daily':
-        intervals = eachDayOfInterval({ start: startDate, end: endDate });
-        formatString = 'yyyy-MM-dd';
-        break;
+        intervals = eachDayOfInterval({ start: startDate, end: endDate })
+        formatString = 'yyyy-MM-dd'
+        break
       case 'weekly':
-        intervals = eachWeekOfInterval({ start: startDate, end: endDate });
-        formatString = 'yyyy-MM-dd';
-        break;
+        intervals = eachWeekOfInterval({ start: startDate, end: endDate })
+        formatString = 'yyyy-MM-dd'
+        break
       case 'monthly':
-        intervals = eachMonthOfInterval({ start: startDate, end: endDate });
-        formatString = 'yyyy-MM';
-        break;
+        intervals = eachMonthOfInterval({ start: startDate, end: endDate })
+        formatString = 'yyyy-MM'
+        break
     }
 
     const activities: PeriodActivity[] = intervals.map(intervalStart => {
-      let intervalEnd: Date;
-      
+      let intervalEnd: Date
+
       switch (period) {
         case 'daily':
-          intervalEnd = endOfDay(intervalStart);
-          break;
+          intervalEnd = endOfDay(intervalStart)
+          break
         case 'weekly':
-          intervalEnd = endOfWeek(intervalStart);
-          break;
+          intervalEnd = endOfWeek(intervalStart)
+          break
         case 'monthly':
-          intervalEnd = endOfMonth(intervalStart);
-          break;
+          intervalEnd = endOfMonth(intervalStart)
+          break
       }
 
-      const periodSessions = sessions.filter(session => 
-        session.startTime >= intervalStart && session.startTime <= intervalEnd
-      );
+      const periodSessions = sessions.filter(
+        session =>
+          session.startTime >= intervalStart && session.startTime <= intervalEnd
+      )
 
-      const messageCount = periodSessions.reduce((sum, session) => sum + session.messages.length, 0);
-      const userMessages = periodSessions.reduce((sum, session) => 
-        sum + session.messages.filter(msg => msg.role === 'user').length, 0
-      );
-      const assistantMessages = periodSessions.reduce((sum, session) => 
-        sum + session.messages.filter(msg => msg.role === 'assistant').length, 0
-      );
+      const messageCount = periodSessions.reduce(
+        (sum, session) => sum + session.messages.length,
+        0
+      )
+      const userMessages = periodSessions.reduce(
+        (sum, session) =>
+          sum + session.messages.filter(msg => msg.role === 'user').length,
+        0
+      )
+      const assistantMessages = periodSessions.reduce(
+        (sum, session) =>
+          sum + session.messages.filter(msg => msg.role === 'assistant').length,
+        0
+      )
 
       return {
         date: format(intervalStart, formatString),
@@ -205,15 +231,16 @@ export class AnalyticsService {
         messageCount,
         userMessages,
         assistantMessages,
-        averageSessionLength: periodSessions.length > 0 ? messageCount / periodSessions.length : 0
-      };
-    });
+        averageSessionLength:
+          periodSessions.length > 0 ? messageCount / periodSessions.length : 0,
+      }
+    })
 
     // 全体統計
-    const summary = await this.getUsageStats(startDate, endDate);
+    const summary = await this.getUsageStats(startDate, endDate)
 
     // トレンド分析
-    const trends = this.analyzeTrends(activities);
+    const trends = this.analyzeTrends(activities)
 
     return {
       period,
@@ -221,8 +248,8 @@ export class AnalyticsService {
       endDate,
       activities,
       summary,
-      trends
-    };
+      trends,
+    }
   }
 
   /**
@@ -233,13 +260,16 @@ export class AnalyticsService {
     endDate?: Date,
     minFrequency: number = 2
   ): Promise<KeywordAnalysis[]> {
-    const sessions = await this.getSessionsInPeriod(startDate, endDate);
-    const keywordMap = new Map<string, {
-      frequency: number;
-      sessions: Set<string>;
-      firstUsed: Date;
-      lastUsed: Date;
-    }>();
+    const sessions = await this.getSessionsInPeriod(startDate, endDate)
+    const keywordMap = new Map<
+      string,
+      {
+        frequency: number
+        sessions: Set<string>
+        firstUsed: Date
+        lastUsed: Date
+      }
+    >()
 
     sessions.forEach(session => {
       session.messages.forEach(message => {
@@ -249,31 +279,31 @@ export class AnalyticsService {
             .toLowerCase()
             .replace(/[^\w\s]/g, '')
             .split(/\s+/)
-            .filter(word => word.length > 2); // 3文字以上の単語のみ
+            .filter(word => word.length > 2) // 3文字以上の単語のみ
 
           words.forEach(word => {
-            const existing = keywordMap.get(word);
+            const existing = keywordMap.get(word)
             if (existing) {
-              existing.frequency++;
-              existing.sessions.add(session.id);
+              existing.frequency++
+              existing.sessions.add(session.id)
               if (message.timestamp < existing.firstUsed) {
-                existing.firstUsed = message.timestamp;
+                existing.firstUsed = message.timestamp
               }
               if (message.timestamp > existing.lastUsed) {
-                existing.lastUsed = message.timestamp;
+                existing.lastUsed = message.timestamp
               }
             } else {
               keywordMap.set(word, {
                 frequency: 1,
                 sessions: new Set([session.id]),
                 firstUsed: message.timestamp,
-                lastUsed: message.timestamp
-              });
+                lastUsed: message.timestamp,
+              })
             }
-          });
+          })
         }
-      });
-    });
+      })
+    })
 
     // 結果を配列に変換し、頻度でソート
     return Array.from(keywordMap.entries())
@@ -283,70 +313,95 @@ export class AnalyticsService {
         frequency: data.frequency,
         sessions: Array.from(data.sessions),
         firstUsed: data.firstUsed,
-        lastUsed: data.lastUsed
+        lastUsed: data.lastUsed,
       }))
-      .sort((a, b) => b.frequency - a.frequency);
+      .sort((a, b) => b.frequency - a.frequency)
   }
 
   /**
    * 指定期間のセッションを取得
    */
-  private async getSessionsInPeriod(startDate?: Date, endDate?: Date): Promise<ChatSession[]> {
+  private async getSessionsInPeriod(
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<ChatSession[]> {
     const filter = {
       startDate,
       endDate,
-      limit: 10000 // 大きな値を設定して全データを取得
-    };
+      limit: 10000, // 大きな値を設定して全データを取得
+    }
 
-    const searchResult = await this.chatHistoryService.searchSessions(filter);
-    return searchResult.sessions;
+    const searchResult = await this.chatHistoryService.searchSessions(filter)
+    return searchResult.sessions
   }
 
   /**
    * トレンド分析
    */
-  private analyzeTrends(activities: PeriodActivity[]): ActivityReport['trends'] {
+  private analyzeTrends(
+    activities: PeriodActivity[]
+  ): ActivityReport['trends'] {
     if (activities.length < 2) {
       return {
         sessionTrend: 'stable',
         messageTrend: 'stable',
-        engagementTrend: 'stable'
-      };
+        engagementTrend: 'stable',
+      }
     }
 
-    const midPoint = Math.floor(activities.length / 2);
-    const firstHalf = activities.slice(0, midPoint);
-    const secondHalf = activities.slice(midPoint);
+    const midPoint = Math.floor(activities.length / 2)
+    const firstHalf = activities.slice(0, midPoint)
+    const secondHalf = activities.slice(midPoint)
 
-    const firstHalfAvgSessions = firstHalf.reduce((sum, a) => sum + a.sessionCount, 0) / firstHalf.length;
-    const secondHalfAvgSessions = secondHalf.reduce((sum, a) => sum + a.sessionCount, 0) / secondHalf.length;
+    const firstHalfAvgSessions =
+      firstHalf.reduce((sum, a) => sum + a.sessionCount, 0) / firstHalf.length
+    const secondHalfAvgSessions =
+      secondHalf.reduce((sum, a) => sum + a.sessionCount, 0) / secondHalf.length
 
-    const firstHalfAvgMessages = firstHalf.reduce((sum, a) => sum + a.messageCount, 0) / firstHalf.length;
-    const secondHalfAvgMessages = secondHalf.reduce((sum, a) => sum + a.messageCount, 0) / secondHalf.length;
+    const firstHalfAvgMessages =
+      firstHalf.reduce((sum, a) => sum + a.messageCount, 0) / firstHalf.length
+    const secondHalfAvgMessages =
+      secondHalf.reduce((sum, a) => sum + a.messageCount, 0) / secondHalf.length
 
-    const firstHalfAvgEngagement = firstHalf.reduce((sum, a) => sum + a.averageSessionLength, 0) / firstHalf.length;
-    const secondHalfAvgEngagement = secondHalf.reduce((sum, a) => sum + a.averageSessionLength, 0) / secondHalf.length;
+    const firstHalfAvgEngagement =
+      firstHalf.reduce((sum, a) => sum + a.averageSessionLength, 0) /
+      firstHalf.length
+    const secondHalfAvgEngagement =
+      secondHalf.reduce((sum, a) => sum + a.averageSessionLength, 0) /
+      secondHalf.length
 
-    const sessionTrend = this.getTrend(firstHalfAvgSessions, secondHalfAvgSessions);
-    const messageTrend = this.getTrend(firstHalfAvgMessages, secondHalfAvgMessages);
-    const engagementTrend = this.getTrend(firstHalfAvgEngagement, secondHalfAvgEngagement);
+    const sessionTrend = this.getTrend(
+      firstHalfAvgSessions,
+      secondHalfAvgSessions
+    )
+    const messageTrend = this.getTrend(
+      firstHalfAvgMessages,
+      secondHalfAvgMessages
+    )
+    const engagementTrend = this.getTrend(
+      firstHalfAvgEngagement,
+      secondHalfAvgEngagement
+    )
 
     return {
       sessionTrend,
       messageTrend,
-      engagementTrend
-    };
+      engagementTrend,
+    }
   }
 
   /**
    * トレンド方向を判定
    */
-  private getTrend(first: number, second: number): 'increasing' | 'decreasing' | 'stable' {
-    const threshold = 0.1; // 10%の変化を閾値とする
-    const change = (second - first) / first;
+  private getTrend(
+    first: number,
+    second: number
+  ): 'increasing' | 'decreasing' | 'stable' {
+    const threshold = 0.1 // 10%の変化を閾値とする
+    const change = (second - first) / first
 
-    if (change > threshold) return 'increasing';
-    if (change < -threshold) return 'decreasing';
-    return 'stable';
+    if (change > threshold) return 'increasing'
+    if (change < -threshold) return 'decreasing'
+    return 'stable'
   }
-} 
+}

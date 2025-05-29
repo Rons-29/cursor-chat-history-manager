@@ -9,30 +9,65 @@ const Sidebar: React.FC = () => {
       name: 'ダッシュボード',
       href: '/',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v0M8 5a2 2 0 01-2 2v0H5a2 2 0 00-2 2v0" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 5a2 2 0 012-2h4a2 2 0 012 2v0M8 5a2 2 0 01-2 2v0H5a2 2 0 00-2 2v0"
+          />
         </svg>
-      )
+      ),
     },
     {
       name: 'セッション一覧',
       href: '/sessions',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
         </svg>
-      )
+      ),
     },
     {
       name: '検索',
       href: '/search',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
-      )
-    }
+      ),
+    },
   ]
 
   const isActive = (path: string) => {
@@ -51,7 +86,7 @@ const Sidebar: React.FC = () => {
       {/* ナビゲーションメニュー */}
       <nav className="mt-8 px-4">
         <ul className="space-y-2">
-          {navigationItems.map((item) => (
+          {navigationItems.map(item => (
             <li key={item.name}>
               <Link
                 to={item.href}
@@ -61,7 +96,11 @@ const Sidebar: React.FC = () => {
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
-                <span className={isActive(item.href) ? 'text-primary-600' : 'text-gray-400'}>
+                <span
+                  className={
+                    isActive(item.href) ? 'text-primary-600' : 'text-gray-400'
+                  }
+                >
                   {item.icon}
                 </span>
                 <span className="font-medium">{item.name}</span>
@@ -78,7 +117,9 @@ const Sidebar: React.FC = () => {
             <span className="text-white text-sm font-medium">CH</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">Chat History</p>
+            <p className="text-sm font-medium text-gray-900 truncate">
+              Chat History
+            </p>
             <p className="text-xs text-gray-500">v1.0.0</p>
           </div>
         </div>
@@ -87,4 +128,4 @@ const Sidebar: React.FC = () => {
   )
 }
 
-export default Sidebar 
+export default Sidebar

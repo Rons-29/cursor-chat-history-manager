@@ -8,19 +8,24 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 // セキュリティとパフォーマンスのミドルウェア
-app.use(helmet({
-  contentSecurityPolicy: false, // Vite開発サーバーとの互換性のため
-}))
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Vite開発サーバーとの互換性のため
+  })
+)
 app.use(compression())
 app.use(morgan('combined'))
 
 // CORS設定
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : 'http://localhost:3000',
-  credentials: true,
-}))
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL
+        : 'http://localhost:3000',
+    credentials: true,
+  })
+)
 
 // JSONパーサー
 app.use(express.json({ limit: '10mb' }))
@@ -28,10 +33,10 @@ app.use(express.urlencoded({ extended: true }))
 
 // ヘルスチェックエンドポイント
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
   })
 })
 
@@ -44,15 +49,15 @@ app.get('/api/sessions', (req, res) => {
         title: 'サンプルセッション',
         startTime: new Date().toISOString(),
         metadata: { totalMessages: 5, tags: ['開発'] },
-        messages: []
-      }
+        messages: [],
+      },
     ],
     pagination: {
       page: 1,
       limit: 20,
       total: 1,
-      totalPages: 1
-    }
+      totalPages: 1,
+    },
   })
 })
 
@@ -62,7 +67,7 @@ app.get('/api/stats', (req, res) => {
     totalMessages: 5,
     thisMonthMessages: 5,
     activeProjects: 1,
-    lastUpdated: new Date().toISOString()
+    lastUpdated: new Date().toISOString(),
   })
 })
 
@@ -70,27 +75,37 @@ app.post('/api/search', (req, res) => {
   res.json({
     keyword: req.body.keyword || '',
     results: [],
-    total: 0
+    total: 0,
   })
 })
 
 // 404ハンドラー
 app.use('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'API endpoint not found',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
   })
 })
 
 // グローバルエラーハンドラー
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Server error:', err)
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  })
-})
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error('Server error:', err)
+    res.status(500).json({
+      error: 'Internal server error',
+      message:
+        process.env.NODE_ENV === 'development'
+          ? err.message
+          : 'Something went wrong',
+    })
+  }
+)
 
 // サーバー起動
 if (process.env.NODE_ENV !== 'test') {
@@ -101,4 +116,4 @@ if (process.env.NODE_ENV !== 'test') {
   })
 }
 
-export default app 
+export default app

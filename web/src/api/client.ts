@@ -61,11 +61,11 @@ class ApiClient {
   }
 
   private async request<T>(
-    endpoint: string, 
+    endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -76,7 +76,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config)
-      
+
       if (!response.ok) {
         throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
       }
@@ -89,15 +89,17 @@ class ApiClient {
   }
 
   // セッション一覧取得
-  async getSessions(params: {
-    page?: number
-    limit?: number
-    keyword?: string
-    startDate?: string
-    endDate?: string
-  } = {}): Promise<ApiSessionsResponse> {
+  async getSessions(
+    params: {
+      page?: number
+      limit?: number
+      keyword?: string
+      startDate?: string
+      endDate?: string
+    } = {}
+  ): Promise<ApiSessionsResponse> {
     const searchParams = new URLSearchParams()
-    
+
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
         searchParams.append(key, String(value))
@@ -106,7 +108,7 @@ class ApiClient {
 
     const query = searchParams.toString()
     const endpoint = `/sessions${query ? `?${query}` : ''}`
-    
+
     return this.request<ApiSessionsResponse>(endpoint)
   }
 
@@ -121,10 +123,13 @@ class ApiClient {
   }
 
   // 検索実行
-  async search(keyword: string, filters: Record<string, any> = {}): Promise<ApiSearchResponse> {
+  async search(
+    keyword: string,
+    filters: Record<string, any> = {}
+  ): Promise<ApiSearchResponse> {
     return this.request<ApiSearchResponse>('/search', {
       method: 'POST',
-      body: JSON.stringify({ keyword, filters })
+      body: JSON.stringify({ keyword, filters }),
     })
   }
 
@@ -136,13 +141,19 @@ class ApiClient {
   }): Promise<ApiSession> {
     return this.request<ApiSession>('/sessions', {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     })
   }
 
   // ヘルスチェック
-  async healthCheck(): Promise<{ status: string; timestamp: string; uptime: number }> {
-    return this.request<{ status: string; timestamp: string; uptime: number }>('/health')
+  async healthCheck(): Promise<{
+    status: string
+    timestamp: string
+    uptime: number
+  }> {
+    return this.request<{ status: string; timestamp: string; uptime: number }>(
+      '/health'
+    )
   }
 }
 
@@ -154,5 +165,6 @@ export const queryKeys = {
   sessions: (params?: any) => ['sessions', params] as const,
   session: (id: string) => ['sessions', id] as const,
   stats: () => ['stats'] as const,
-  search: (keyword: string, filters?: any) => ['search', keyword, filters] as const,
-} 
+  search: (keyword: string, filters?: any) =>
+    ['search', keyword, filters] as const,
+}

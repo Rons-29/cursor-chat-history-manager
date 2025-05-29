@@ -10,8 +10,18 @@ const Sessions: React.FC = () => {
           <p className="text-gray-600">すべてのチャットセッションを表示</p>
         </div>
         <button className="btn-primary">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <svg
+            className="w-4 h-4 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
           更新
         </button>
@@ -21,7 +31,9 @@ const Sessions: React.FC = () => {
       <div className="card">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">キーワード検索</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              キーワード検索
+            </label>
             <input
               type="text"
               placeholder="セッションを検索..."
@@ -29,7 +41,9 @@ const Sessions: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">期間</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              期間
+            </label>
             <select className="input-field">
               <option>すべて</option>
               <option>今日</option>
@@ -38,7 +52,9 @@ const Sessions: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">ソート</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ソート
+            </label>
             <select className="input-field">
               <option>最新順</option>
               <option>古い順</option>
@@ -56,7 +72,9 @@ const Sessions: React.FC = () => {
             <div className="flex items-center space-x-4">
               <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
               <div>
-                <h3 className="font-semibold text-gray-900">セッション読み込み中...</h3>
+                <h3 className="font-semibold text-gray-900">
+                  セッション読み込み中...
+                </h3>
                 <p className="text-sm text-gray-500">データを取得しています</p>
                 <div className="flex items-center space-x-4 mt-2">
                   <span className="text-xs text-gray-400">-- メッセージ</span>
@@ -65,9 +83,21 @@ const Sessions: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">--</span>
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                --
+              </span>
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </div>
           </div>
@@ -79,18 +109,36 @@ const Sessions: React.FC = () => {
             <div className="flex items-center space-x-4">
               <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
               <div>
-                <h3 className="font-semibold text-gray-900">サンプルセッション</h3>
-                <p className="text-sm text-gray-500">React + TypeScript WebUI実装についての相談</p>
+                <h3 className="font-semibold text-gray-900">
+                  サンプルセッション
+                </h3>
+                <p className="text-sm text-gray-500">
+                  React + TypeScript WebUI実装についての相談
+                </p>
                 <div className="flex items-center space-x-4 mt-2">
                   <span className="text-xs text-gray-400">42 メッセージ</span>
-                  <span className="text-xs text-gray-400">2024/01/15 14:30</span>
+                  <span className="text-xs text-gray-400">
+                    2024/01/15 14:30
+                  </span>
                 </div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">開発</span>
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
+                開発
+              </span>
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </div>
           </div>
@@ -100,7 +148,8 @@ const Sessions: React.FC = () => {
       {/* ページネーション */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          <span className="font-medium">--</span> 件中 <span className="font-medium">--</span> 件を表示
+          <span className="font-medium">--</span> 件中{' '}
+          <span className="font-medium">--</span> 件を表示
         </p>
         <div className="flex items-center space-x-2">
           <button className="btn-secondary" disabled>
@@ -115,4 +164,4 @@ const Sessions: React.FC = () => {
   )
 }
 
-export default Sessions 
+export default Sessions

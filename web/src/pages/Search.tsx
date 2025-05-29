@@ -26,4 +26,4 @@ const Search: React.FC = () => {
   )
 }
 
-export default Search 
+export default Search

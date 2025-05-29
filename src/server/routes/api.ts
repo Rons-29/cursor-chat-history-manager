@@ -27,7 +27,7 @@ async function initializeServices() {
       cleanupDays: 30,
       enableSearch: true,
       enableBackup: false,
-      backupInterval: 24
+      backupInterval: 24,
     })
     await chatHistoryService.initialize()
   }
@@ -40,10 +40,10 @@ initializeServices()
 router.get('/sessions', async (req, res) => {
   try {
     const { page = 1, limit = 20, keyword, startDate, endDate } = req.query
-    
+
     const filter: ChatHistoryFilter = {
       limit: parseInt(String(limit)),
-      offset: (parseInt(String(page)) - 1) * parseInt(String(limit))
+      offset: (parseInt(String(page)) - 1) * parseInt(String(limit)),
     }
 
     if (keyword) {
@@ -57,7 +57,7 @@ router.get('/sessions', async (req, res) => {
     }
 
     const result = await chatHistoryService.searchSessions(filter)
-    
+
     res.json({
       sessions: result.sessions,
       pagination: {
@@ -65,8 +65,8 @@ router.get('/sessions', async (req, res) => {
         limit: parseInt(String(limit)),
         total: result.totalCount,
         totalPages: result.totalPages,
-        hasMore: result.hasMore
-      }
+        hasMore: result.hasMore,
+      },
     })
   } catch (error) {
     console.error('セッション一覧取得エラー:', error)
@@ -79,7 +79,7 @@ router.get('/sessions/:id', async (req, res) => {
   try {
     const { id } = req.params
     const session = await chatHistoryService.getSession(id)
-    
+
     if (!session) {
       return res.status(404).json({ error: 'セッションが見つかりません' })
     }
@@ -95,22 +95,22 @@ router.get('/sessions/:id', async (req, res) => {
 router.post('/search', async (req, res) => {
   try {
     const { keyword, filters = {} } = req.body
-    
+
     if (!keyword) {
       return res.status(400).json({ error: 'キーワードが必要です' })
     }
 
     const searchFilter: ChatHistoryFilter = {
       keyword,
-      ...filters
+      ...filters,
     }
 
     const results = await chatHistoryService.searchSessions(searchFilter)
-    
+
     res.json({
       keyword,
       results: results.sessions,
-      total: results.totalCount
+      total: results.totalCount,
     })
   } catch (error) {
     console.error('検索エラー:', error)
@@ -122,13 +122,13 @@ router.post('/search', async (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     const stats = await chatHistoryService.getStats()
-    
+
     res.json({
       totalSessions: stats.totalSessions,
       totalMessages: stats.totalMessages,
       thisMonthMessages: stats.totalMessages, // 簡易実装
       activeProjects: stats.totalSessions, // 簡易実装
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     })
   } catch (error) {
     console.error('統計情報取得エラー:', error)
@@ -140,13 +140,13 @@ router.get('/stats', async (req, res) => {
 router.post('/sessions', async (req, res) => {
   try {
     const { title, description, tags = [] } = req.body
-    
+
     const session = await chatHistoryService.createSession(
       title || `新しいセッション ${new Date().toLocaleString('ja-JP')}`,
       {
         description: description || '',
         tags,
-        source: 'web-ui'
+        source: 'web-ui',
       }
     )
 
@@ -157,4 +157,4 @@ router.post('/sessions', async (req, res) => {
   }
 })
 
-export default router 
+export default router

@@ -1,5 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Chat History Manager - Cursor AI Development Rules
-# このファイルはCursor AIがプロジェクト開発時に自動的に遵守すべきルールを定義します
+このファイルはCursor AIがプロジェクト開発時に自動的に遵守すべきルールを定義します
 
 ## 🎯 基本開発方針
 - TypeScript Firstで開発し、any型の使用を最小限に抑制
@@ -144,4 +149,4 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onSelect }) => {
 - `npm run quality` - 包括的品質チェック
 - `npm run dev:full` - フロント・バック同時起動
 
-このルールに従って、高品質で保守しやすいChat History Managerの開発を行ってください。不明な点があれば、PROJECT_RULES.mdやCONTRIBUTING.mdを参照してください。 
+このルールに従って、高品質で保守しやすいChat History Managerの開発を行ってください。不明な点があれば、PROJECT_RULES.mdやCONTRIBUTING.mdを参照してください。

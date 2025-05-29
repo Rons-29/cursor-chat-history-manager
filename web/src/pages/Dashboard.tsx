@@ -1,14 +1,135 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { apiClient, queryKeys } from '../api/client'
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // 統計データ取得
+  const { 
+    data: stats, 
+    isLoading: statsLoading, 
+    error: statsError 
+  } = useQuery({
+    queryKey: queryKeys.stats(),
+    queryFn: () => apiClient.getStats(),
+    refetchInterval: 30000, // 30秒ごとに更新
+  })
+
+  // セッション一覧取得（最近の5件）
+  const { 
+    data: sessionsData, 
+    isLoading: sessionsLoading, 
+    error: sessionsError 
+  } = useQuery({
+    queryKey: queryKeys.sessions({ limit: 5 }),
+    queryFn: () => apiClient.getSessions({ limit: 5 }),
+    refetchInterval: 30000,
+  })
+
+  // データ手動更新
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      // 強制的にデータを再取得
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['stats'] }),
+        queryClient.refetchQueries({ queryKey: ['sessions'] })
+      ])
+    } catch (error) {
+      console.error('データ更新エラー:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // ページ遷移ハンドラー
+  const handleNavigateToSessions = () => navigate('/sessions')
+  const handleNavigateToSearch = () => navigate('/search')
+
+  // エクスポート機能（仮実装）
+  const handleExport = () => {
+    alert('エクスポート機能は準備中です')
+  }
+
+  // 設定画面
+  const handleSettings = () => {
+    navigate('/settings')
+  }
+
+  // セッション詳細ページに遷移
+  const handleSessionClick = (sessionId: string) => {
+    navigate(`/sessions/${sessionId}`)
+  }
+
+  const formatLastUpdated = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      const now = new Date()
+      const diffMs = now.getTime() - date.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      
+      if (diffHours < 1) return '1時間未満'
+      if (diffHours < 24) return `${diffHours}時間前`
+      return `${Math.floor(diffHours / 24)}日前`
+    } catch {
+      return '--'
+    }
+  }
+
+  const formatSessionTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('ja-JP', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return '--'
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* ページヘッダー */}
-      <div className="border-b border-gray-200 pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
-        <p className="text-gray-600">
-          チャット履歴の概要と最近のアクティビティ
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+          <p className="text-gray-600">
+            Chat History Manager - システム概要
+          </p>
+        </div>
+        <button 
+          className="btn-primary flex items-center space-x-2"
+          onClick={handleRefresh}
+          disabled={statsLoading || sessionsLoading || isRefreshing}
+        >
+          <svg
+            className={`w-4 h-4 ${(statsLoading || sessionsLoading || isRefreshing) ? 'animate-spin' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          <span>
+            {isRefreshing ? '更新中...' : 
+             (statsLoading || sessionsLoading) ? '読み込み中...' : 
+             'データ更新'}
+          </span>
+        </button>
       </div>
 
       {/* 統計カード */}
@@ -19,7 +140,9 @@ const Dashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">
                 総セッション数
               </p>
-              <p className="text-2xl font-bold text-gray-900">--</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.totalSessions ?? '--'}
+              </p>
             </div>
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <svg
@@ -45,7 +168,9 @@ const Dashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">
                 今月のメッセージ
               </p>
-              <p className="text-2xl font-bold text-gray-900">--</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.thisMonthMessages ?? '--'}
+              </p>
             </div>
             <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
               <svg
@@ -71,7 +196,9 @@ const Dashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">
                 アクティブプロジェクト
               </p>
-              <p className="text-2xl font-bold text-gray-900">--</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.activeProjects ?? '--'}
+              </p>
             </div>
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
               <svg
@@ -95,7 +222,9 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">最終更新</p>
-              <p className="text-2xl font-bold text-gray-900">--</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.lastUpdated ? formatLastUpdated(stats.lastUpdated) : '--'}
+              </p>
             </div>
             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
               <svg
@@ -116,28 +245,87 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* エラー表示 */}
+      {(statsError || sessionsError) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                データの読み込みエラー
+              </h3>
+              <p className="text-sm text-red-700 mt-1">
+                {statsError?.message || sessionsError?.message || 'APIサーバーに接続できませんでした'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 最近のセッション */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
             最近のセッション
           </h2>
-          <button className="btn-secondary">すべて見る</button>
+          <button className="btn-secondary" onClick={handleNavigateToSessions}>すべて見る</button>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <div>
-                <p className="font-medium text-gray-900">
-                  セッション読み込み中...
-                </p>
-                <p className="text-sm text-gray-500">データを取得しています</p>
+          {sessionsLoading ? (
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <div>
+                  <p className="font-medium text-gray-900">
+                    セッション読み込み中...
+                  </p>
+                  <p className="text-sm text-gray-500">データを取得しています</p>
+                </div>
+              </div>
+              <span className="text-sm text-gray-400">--</span>
+            </div>
+          ) : sessionsData?.sessions && sessionsData.sessions.length > 0 ? (
+            sessionsData.sessions.map((session) => (
+              <div 
+                key={session.id} 
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => handleSessionClick(session.id)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {session.title || `セッション ${session.id.slice(0, 8)}`}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {session.metadata.totalMessages}件のメッセージ
+                      {session.metadata.tags && session.metadata.tags.length > 0 && 
+                        ` • ${session.metadata.tags.slice(0, 2).join(', ')}`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <span className="text-sm text-gray-400">
+                  {formatSessionTime(session.startTime)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <div>
+                  <p className="font-medium text-gray-900">
+                    セッションが見つかりません
+                  </p>
+                  <p className="text-sm text-gray-500">データがありません</p>
+                </div>
               </div>
             </div>
-            <span className="text-sm text-gray-400">--</span>
-          </div>
+          )}
         </div>
       </div>
 
@@ -147,7 +335,7 @@ const Dashboard: React.FC = () => {
           クイックアクション
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={handleNavigateToSearch}>
             <svg
               className="w-4 h-4 mr-2"
               fill="none"
@@ -163,7 +351,7 @@ const Dashboard: React.FC = () => {
             </svg>
             検索開始
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={handleExport}>
             <svg
               className="w-4 h-4 mr-2"
               fill="none"
@@ -179,7 +367,7 @@ const Dashboard: React.FC = () => {
             </svg>
             エクスポート
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={handleSettings}>
             <svg
               className="w-4 h-4 mr-2"
               fill="none"

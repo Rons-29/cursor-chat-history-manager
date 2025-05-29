@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Sessions from './pages/Sessions'
 import SessionDetail from './pages/SessionDetail'
 import Search from './pages/Search'
+import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/sessions" element={<Sessions />} />
         <Route path="/sessions/:id" element={<SessionDetail />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

@@ -9,6 +9,24 @@ jest.mock('../services/ChatHistoryService')
 jest.mock('../services/CursorLogService')
 jest.mock('fs-extra')
 
+// fs-extraのモック型を定義
+const mockFs = {
+  pathExists: jest.fn(),
+  readdir: jest.fn(),
+  readJson: jest.fn(),
+  stat: jest.fn(),
+  ensureDir: jest.fn(),
+  writeJson: jest.fn()
+} as unknown as typeof fs
+
+// モックを上書き
+;(fs as unknown as typeof mockFs).pathExists = mockFs.pathExists
+;(fs as unknown as typeof mockFs).readdir = mockFs.readdir
+;(fs as unknown as typeof mockFs).readJson = mockFs.readJson
+;(fs as unknown as typeof mockFs).stat = mockFs.stat
+;(fs as unknown as typeof mockFs).ensureDir = mockFs.ensureDir
+;(fs as unknown as typeof mockFs).writeJson = mockFs.writeJson
+
 describe('IntegrationService', () => {
   let service: IntegrationService
   let config: IntegrationConfig
@@ -22,7 +40,8 @@ describe('IntegrationService', () => {
       },
       chatHistory: {
         storagePath: '/test/chat/history',
-        maxSessions: 100
+        maxSessions: 100,
+        storageType: 'file'
       },
       sync: {
         interval: 300,
@@ -88,9 +107,9 @@ describe('IntegrationService', () => {
         ]
       }
 
-      ;(fs.pathExists as jest.Mock).mockResolvedValue(true)
-      ;(fs.readdir as jest.Mock).mockResolvedValue(['test.json'])
-      ;(fs.readJson as jest.Mock).mockResolvedValue(mockCursorLogs)
+      mockFs.pathExists.mockResolvedValue(true)
+      mockFs.readdir.mockResolvedValue(['test.json'])
+      mockFs.readJson.mockResolvedValue(mockCursorLogs)
       ;(ChatHistoryService.prototype.searchSessions as jest.Mock).mockResolvedValue(mockChatLogs)
 
       const results = await service.search(searchOptions)
@@ -101,7 +120,7 @@ describe('IntegrationService', () => {
     })
 
     it('should handle empty results', async () => {
-      ;(fs.pathExists as jest.Mock).mockResolvedValue(false)
+      mockFs.pathExists.mockResolvedValue(false)
       ;(ChatHistoryService.prototype.searchSessions as jest.Mock).mockResolvedValue({ sessions: [] })
 
       const results = await service.search(searchOptions)
@@ -125,10 +144,10 @@ describe('IntegrationService', () => {
         storageSize: 2000
       }
 
-      ;(fs.pathExists as jest.Mock).mockResolvedValue(true)
-      ;(fs.readdir as jest.Mock).mockResolvedValue(['test.json'])
-      ;(fs.stat as jest.Mock).mockResolvedValue({ size: mockCursorStats.size })
-      ;(fs.readJson as jest.Mock).mockResolvedValue(Array(mockCursorStats.count))
+      mockFs.pathExists.mockResolvedValue(true)
+      mockFs.readdir.mockResolvedValue(['test.json'])
+      mockFs.stat.mockResolvedValue({ size: mockCursorStats.size })
+      mockFs.readJson.mockResolvedValue(Array(mockCursorStats.count))
       ;(ChatHistoryService.prototype.getStats as jest.Mock).mockResolvedValue(mockChatStats)
 
       const stats = await service.getStats()
@@ -143,7 +162,7 @@ describe('IntegrationService', () => {
         storageSize: 2000
       }
 
-      ;(fs.pathExists as jest.Mock).mockResolvedValue(false)
+      mockFs.pathExists.mockResolvedValue(false)
       ;(ChatHistoryService.prototype.getStats as jest.Mock).mockResolvedValue(mockChatStats)
 
       const stats = await service.getStats()

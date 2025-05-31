@@ -106,22 +106,20 @@ export class IntegrationService {
 
       // チャット履歴の検索
       const chatLogs = await this.chatHistoryService.searchSessions({
-        filter: {
-          text: options.query,
-          timeRange: options.timeRange,
-          limit: options.limit,
-          offset: options.offset
-        } as ChatHistoryFilter
+        text: options.query,
+        timeRange: options.timeRange,
+        limit: options.limit,
+        offset: options.offset
       })
 
       // チャットログを統合ログ形式に変換
       const integratedChatLogs = chatLogs.sessions.map(chat => ({
         id: chat.id,
-        timestamp: new Date(chat.timestamp),
+        timestamp: new Date(chat.createdAt),
         type: 'chat' as const,
-        content: chat.content,
+        content: chat.summary || '',
         metadata: {
-          project: chat.metadata?.project,
+          project: chat.metadata?.projectId?.toString(),
           tags: chat.metadata?.tags || [],
           source: 'chat',
           ...chat.metadata
@@ -221,7 +219,7 @@ export class IntegrationService {
         lastSync: new Date(),
         syncStatus: this.syncInterval ? 'syncing' : 'idle',
         errorCount: 0, // TODO: エラーカウントの実装
-        storageSize: totalSize + (chatStats.storageSize || 0)
+        storageSize: totalSize + Number(chatStats.storageSize || 0)
       }
     } catch (error) {
       throw this.createError('STATS_ERROR', 'Failed to get stats', error)

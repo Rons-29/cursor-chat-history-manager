@@ -106,12 +106,11 @@ export class IntegrationService {
 
       // チャット履歴の検索
       const chatLogs = await this.chatHistoryService.searchSessions({
-        filter: {
-          query: options.query,
-          timeRange: options.timeRange,
-          limit: options.limit,
-          offset: options.offset
-        }
+        keyword: options.query,
+        startDate: options.timeRange?.start,
+        endDate: options.timeRange?.end,
+        limit: options.limit,
+        offset: options.offset
       })
 
       // チャットログを統合ログ形式に変換
@@ -119,10 +118,10 @@ export class IntegrationService {
         id: chat.id,
         timestamp: new Date(chat.createdAt),
         type: 'chat' as const,
-        content: chat.messages?.[0]?.content || '',
+        content: chat.messages[0]?.content || '',
         metadata: {
           project: chat.metadata?.projectId?.toString(),
-          tags: chat.metadata?.tags || [],
+          tags: chat.tags || [],
           source: 'chat',
           ...chat.metadata
         }

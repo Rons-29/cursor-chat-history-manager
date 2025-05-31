@@ -17,15 +17,15 @@ const mockFs = {
   stat: jest.fn(),
   ensureDir: jest.fn(),
   writeJson: jest.fn()
-} as unknown as typeof fs
+}
 
 // モックを上書き
-;(fs as unknown as typeof mockFs).pathExists = mockFs.pathExists
-;(fs as unknown as typeof mockFs).readdir = mockFs.readdir
-;(fs as unknown as typeof mockFs).readJson = mockFs.readJson
-;(fs as unknown as typeof mockFs).stat = mockFs.stat
-;(fs as unknown as typeof mockFs).ensureDir = mockFs.ensureDir
-;(fs as unknown as typeof mockFs).writeJson = mockFs.writeJson
+Object.defineProperty(fs, 'pathExists', { value: mockFs.pathExists })
+Object.defineProperty(fs, 'readdir', { value: mockFs.readdir })
+Object.defineProperty(fs, 'readJson', { value: mockFs.readJson })
+Object.defineProperty(fs, 'stat', { value: mockFs.stat })
+Object.defineProperty(fs, 'ensureDir', { value: mockFs.ensureDir })
+Object.defineProperty(fs, 'writeJson', { value: mockFs.writeJson })
 
 describe('IntegrationService', () => {
   let service: IntegrationService
@@ -100,9 +100,9 @@ describe('IntegrationService', () => {
         sessions: [
           {
             id: '2',
-            timestamp: new Date(),
-            content: 'test chat',
-            metadata: { project: 'test' }
+            createdAt: new Date(),
+            messages: [{ content: 'test chat' }],
+            metadata: { projectId: 1, tags: ['test'] }
           }
         ]
       }

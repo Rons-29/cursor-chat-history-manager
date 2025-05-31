@@ -179,6 +179,8 @@ export class ChatHistoryService {
 
       const sessionData = await fs.readJson(sessionPath)
       // 日付文字列をDateオブジェクトに変換
+      sessionData.createdAt = new Date(sessionData.createdAt)
+      sessionData.updatedAt = new Date(sessionData.updatedAt)
       sessionData.startTime = new Date(sessionData.startTime)
       if (sessionData.endTime) {
         sessionData.endTime = new Date(sessionData.endTime)
@@ -269,7 +271,7 @@ export class ChatHistoryService {
 
     // タグフィルター
     if (filter.tags && filter.tags.length > 0) {
-      const sessionTags = session.metadata?.tags || []
+      const sessionTags = session.tags || []
       if (!filter.tags.some(tag => sessionTags.includes(tag))) {
         return false
       }
@@ -278,7 +280,9 @@ export class ChatHistoryService {
     // キーワード検索
     if (filter.keyword) {
       const keyword = filter.keyword.toLowerCase()
-      const titleMatch = session.title?.toLowerCase().includes(keyword)
+      // タイトルの型安全チェック
+      const title = typeof session.title === 'string' ? session.title : (session.title as any)?.title || ''
+      const titleMatch = title.toLowerCase().includes(keyword)
       const messageMatch = session.messages.some(msg =>
         msg.content.toLowerCase().includes(keyword)
       )

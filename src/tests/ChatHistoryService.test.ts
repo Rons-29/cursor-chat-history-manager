@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
-import { ChatHistoryService } from '../services/ChatHistoryService'
-import { ChatHistoryConfig } from '../types'
+import { ChatHistoryService } from '../services/ChatHistoryService.js'
+import { ChatHistoryConfig } from '../types/index.js'
 import * as fs from 'fs-extra'
 import * as path from 'path'
 import * as os from 'os'
@@ -16,10 +16,14 @@ describe('ChatHistoryService', () => {
     
     config = {
       storagePath: tempDir,
-      autoSave: false,
+      storageType: 'file',
+      maxSessions: 1000,
+      maxMessagesPerSession: 1000,
       autoCleanup: false,
-      backupEnabled: false,
-      compression: false,
+      cleanupDays: 30,
+      enableSearch: true,
+      enableBackup: false,
+      backupInterval: 24
     }
     
     service = new ChatHistoryService(config)
@@ -42,31 +46,47 @@ describe('ChatHistoryService', () => {
 
   describe('セッション作成', () => {
     it('新しいセッションを作成できること', async () => {
-      const session = await service.createSession('テストセッション')
+      const session = await service.createSession({
+        title: 'テストセッション'
+      })
       
       expect(session).toBeDefined()
       expect(session.id).toBeDefined()
       expect(session.title).toBe('テストセッション')
       expect(session.messages).toEqual([])
+      expect(session.createdAt).toBeInstanceOf(Date)
       expect(session.startTime).toBeInstanceOf(Date)
+      expect(Array.isArray(session.tags)).toBe(true)
+      
+      // 保存・読み込み後の状態もテスト
+      const retrievedSession = await service.getSession(session.id)
+      expect(retrievedSession).toBeDefined()
+      expect(retrievedSession?.title).toBe('テストセッション')
+      expect(retrievedSession?.createdAt).toBeInstanceOf(Date)
+      expect(Array.isArray(retrievedSession?.tags)).toBe(true)
     })
 
     it('メタデータ付きでセッションを作成できること', async () => {
-      const metadata = {
-        projectId: 'test-project',
-        userId: 'test-user',
-        tags: ['test', 'demo'],
-      }
+      const session = await service.createSession({
+        title: 'メタデータテスト',
+        tags: ['test', 'demo']
+      })
       
-      const session = await service.createSession('メタデータテスト', metadata)
+      expect(session.tags).toEqual(['test', 'demo'])
+      expect(session.title).toBe('メタデータテスト')
       
-      expect(session.metadata).toEqual(metadata)
+      // 保存・読み込み後の状態もテスト
+      const retrievedSession = await service.getSession(session.id)
+      expect(retrievedSession?.tags).toEqual(['test', 'demo'])
+      expect(retrievedSession?.title).toBe('メタデータテスト')
     })
   })
 
   describe('メッセージ追加', () => {
     it('セッションにメッセージを追加できること', async () => {
-      const session = await service.createSession('メッセージテスト')
+      const session = await service.createSession({
+        title: 'メッセージテスト'
+      })
       
       const message = await service.addMessage(session.id, {
         role: 'user',
@@ -93,16 +113,18 @@ describe('ChatHistoryService', () => {
   describe('セッション検索', () => {
     beforeEach(async () => {
       // テストデータを準備
-      const session1 = await service.createSession('JavaScript入門', {
-        tags: ['javascript', 'programming'],
+      const session1 = await service.createSession({
+        title: 'JavaScript入門',
+        tags: ['javascript', 'programming']
       })
       await service.addMessage(session1.id, {
         role: 'user',
         content: 'JavaScriptを学びたいです',
       })
 
-      const session2 = await service.createSession('React開発', {
-        tags: ['react', 'frontend'],
+      const session2 = await service.createSession({
+        title: 'React開発',
+        tags: ['react', 'frontend']
       })
       await service.addMessage(session2.id, {
         role: 'user',
@@ -123,7 +145,9 @@ describe('ChatHistoryService', () => {
       })
       
       expect(result.sessions).toHaveLength(1)
-      expect(result.sessions[0].title).toBe('React開発')
+      const foundSession = result.sessions[0]
+      expect(foundSession).toBeDefined()
+      expect(foundSession.title).toBe('React開発')
     })
 
     it('タグでセッションをフィルタできること', async () => {
@@ -132,14 +156,18 @@ describe('ChatHistoryService', () => {
       })
       
       expect(result.sessions).toHaveLength(1)
-      expect(result.sessions[0].title).toBe('JavaScript入門')
+      const foundSession = result.sessions[0]
+      expect(foundSession).toBeDefined()
+      expect(foundSession.title).toBe('JavaScript入門')
     })
   })
 
   describe('統計情報', () => {
     it('統計情報を取得できること', async () => {
       // テストデータを作成
-      const session = await service.createSession('統計テスト')
+      const session = await service.createSession({
+        title: '統計テスト'
+      })
       await service.addMessage(session.id, {
         role: 'user',
         content: 'テストメッセージ1',
@@ -159,7 +187,9 @@ describe('ChatHistoryService', () => {
 
   describe('セッション削除', () => {
     it('セッションを削除できること', async () => {
-      const session = await service.createSession('削除テスト')
+      const session = await service.createSession({
+        title: '削除テスト'
+      })
       const sessionId = session.id
       
       const deleted = await service.deleteSession(sessionId)

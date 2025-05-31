@@ -12,7 +12,7 @@ import { ConfigService } from './services/ConfigService.js'
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { ExportService } from './services/ExportService.js'
 import { AutoSaveService } from './services/AutoSaveService.js'
-import { CursorWatcherService } from './services/CursorWatcherService.js'
+// import { CursorWatcherService } from './services/CursorWatcherService.js'
 import type { 
   ChatHistoryFilter, 
   ExportFormat,
@@ -30,7 +30,7 @@ let configService: ConfigService
 let analyticsService: AnalyticsService
 let exportService: ExportService
 let autoSaveService: AutoSaveService
-let cursorWatcherService: CursorWatcherService
+// let cursorWatcherService: CursorWatcherService
 
 // サービス初期化
 async function initializeServices(): Promise<void> {
@@ -44,7 +44,7 @@ async function initializeServices(): Promise<void> {
     analyticsService = new AnalyticsService(chatHistoryService)
     exportService = new ExportService()
     autoSaveService = new AutoSaveService(chatHistoryService, configService)
-    cursorWatcherService = new CursorWatcherService(chatHistoryService, configService)
+    // cursorWatcherService = new CursorWatcherService(chatHistoryService, configService)
     
     console.log(chalk.green('✅ サービス初期化完了'))
   } catch (error) {
@@ -327,6 +327,7 @@ async function main() {
 
   // === Cursor統合コマンド ===
 
+  /*
   program
     .command('cursor-scan')
     .description('Cursorチャット履歴を手動スキャン・インポート')
@@ -420,6 +421,7 @@ async function main() {
         console.error(chalk.red('❌ エラー:'), error)
       }
     })
+  */
 
   // === 自動保存コマンド ===
 

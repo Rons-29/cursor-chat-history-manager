@@ -3,7 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import type { FSWatcher } from 'chokidar'
 import chokidar from 'chokidar'
-import { CursorLogConfig, IntegrationError } from '../types/integration'
+import { CursorLogConfig, IntegrationError, IntegratedLog } from '../types/integration'
 
 export class CursorLogService {
   private config: CursorLogConfig

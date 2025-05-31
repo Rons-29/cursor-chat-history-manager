@@ -10,6 +10,7 @@ import {
   IntegrationSearchOptions,
   IntegrationError
 } from '../types/integration'
+import { ChatHistoryFilter, ChatHistorySearchResult, ChatHistoryStats } from '../types'
 
 export class IntegrationService {
   private config: IntegrationConfig
@@ -105,14 +106,16 @@ export class IntegrationService {
 
       // チャット履歴の検索
       const chatLogs = await this.chatHistoryService.searchSessions({
-        query: options.query,
-        timeRange: options.timeRange,
-        limit: options.limit,
-        offset: options.offset
+        filter: {
+          text: options.query,
+          timeRange: options.timeRange,
+          limit: options.limit,
+          offset: options.offset
+        } as ChatHistoryFilter
       })
 
       // チャットログを統合ログ形式に変換
-      const integratedChatLogs = chatLogs.map(chat => ({
+      const integratedChatLogs = chatLogs.sessions.map(chat => ({
         id: chat.id,
         timestamp: new Date(chat.timestamp),
         type: 'chat' as const,
@@ -142,7 +145,7 @@ export class IntegrationService {
       }
 
       // プロジェクトフィルター
-      if (options.projects && !options.projects.includes(log.metadata.project)) {
+      if (options.projects && log.metadata.project && !options.projects.includes(log.metadata.project)) {
         return false
       }
 
@@ -164,8 +167,8 @@ export class IntegrationService {
       if (options.query) {
         const searchText = options.query.toLowerCase()
         return log.content.toLowerCase().includes(searchText) ||
-               log.metadata.project?.toLowerCase().includes(searchText) ||
-               log.metadata.tags?.some(tag => tag.toLowerCase().includes(searchText))
+               (log.metadata.project?.toLowerCase() || '').includes(searchText) ||
+               log.metadata.tags?.some(tag => tag.toLowerCase().includes(searchText)) || false
       }
 
       return true
@@ -218,7 +221,7 @@ export class IntegrationService {
         lastSync: new Date(),
         syncStatus: this.syncInterval ? 'syncing' : 'idle',
         errorCount: 0, // TODO: エラーカウントの実装
-        storageSize: totalSize + chatStats.totalSize
+        storageSize: totalSize + (chatStats.storageSize || 0)
       }
     } catch (error) {
       throw this.createError('STATS_ERROR', 'Failed to get stats', error)

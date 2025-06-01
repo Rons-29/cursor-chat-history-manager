@@ -576,4 +576,91 @@ export class IntegrationService extends EventEmitter {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
   }
+
+  /**
+   * Cursor監視を開始
+   */
+  async startWatching(): Promise<void> {
+    if (!this.isInitialized) {
+      throw this.createError('NOT_INITIALIZED', 'Service not initialized')
+    }
+
+    try {
+      this.logger.info('Cursor監視を開始します')
+      
+      // 監視開始を非同期で実行し、即座にレスポンスを返す
+      const startWatchingPromise = Promise.all([
+        this.cursorWatcherService?.startWatching(),
+        this.cursorLogService?.startWatching()
+      ].filter(Boolean))
+
+      // バックグラウンドで実行
+      startWatchingPromise
+        .then(() => {
+          this.logger.info('Cursor監視が開始されました')
+          this.emit('watchingStarted')
+        })
+        .catch((error) => {
+          this.logger.error('Cursor監視開始エラー:', error)
+          this.emit('error', this.createError('WATCHING_START_ERROR', 'Failed to start watching', error))
+        })
+
+      // 即座に完了として返す
+      this.logger.info('Cursor監視開始リクエストを受け付けました')
+    } catch (error) {
+      this.logger.error('Cursor監視開始エラー:', error)
+      throw this.createError('WATCHING_START_ERROR', 'Failed to start watching', error)
+    }
+  }
+
+  /**
+   * Cursor監視を停止
+   */
+  async stopWatching(): Promise<void> {
+    if (!this.isInitialized) {
+      throw this.createError('NOT_INITIALIZED', 'Service not initialized')
+    }
+
+    try {
+      this.logger.info('Cursor監視を停止します')
+      
+      // 監視停止を非同期で実行し、即座にレスポンスを返す
+      const stopWatchingPromise = Promise.all([
+        this.cursorWatcherService?.stopWatching(),
+        this.cursorLogService?.stopWatching()
+      ].filter(Boolean))
+
+      // バックグラウンドで実行
+      stopWatchingPromise
+        .then(() => {
+          this.logger.info('Cursor監視が停止されました')
+          this.emit('watchingStopped')
+        })
+        .catch((error) => {
+          this.logger.error('Cursor監視停止エラー:', error)
+          this.emit('error', this.createError('WATCHING_STOP_ERROR', 'Failed to stop watching', error))
+        })
+
+      // 即座に完了として返す
+      this.logger.info('Cursor監視停止リクエストを受け付けました')
+    } catch (error) {
+      this.logger.error('Cursor監視停止エラー:', error)
+      throw this.createError('WATCHING_STOP_ERROR', 'Failed to stop watching', error)
+    }
+  }
+
+  /**
+   * 監視状態を取得
+   */
+  getWatchingStatus(): { isWatching: boolean; lastScan?: Date } {
+    if (!this.isInitialized) {
+      return { isWatching: false }
+    }
+
+    const cursorWatcherStatus = this.cursorWatcherService?.getStatus()
+    return {
+      isWatching: cursorWatcherStatus?.isActive || false,
+      lastScan: cursorWatcherStatus?.lastScan
+    }
+  }
 } 

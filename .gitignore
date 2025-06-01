@@ -29,6 +29,7 @@ web/dist/
 
 # Chat history data (機密情報を含む可能性)
 .cursor-chat-history/
+data/
 exports/
 backups/
 *.backup.json
@@ -84,4 +85,9 @@ web/dist/
 .vite/
 
 # Development files
-*.tsbuildinfo 
+*.tsbuildinfo
+
+# SQLite database files (個人データ含む)
+*.db
+*.sqlite
+*.sqlite3 

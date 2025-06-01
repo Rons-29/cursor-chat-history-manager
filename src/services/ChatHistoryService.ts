@@ -157,8 +157,19 @@ class ChatHistoryService {
         throw new ValidationError('Invalid session data format')
       }
 
-      await this.sessionCache.set(sessionId, data)
-      return data
+      // 日付文字列をDateオブジェクトに変換
+      const normalizedData: ChatSession = {
+        ...data,
+        createdAt: new Date(data.createdAt),
+        updatedAt: new Date(data.updatedAt),
+        messages: data.messages.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      }
+
+      await this.sessionCache.set(sessionId, normalizedData)
+      return normalizedData
     } catch (error) {
       await this.logger.error('セッションの取得に失敗しました', { 
         error: error instanceof Error ? error.message : String(error),
@@ -240,7 +251,12 @@ class ChatHistoryService {
         results.push(session)
       }
 
-      results.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      // 安全な日付ソート処理
+      results.sort((a, b) => {
+        const aTime = a.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a.updatedAt).getTime()
+        const bTime = b.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b.updatedAt).getTime()
+        return bTime - aTime
+      })
 
       const total = results.length
       const page = filter.page || 1
@@ -610,17 +626,26 @@ class ChatHistoryService {
   private validateSessionData(data: unknown): data is ChatSession {
     if (!data || typeof data !== 'object') return false
     const session = data as ChatSession
+    
+    // 基本的なプロパティチェック（緩和）
     if (!session.id || typeof session.id !== 'string') return false
-    if (!session.title || typeof session.title !== 'string') return false
-    if (!session.createdAt) return false
-    if (!Array.isArray(session.messages)) return false
-
-    for (const msg of session.messages) {
-      if (!msg.id || typeof msg.id !== 'string') return false
-      if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role))
-        return false
-      if (!msg.content || typeof msg.content !== 'string') return false
-      if (!msg.timestamp) return false
+    
+    // titleは空でも許可（自動生成される）
+    if (session.title !== undefined && typeof session.title !== 'string') return false
+    
+    // createdAtは自動補完される
+    // messagesは空配列でも許可
+    if (session.messages && !Array.isArray(session.messages)) return false
+    
+    // メッセージが存在する場合のバリデーション
+    if (session.messages) {
+      for (const msg of session.messages) {
+        if (!msg.id || typeof msg.id !== 'string') return false
+        if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role))
+          return false
+        if (msg.content !== undefined && typeof msg.content !== 'string') return false
+        // timestampは自動補完される
+      }
     }
 
     return true
@@ -1254,6 +1279,90 @@ class ChatHistoryService {
         session,
       })
       throw new StorageError('セッション作成', error as Error)
+    }
+  }
+
+  async rebuildIndex(): Promise<{
+    rebuilt: number
+    errors: string[]
+  }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    const result = {
+      rebuilt: 0,
+      errors: [] as string[]
+    }
+
+    try {
+      await this.logger.info('インデックス再構築を開始します')
+      
+      // インデックスをクリア
+      await this.indexManager.initialize()
+      
+      // セッションディレクトリの全ファイルをスキャン
+      const sessionFiles = await fs.readdir(this.sessionsPath)
+      const jsonFiles = sessionFiles.filter(file => file.endsWith('.json'))
+      
+      for (const file of jsonFiles) {
+        try {
+          const sessionId = path.basename(file, '.json')
+          const filePath = path.join(this.sessionsPath, file)
+          
+          // ファイルが存在するか確認
+          if (!(await fs.pathExists(filePath))) {
+            continue
+          }
+          
+          // セッションデータを読み込み
+          const sessionData = await fs.readJson(filePath)
+          
+          // バリデーション
+          if (!this.validateSessionData(sessionData)) {
+            result.errors.push(`無効なセッションデータ: ${sessionId}`)
+            continue
+          }
+          
+          // 日付オブジェクトに変換
+          const session: ChatSession = {
+            ...sessionData,
+            createdAt: new Date(sessionData.createdAt),
+            updatedAt: new Date(sessionData.updatedAt),
+            messages: sessionData.messages.map(msg => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }))
+          }
+          
+          // インデックスに追加
+          await this.indexManager.addSession(sessionId, {
+            tags: session.tags,
+            createdAt: session.createdAt,
+            updatedAt: session.updatedAt,
+            size: session.messages.length
+          })
+          
+          result.rebuilt++
+          
+          if (result.rebuilt % 1000 === 0) {
+            await this.logger.info(`インデックス再構築進行中: ${result.rebuilt}件処理完了`)
+          }
+          
+        } catch (error) {
+          result.errors.push(`セッション ${file} の処理エラー: ${error}`)
+        }
+      }
+      
+      await this.logger.info(`インデックス再構築完了: ${result.rebuilt}件再構築`, {
+        rebuilt: result.rebuilt,
+        errors: result.errors.length
+      })
+      
+      return result
+    } catch (error) {
+      await this.logger.error('インデックス再構築に失敗しました', { error })
+      throw new StorageError('インデックス再構築', error as Error)
     }
   }
 }

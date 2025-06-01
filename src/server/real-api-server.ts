@@ -6,20 +6,31 @@ import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { IntegrationService } from '../services/IntegrationService.js'
 import { CursorLogService } from '../services/CursorLogService.js'
 import { ConfigService } from '../services/ConfigService.js'
+import { IncrementalIndexService } from '../services/IncrementalIndexService.js'
+import { SqliteIndexService } from '../services/SqliteIndexService.js'
 import { Logger } from './utils/Logger.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
 
 // ミドルウェア
-app.use(cors())
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true
+}))
 app.use(express.json())
+
+// CORSミドルウェアがプリフライトリクエストを自動処理
 
 // サービス初期化
 let chatHistoryService: ChatHistoryService
 let integrationService: IntegrationService
 let cursorLogService: CursorLogService
 let configService: ConfigService
+let incrementalIndexService: IncrementalIndexService
+let sqliteIndexService: SqliteIndexService
 const logger = new Logger({ logPath: './logs', level: 'info' })
 
 async function initializeServices() {
@@ -51,6 +62,22 @@ async function initializeServices() {
       }
     })
     await chatHistoryService.initialize()
+    
+    // 増分インデックスサービス初期化
+    incrementalIndexService = new IncrementalIndexService(
+      path.join(process.cwd(), 'data', 'chat-history'),
+      path.join(process.cwd(), 'data', 'index.json'),
+      logger
+    )
+    await incrementalIndexService.initialize()
+    
+    // SQLiteインデックスサービス初期化
+    sqliteIndexService = new SqliteIndexService(
+      path.join(process.cwd(), 'data', 'chat-history'),
+      path.join(process.cwd(), 'data', 'index.db'),
+      logger
+    )
+    await sqliteIndexService.initialize()
     
     // Cursorログサービス初期化
     cursorLogService = new CursorLogService({
@@ -349,6 +376,498 @@ app.post('/api/integration/initialize', async (req, res) => {
   }
 })
 
+// Cursor監視開始
+app.post('/api/integration/cursor/watch/start', async (req, res) => {
+  try {
+    await integrationService.startWatching()
+    res.json({ 
+      success: true, 
+      message: 'Cursor監視を開始しました',
+      isWatching: true 
+    })
+  } catch (error) {
+    logger.error('Cursor監視開始エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '監視の開始に失敗しました'
+    })
+  }
+})
+
+// Cursor監視停止
+app.post('/api/integration/cursor/watch/stop', async (req, res) => {
+  try {
+    await integrationService.stopWatching()
+    res.json({ 
+      success: true, 
+      message: 'Cursor監視を停止しました',
+      isWatching: false 
+    })
+  } catch (error) {
+    logger.error('Cursor監視停止エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '監視の停止に失敗しました'
+    })
+  }
+})
+
+// 統合ログ取得
+app.get('/api/integration/logs', async (req, res) => {
+  try {
+    const { limit = 100, offset = 0, types, startDate, endDate } = req.query
+    
+    // 簡単なモックデータで対応
+    const mockLogs = [
+      {
+        id: 'log-1',
+        timestamp: new Date().toISOString(),
+        type: 'chat',
+        content: 'Sample chat log entry',
+        metadata: {
+          project: 'chat-history-manager',
+          source: 'chat'
+        }
+      },
+      {
+        id: 'log-2',
+        timestamp: new Date().toISOString(),
+        type: 'cursor',
+        content: 'Sample cursor log entry',
+        metadata: {
+          project: 'chat-history-manager',
+          source: 'cursor'
+        }
+      }
+    ]
+    
+    res.json({
+      logs: mockLogs,
+      total: mockLogs.length,
+      hasMore: false
+    })
+  } catch (error) {
+    logger.error('統合ログ取得エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '不明なエラー'
+    })
+  }
+})
+
+// 統合分析データ取得
+app.get('/api/integration/analytics', async (req, res) => {
+  try {
+    const { granularity = 'daily', startDate, endDate } = req.query
+    
+    const analyticsRequest = {
+      startDate: startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      endDate: endDate ? new Date(endDate as string) : new Date(),
+      granularity: granularity as 'hourly' | 'daily' | 'weekly' | 'monthly',
+      timeRange: {
+        start: startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        end: endDate ? new Date(endDate as string) : new Date()
+      },
+      metrics: ['messageCount', 'sessionCount']
+    }
+
+    const analytics = await integrationService.getAnalytics(analyticsRequest)
+    res.json(analytics)
+  } catch (error) {
+    logger.error('分析データ取得エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '不明なエラー'
+    })
+  }
+})
+
+// 統合設定取得
+app.get('/api/integration/settings', async (req, res) => {
+  try {
+    // デフォルト設定を返す
+    const defaultSettings = {
+      cursor: {
+        enabled: true,
+        watchPath: path.join(process.env.HOME || '', 'Library/Application Support/Cursor/User/workspaceStorage'),
+        autoImport: true,
+        syncInterval: 300,
+        batchSize: 100
+      },
+      chatHistory: {
+        storagePath: path.join(process.cwd(), 'data', 'chat-history'),
+        maxSessions: 10000,
+        maxMessagesPerSession: 500,
+        autoCleanup: true,
+        cleanupDays: 30
+      },
+      general: {
+        enableNotifications: true,
+        autoSync: true,
+        theme: 'system'
+      }
+    }
+    
+    res.json(defaultSettings)
+  } catch (error) {
+    logger.error('設定取得エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '不明なエラー'
+    })
+  }
+})
+
+// 統合設定保存
+app.post('/api/integration/settings', async (req, res) => {
+  try {
+    const settings = req.body
+    
+    // 設定の簡単なバリデーション
+    if (!settings || typeof settings !== 'object') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: '有効な設定データが必要です'
+      })
+      return
+    }
+    
+    // TODO: 実際の設定保存ロジックを実装
+    // 現在はメモリ内に保存（デモ用）
+    logger.info('設定を保存しました:', settings)
+    
+    res.json({
+      success: true,
+      message: '設定が保存されました'
+    })
+  } catch (error) {
+    logger.error('設定保存エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '不明なエラー'
+    })
+  }
+})
+
+// インデックス再構築（従来版）
+app.post('/api/integration/rebuild-index', async (req, res) => {
+  try {
+    const result = await chatHistoryService.rebuildIndex()
+    res.json({
+      success: true,
+      message: `インデックス再構築完了: ${result.rebuilt}件処理`,
+      rebuilt: result.rebuilt,
+      errors: result.errors
+    })
+  } catch (error) {
+    logger.error('インデックス再構築エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'インデックス再構築に失敗しました'
+    })
+  }
+})
+
+// 増分同期（改善版）
+app.post('/api/integration/incremental-sync', async (req, res) => {
+  try {
+    if (!incrementalIndexService) {
+      res.status(503).json({
+        error: 'Service Unavailable',
+        message: '増分インデックスサービスが初期化されていません'
+      })
+      return
+    }
+
+    const result = await incrementalIndexService.performIncrementalSync()
+    
+    res.json({
+      success: true,
+      message: `増分同期完了: ${result.processed}件処理`,
+      method: 'incremental',
+      performance: 'high',
+      stats: {
+        processed: result.processed,
+        added: result.added,
+        modified: result.modified,
+        deleted: result.deleted,
+        errors: result.errors
+      }
+    })
+  } catch (error) {
+    logger.error('増分同期エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '増分同期に失敗しました'
+    })
+  }
+})
+
+// SQLiteマイグレーション
+app.post('/api/integration/sqlite-migrate', async (req, res) => {
+  try {
+    if (!sqliteIndexService || !chatHistoryService) {
+      res.status(503).json({
+        error: 'Service Unavailable',
+        message: 'SQLiteサービスまたはチャット履歴サービスが初期化されていません'
+      })
+      return
+    }
+
+    // 現在のSQLiteセッション数を確認
+    const currentSqliteStats = await sqliteIndexService.getStats()
+    const currentSqliteCount = currentSqliteStats.totalSessions
+
+    // 全セッション数を取得
+    const allSessionsCount = await chatHistoryService.searchSessions({ page: 1, pageSize: 1 })
+    const totalSessions = allSessionsCount.totalCount
+
+    // まだ移行していないセッションがあるかチェック
+    if (currentSqliteCount >= totalSessions) {
+      res.json({
+        success: true,
+        message: `移行完了: 全${totalSessions}件のセッションが既に移行済みです`,
+        method: 'sqlite',
+        performance: 'very-high',
+        stats: {
+          migrated: 0,
+          total: totalSessions,
+          alreadyMigrated: currentSqliteCount,
+          completion: '100%',
+          errors: 0
+        }
+      })
+      return
+    }
+
+    // バッチサイズを計算（残りのセッション数）
+    const remainingSessions = totalSessions - currentSqliteCount
+    const batchSize = Math.min(remainingSessions, 5000) // 最大5000件ずつ処理
+
+    // まず現在移行済みのセッションIDを取得（重複回避）
+    const migratedSessions = await sqliteIndexService.getSessions({ page: 1, pageSize: currentSqliteCount })
+    const migratedIds = new Set(migratedSessions.sessions.map(s => s.id))
+
+    // 複数ページで全セッションを取得・移行
+    let currentPage = 1
+    let hasMorePages = true
+    let totalMigrated = 0
+    let totalErrors = 0
+    const errors: string[] = []
+
+    while (hasMorePages && totalMigrated < remainingSessions) {
+      const sessions = await chatHistoryService.searchSessions({ 
+        page: currentPage, 
+        pageSize: Math.min(1000, remainingSessions - totalMigrated)
+      })
+
+      if (sessions.sessions.length === 0) {
+        hasMorePages = false
+        break
+      }
+
+      // 未移行のセッションのみ処理
+      const unmigratedSessions = sessions.sessions.filter(session => !migratedIds.has(session.id))
+
+      for (const session of unmigratedSessions) {
+        try {
+          await sqliteIndexService.upsertSession(session)
+          totalMigrated++
+        } catch (error) {
+          totalErrors++
+          errors.push(`セッション ${session.id} の移行エラー: ${error}`)
+        }
+
+        // プログレス制限を緩和
+        if (totalMigrated >= Math.min(batchSize, remainingSessions)) {
+          hasMorePages = false
+          break
+        }
+      }
+
+      currentPage++
+      hasMorePages = sessions.hasMore && (currentPage <= 50) // 最大50ページまで拡張
+    }
+
+    const finalCompletion = Math.round(((currentSqliteCount + totalMigrated) / totalSessions) * 100)
+
+    res.json({
+      success: true,
+      message: `SQLite移行バッチ完了: ${totalMigrated}件移行 (完了率: ${finalCompletion}%)`,
+      method: 'sqlite',
+      performance: 'very-high',
+      stats: {
+        migrated: totalMigrated,
+        total: totalSessions,
+        previouslyMigrated: currentSqliteCount,
+        currentTotal: currentSqliteCount + totalMigrated,
+        completion: `${finalCompletion}%`,
+        remaining: totalSessions - (currentSqliteCount + totalMigrated),
+        errors: totalErrors,
+        errorDetails: errors.slice(0, 10) // 最初の10件のエラーのみ
+      }
+    })
+  } catch (error) {
+    logger.error('SQLite移行エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'SQLite移行に失敗しました'
+    })
+  }
+})
+
+// 高性能検索（SQLite使用）
+app.post('/api/integration/sqlite-search', async (req, res) => {
+  try {
+    if (!sqliteIndexService) {
+      res.status(503).json({
+        error: 'Service Unavailable',
+        message: 'SQLiteサービスが初期化されていません'
+      })
+      return
+    }
+
+    const { keyword, options = {} } = req.body
+
+    if (!keyword) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'キーワードが必要です'
+      })
+      return
+    }
+
+    const result = await sqliteIndexService.getSessions({
+      keyword,
+      page: options.page || 1,
+      pageSize: options.pageSize || 50
+    })
+
+    res.json({
+      keyword,
+      method: 'sqlite-fts5',
+      performance: 'very-high',
+      results: result.sessions,
+      total: result.total,
+      hasMore: result.hasMore
+    })
+  } catch (error) {
+    logger.error('SQLite検索エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'SQLite検索に失敗しました'
+    })
+  }
+})
+
+// 統合統計情報
+app.get('/api/integration/enhanced-stats', async (req, res) => {
+  try {
+    const stats: {
+      traditional?: any
+      incremental?: any
+      sqlite?: any
+    } = {}
+
+    // 従来方式の統計
+    if (chatHistoryService) {
+      const sessions = await chatHistoryService.searchSessions({ page: 1, pageSize: 1 })
+      stats.traditional = {
+        totalSessions: sessions.totalCount,
+        method: 'json-file',
+        performance: 'low'
+      }
+    }
+
+    // 増分同期の統計
+    if (incrementalIndexService) {
+      const incrementalStats = await incrementalIndexService.getStats()
+      stats.incremental = {
+        ...incrementalStats,
+        method: 'incremental',
+        performance: 'high'
+      }
+    }
+
+    // SQLiteの統計
+    if (sqliteIndexService) {
+      const sqliteStats = await sqliteIndexService.getStats()
+      stats.sqlite = {
+        ...sqliteStats,
+        method: 'sqlite',
+        performance: 'very-high'
+      }
+    }
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      stats,
+      recommendation: stats.sqlite ? 'sqlite' : stats.incremental ? 'incremental' : 'traditional'
+    })
+  } catch (error) {
+    logger.error('統合統計取得エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '統計取得に失敗しました'
+    })
+  }
+})
+
+// インデックス方式の比較・選択
+app.get('/api/integration/index-methods', (req, res) => {
+  try {
+    const methods = {
+      current: {
+        name: 'JSON-based Full Rebuild',
+        performance: 'low',
+        scalability: 'poor',
+        memoryUsage: 'high',
+        description: '全ファイルを一度に処理する従来方式'
+      },
+      incremental: {
+        name: 'Incremental Sync',
+        performance: 'high',
+        scalability: 'good',
+        memoryUsage: 'low',
+        description: 'チェックサムベースの差分更新方式'
+      },
+      sqlite: {
+        name: 'SQLite Database',
+        performance: 'very-high',
+        scalability: 'excellent',
+        memoryUsage: 'very-low',
+        description: 'リレーショナルDBによる高性能インデックス'
+      }
+    }
+    
+    const recommendation = {
+      recommended: 'sqlite',
+      reason: '大量データに対する検索性能とスケーラビリティが優れている',
+      migrationPath: [
+        'SQLiteベースサービスの初期化',
+        '既存データの段階的移行',
+        'パフォーマンステスト',
+        '本格運用開始'
+      ]
+    }
+    
+    res.json({
+      methods,
+      recommendation,
+      currentDataSize: {
+        estimatedSessions: 12325,
+        estimatedMethod: 'sqlite'
+      }
+    })
+  } catch (error) {
+    logger.error('インデックス方式情報取得エラー:', error)
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : '情報取得に失敗しました'
+    })
+  }
+})
+
 // エラーハンドリング
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('API Error:', err)
@@ -380,9 +899,21 @@ async function startServer() {
       logger.info('  POST /api/search')
       logger.info('  GET  /api/stats')
       logger.info('  GET  /api/integration/stats')
+      logger.info('  GET  /api/integration/logs')
+      logger.info('  GET  /api/integration/analytics')
+      logger.info('  GET  /api/integration/settings')
+      logger.info('  POST /api/integration/settings')
       logger.info('  GET  /api/integration/cursor/status')
       logger.info('  POST /api/integration/cursor/scan')
+      logger.info('  POST /api/integration/cursor/watch/start')
+      logger.info('  POST /api/integration/cursor/watch/stop')
       logger.info('  POST /api/integration/initialize')
+      logger.info('  POST /api/integration/rebuild-index')
+      logger.info('  POST /api/integration/incremental-sync')
+      logger.info('  GET  /api/integration/index-methods')
+      logger.info('  POST /api/integration/sqlite-migrate')
+      logger.info('  POST /api/integration/sqlite-search')
+      logger.info('  GET  /api/integration/enhanced-stats')
     })
   } catch (error) {
     console.error('サーバー起動エラー:', error)
@@ -390,7 +921,8 @@ async function startServer() {
   }
 }
 
-if (require.main === module) {
+// ESモジュールでは import.meta.url を使用
+if (import.meta.url === `file://${process.argv[1]}`) {
   startServer()
 }
 

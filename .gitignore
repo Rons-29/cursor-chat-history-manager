@@ -94,3 +94,15 @@ web/dist/
 
 # Security tools (内部開発用)
 scripts/security-check.sh 
+
+# Personal development notes (個人メモ・作業ログ)
+**/TODO.md
+**/todo.md
+**/*-status.md
+**/*-progress.md
+**/*-notes.md
+**/INTEGRATION_STATUS.md
+**/webui-implementation-status.md
+docs/personal/
+notes/
+.notes/

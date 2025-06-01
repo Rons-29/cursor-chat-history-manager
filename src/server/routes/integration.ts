@@ -13,7 +13,7 @@ import type {
 } from '../types/integration.js'
 
 // 型安全なルートハンドラー
-type AsyncRequestHandler = (req: Request, res: Response) => Promise<Response | void>
+type AsyncRequestHandler = (req: Request, res: Response) => Promise<void>
 
 const router = Router()
 
@@ -36,10 +36,10 @@ const asyncHandler = (fn: AsyncRequestHandler): RequestHandler =>
 /**
  * 統合検索エンドポイント
  */
-router.get('/search', asyncHandler(async (req: Request, res: Response) => {
+router.get('/search', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
@@ -60,7 +60,7 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
       }
     }
 
-    const results = await integrationService.search(options)
+    const results = await integrationService!.search(options)
     
     res.json({
       results,
@@ -79,16 +79,16 @@ router.get('/search', asyncHandler(async (req: Request, res: Response) => {
 /**
  * 統計情報取得エンドポイント
  */
-router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
+router.get('/stats', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
     }
 
-    const stats = await integrationService.getStats()
+    const stats = await integrationService!.getStats()
     
     res.json({
       ...stats,
@@ -106,10 +106,10 @@ router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
 /**
  * 分析データ取得エンドポイント
  */
-router.get('/analytics', asyncHandler(async (req: Request, res: Response) => {
+router.get('/analytics', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
@@ -124,7 +124,7 @@ router.get('/analytics', asyncHandler(async (req: Request, res: Response) => {
       metrics: req.query.metrics ? (req.query.metrics as string).split(',') : ['messageCount', 'sessionCount']
     }
 
-    const analytics = await integrationService.getAnalytics(request)
+    const analytics = await integrationService!.getAnalytics(request)
     
     res.json(analytics)
   } catch (error) {
@@ -139,16 +139,16 @@ router.get('/analytics', asyncHandler(async (req: Request, res: Response) => {
 /**
  * 同期開始エンドポイント
  */
-router.post('/sync/start', asyncHandler(async (req: Request, res: Response) => {
+router.post('/sync/start', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
     }
 
-    await integrationService.startSync()
+    await integrationService!.startSync()
     
     res.json({
       message: '同期を開始しました',
@@ -167,16 +167,16 @@ router.post('/sync/start', asyncHandler(async (req: Request, res: Response) => {
 /**
  * 同期停止エンドポイント
  */
-router.post('/sync/stop', asyncHandler(async (req: Request, res: Response) => {
+router.post('/sync/stop', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
     }
 
-    await integrationService.stopSync()
+    await integrationService!.stopSync()
     
     res.json({
       message: '同期を停止しました',
@@ -195,16 +195,16 @@ router.post('/sync/stop', asyncHandler(async (req: Request, res: Response) => {
 /**
  * 同期ステータス取得エンドポイント
  */
-router.get('/sync/status', asyncHandler(async (req: Request, res: Response) => {
+router.get('/sync/status', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
     }
 
-    const status = integrationService.getCursorWatcherStatus()
+    const status = integrationService!.getCursorWatcherStatus()
     
     res.json({
       ...status,
@@ -222,17 +222,17 @@ router.get('/sync/status', asyncHandler(async (req: Request, res: Response) => {
 /**
  * Cursorログスキャンエンドポイント
  */
-router.post('/scan', asyncHandler(async (req: Request, res: Response) => {
+router.post('/scan', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
     }
 
     const { path: customPath } = req.body
-    const importCount = await integrationService.scanCursorLogs(customPath)
+    const importCount = await integrationService!.scanCursorLogs(customPath)
     
     res.json({
       message: 'スキャンが完了しました',
@@ -252,10 +252,10 @@ router.post('/scan', asyncHandler(async (req: Request, res: Response) => {
 /**
  * リアルタイムイベント（WebSocket準備）
  */
-router.get('/events', asyncHandler(async (req: Request, res: Response) => {
+router.get('/events', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     if (!integrationService) {
-      return res.status(503).json({ 
+      res.status(503).json({ 
         error: 'Integration service not available',
         message: 'サービスが初期化されていません'
       })
@@ -276,31 +276,31 @@ router.get('/events', asyncHandler(async (req: Request, res: Response) => {
     }
 
     // 統合サービスのイベントをリッスン
-    integrationService.on('syncStarted', (data) => {
+    integrationService!.on('syncStarted', (data) => {
       sendEvent('syncStarted', data)
     })
 
-    integrationService.on('syncStopped', () => {
+    integrationService!.on('syncStopped', () => {
       sendEvent('syncStopped', {})
     })
 
-    integrationService.on('syncCompleted', (data) => {
+    integrationService!.on('syncCompleted', (data) => {
       sendEvent('syncCompleted', data)
     })
 
-    integrationService.on('logIntegrated', (data) => {
+    integrationService!.on('logIntegrated', (data) => {
       sendEvent('logIntegrated', data)
     })
 
-    integrationService.on('fileProcessed', (data) => {
+    integrationService!.on('fileProcessed', (data) => {
       sendEvent('fileProcessed', data)
     })
 
-    integrationService.on('scanCompleted', (data) => {
+    integrationService!.on('scanCompleted', (data) => {
       sendEvent('scanCompleted', data)
     })
 
-    integrationService.on('syncError', (error) => {
+    integrationService!.on('syncError', (error) => {
       sendEvent('syncError', { 
         message: error instanceof Error ? error.message : String(error) 
       })
@@ -335,7 +335,7 @@ router.get('/events', asyncHandler(async (req: Request, res: Response) => {
 /**
  * ヘルスチェックエンドポイント
  */
-router.get('/health', asyncHandler(async (req: Request, res: Response) => {
+router.get('/health', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     const isServiceAvailable = integrationService !== null
     const status = isServiceAvailable ? integrationService?.getCursorWatcherStatus() : null

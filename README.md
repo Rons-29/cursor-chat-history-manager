@@ -1,5 +1,5 @@
-# Chat History Manager 💬
-
+# Chat History Manager［改修中］ 💬
+※今動かない可能性あり
 Cursorエディタのチャット履歴を管理・検索・分析するための包括的なツール
 
 ## ⚠️ **重要なセキュリティ注意事項**

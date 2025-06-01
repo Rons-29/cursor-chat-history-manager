@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
-import request, { Response } from 'supertest'
+import request from 'supertest'
+import type { Response } from 'supertest'
 import app from '../../server/app.js'
 import { ChatHistoryService } from '../../services/ChatHistoryService.js'
 import { CursorLogService } from '../../services/CursorLogService.js'
@@ -60,8 +61,7 @@ describe('/api/integration', () => {
   describe('GET /api/integration/search', () => {
     it('should search integrated logs', async () => {
       const response: Response = await request(app)
-        .get('/api/integration/search')
-        .query({ q: 'test', types: 'chat,cursor' })
+        .get('/api/integration/search?q=test&types=chat,cursor')
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('results')
@@ -71,12 +71,7 @@ describe('/api/integration', () => {
 
     it('should handle search with time range', async () => {
       const response: Response = await request(app)
-        .get('/api/integration/search')
-        .query({ 
-          q: 'test',
-          startDate: '2024-01-01',
-          endDate: '2024-12-31'
-        })
+        .get('/api/integration/search?q=test&startDate=2024-01-01&endDate=2024-12-31')
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('results')
@@ -151,11 +146,7 @@ describe('/api/integration', () => {
 
     it('should return analytics data', async () => {
       const response: Response = await request(app)
-        .get('/api/integration/analytics')
-        .query({
-          startDate: '2024-01-01',
-          endDate: '2024-12-31'
-        })
+        .get('/api/integration/analytics?startDate=2024-01-01&endDate=2024-12-31')
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('summary')
@@ -164,13 +155,7 @@ describe('/api/integration', () => {
 
     it('期間を指定した分析データを取得できること', async () => {
       const response: Response = await request(app)
-        .get('/api/integration/analytics')
-        .query({
-          startDate: '2024-01-01',
-          endDate: '2024-01-31',
-          granularity: 'daily',
-          types: 'chat'
-        })
+        .get('/api/integration/analytics?startDate=2024-01-01&endDate=2024-01-31&granularity=daily&types=chat')
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('summary')

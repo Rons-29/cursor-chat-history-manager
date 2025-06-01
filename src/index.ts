@@ -877,11 +877,14 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(config.cursor || { 
-          enabled: false, 
-          autoImport: false, 
-          watchPath: './cursor-data',
-          logDir: './logs/cursor'
+        new CursorLogService({
+          enabled: config.cursor?.enabled ?? false, 
+          autoImport: config.cursor?.autoImport ?? false, 
+          watchPath: config.cursor?.watchPath ?? './cursor-data',
+          logDir: config.cursor?.logDir ?? './logs/cursor',
+          syncInterval: config.cursor?.syncInterval ?? 300,
+          batchSize: config.cursor?.batchSize ?? 100,
+          retryAttempts: config.cursor?.retryAttempts ?? 3
         }, logger),
         logger
       )
@@ -915,11 +918,14 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(config.cursor || { 
-          enabled: false, 
-          autoImport: false, 
-          watchPath: './cursor-data',
-          logDir: './logs/cursor'
+        new CursorLogService({
+          enabled: config.cursor?.enabled ?? false, 
+          autoImport: config.cursor?.autoImport ?? false, 
+          watchPath: config.cursor?.watchPath ?? './cursor-data',
+          logDir: config.cursor?.logDir ?? './logs/cursor',
+          syncInterval: config.cursor?.syncInterval ?? 300,
+          batchSize: config.cursor?.batchSize ?? 100,
+          retryAttempts: config.cursor?.retryAttempts ?? 3
         }, logger),
         logger
       )
@@ -948,11 +954,14 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(config.cursor || { 
-          enabled: false, 
-          autoImport: false, 
-          watchPath: './cursor-data',
-          logDir: './logs/cursor'
+        new CursorLogService({
+          enabled: config.cursor?.enabled ?? false, 
+          autoImport: config.cursor?.autoImport ?? false, 
+          watchPath: config.cursor?.watchPath ?? './cursor-data',
+          logDir: config.cursor?.logDir ?? './logs/cursor',
+          syncInterval: config.cursor?.syncInterval ?? 300,
+          batchSize: config.cursor?.batchSize ?? 100,
+          retryAttempts: config.cursor?.retryAttempts ?? 3
         }, logger),
         logger
       )

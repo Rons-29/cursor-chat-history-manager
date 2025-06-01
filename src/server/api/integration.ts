@@ -2,8 +2,8 @@ import express from 'express'
 import { IntegrationService } from '../../services/IntegrationService.js'
 import type { IntegrationConfig } from '../../types/integration.js'
 import { IntegrationSearchRequestSchema, IntegrationAnalyticsRequestSchema } from '../../types/integration.js'
-import { ZodError } from 'zod'
-import { Logger } from '../../utils/Logger.js'
+
+import { Logger } from '../utils/Logger.js'
 // import { z } from 'zod' // バリデーション用（後で追加）
 
 const router = express.Router()
@@ -14,12 +14,21 @@ const config: IntegrationConfig = {
   cursor: {
     enabled: true,
     watchPath: process.env.CURSOR_LOG_PATH || '~/.cursor/logs',
-    autoImport: true
+    logDir: process.env.CURSOR_LOG_DIR || './logs/cursor',
+    autoImport: true,
+    syncInterval: 300,
+    batchSize: 100,
+    retryAttempts: 3
   },
   chatHistory: {
     storagePath: process.env.CHAT_HISTORY_PATH || '~/.chat-history',
-    storageType: 'file',
-    maxSessions: 1000
+    maxSessions: 1000,
+    maxMessagesPerSession: 500,
+    autoCleanup: true,
+    cleanupDays: 30,
+    enableSearch: true,
+    enableBackup: false,
+    backupInterval: 24
   },
   sync: {
     interval: 300,
@@ -27,7 +36,7 @@ const config: IntegrationConfig = {
     retryAttempts: 3
   }
 }
-const integrationService = new IntegrationService(config)
+const integrationService = new IntegrationService(config, logger)
 
 // POST /api/integration/search
 router.post('/search', async (req, res) => {
@@ -46,12 +55,11 @@ router.post('/search', async (req, res) => {
     const results = await integrationService.search(options)
     res.json({ results })
   } catch (error) {
-    if (error instanceof ZodError) {
-      res.status(400).json({ error: 'Validation error', details: error.errors })
-    } else {
-      logger.error('Search error:', error)
-      res.status(500).json({ error: 'Internal server error' })
-    }
+    logger.error('Search error:', error)
+    res.status(500).json({ 
+      error: 'Search failed',
+      message: error instanceof Error ? error.message : 'Internal server error'
+    })
   }
 })
 
@@ -62,12 +70,11 @@ router.get('/analytics', async (req, res) => {
     const results = await integrationService.getAnalytics(validatedData)
     res.json(results)
   } catch (error) {
-    if (error instanceof ZodError) {
-      res.status(400).json({ error: 'Validation error', details: error.errors })
-    } else {
-      logger.error('Analytics error:', error)
-      res.status(500).json({ error: 'Internal server error' })
-    }
+    logger.error('Analytics error:', error)
+    res.status(500).json({ 
+      error: 'Analytics failed',
+      message: error instanceof Error ? error.message : 'Internal server error'
+    })
   }
 })
 

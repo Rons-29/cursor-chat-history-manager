@@ -5,7 +5,6 @@ import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { IntegrationService } from '../services/IntegrationService.js'
 import { CursorLogService } from '../services/CursorLogService.js'
 import { ConfigService } from '../services/ConfigService.js'
-import { Logger } from '../utils/Logger.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -19,11 +18,10 @@ let chatHistoryService: ChatHistoryService
 let integrationService: IntegrationService
 let cursorLogService: CursorLogService
 let configService: ConfigService
-let logger: Logger
 
 async function initializeServices() {
   try {
-    logger = new Logger('RealAPIServer')
+    console.log('RealAPIServer: サービス初期化を開始します')
     
     // 設定サービス初期化
     configService = new ConfigService()

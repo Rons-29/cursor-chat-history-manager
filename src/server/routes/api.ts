@@ -7,7 +7,7 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { apiDataService } from '../api-router.js'
 import { ChatHistoryService } from '../../services/ChatHistoryService.js'
-import { Logger } from '../../utils/Logger.js'
+import { Logger } from '../utils/Logger.js'
 
 const router = Router()
 const logger = new Logger({ logPath: './logs', level: 'info' })

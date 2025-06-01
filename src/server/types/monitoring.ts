@@ -1,4 +1,8 @@
 // 監視システムの型定義
+
+// レポート期間型
+export type ReportPeriod = 'hourly' | 'daily' | 'weekly' | 'monthly'
+
 export interface Metric {
   id: string
   name: string

@@ -7,7 +7,7 @@
 
 import type { Request, Response, NextFunction } from 'express'
 import { apiDataService } from '../api-router.js'
-import { Logger } from '../../utils/Logger.js'
+import { Logger } from '../utils/Logger.js'
 
 const logger = new Logger({ logPath: './logs', level: 'info' })
 

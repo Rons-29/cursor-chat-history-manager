@@ -169,4 +169,9 @@ export const queryKeys = {
   stats: () => ['stats'] as const,
   search: (keyword: string, filters?: any) =>
     ['search', keyword, filters] as const,
+  // 統合機能関連のクエリキー
+  integrationStats: () => ['integration', 'stats'] as const,
+  integrationLogs: (params?: any) => ['integration', 'logs', params] as const,
+  integrationSettings: () => ['integration', 'settings'] as const,
+  cursorStatus: () => ['integration', 'cursor', 'status'] as const,
 }

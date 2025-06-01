@@ -16,6 +16,34 @@ export interface IntegrationStats {
   error?: string
 }
 
+// Enhanced統計情報の型定義（実際のAPIレスポンス）
+export interface EnhancedStats {
+  timestamp: string
+  stats: {
+    traditional: {
+      totalSessions: number
+      method: string
+      performance: string
+    }
+    incremental: {
+      totalSessions: number
+      queueSize: number
+      processing: boolean
+      method: string
+      performance: string
+    }
+    sqlite: {
+      totalSessions: number
+      totalMessages: number
+      topTags: Array<{ name: string; count: number }>
+      recentActivity: Array<{ date: string; sessionCount: number }>
+      method: string
+      performance: string
+    }
+  }
+  recommendation: string
+}
+
 // Cursorステータスの型定義
 export interface CursorStatus {
   isWatching: boolean
@@ -51,11 +79,158 @@ export interface ApiError {
 }
 
 /**
+ * APIサーバーの接続状態
+ */
+export interface ApiConnectionStatus {
+  isConnected: boolean
+  serverUrl: string
+  lastChecked: Date
+  error?: string
+}
+
+/**
+ * APIサーバーの接続チェック
+ */
+export const checkApiConnection = async (): Promise<ApiConnectionStatus> => {
+  const serverUrl = window.location.origin
+  const lastChecked = new Date()
+  
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000) // 5秒タイムアウト
+    
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      signal: controller.signal
+    })
+    
+    clearTimeout(timeoutId)
+    
+    if (response.ok) {
+      return {
+        isConnected: true,
+        serverUrl,
+        lastChecked
+      }
+    } else {
+      return {
+        isConnected: false,
+        serverUrl,
+        lastChecked,
+        error: `サーバーエラー: ${response.status} ${response.statusText}`
+      }
+    }
+  } catch (error) {
+    let errorMessage = 'APIサーバーに接続できません'
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'APIサーバーへの接続がタイムアウトしました（5秒）'
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'APIサーバーが起動していません'
+      } else {
+        errorMessage = `接続エラー: ${error.message}`
+      }
+    }
+    
+    return {
+      isConnected: false,
+      serverUrl,
+      lastChecked,
+      error: errorMessage
+    }
+  }
+}
+
+/**
+ * APIサーバー接続チェック付きのfetch関数
+ */
+const fetchWithConnectionCheck = async (
+  url: string, 
+  options: RequestInit = {}
+): Promise<Response> => {
+  // まず接続チェック
+  const connectionStatus = await checkApiConnection()
+  
+  if (!connectionStatus.isConnected) {
+    throw new Error(connectionStatus.error || 'APIサーバーに接続できません')
+  }
+  
+  // 通常のfetch実行
+  const response = await fetch(url, options)
+  return response
+}
+
+/**
  * 統計情報を取得
  */
 export const getIntegrationStats = async (): Promise<IntegrationStats> => {
+  console.log('🔍 統計情報を取得中...')
+  
   try {
-    const response = await fetch('/api/integration/stats', {
+    const response = await fetch('/api/integration/enhanced-stats', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    console.log('📊 統計情報APIレスポンス:', response.status, response.statusText)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ 統計情報API エラー:', errorText)
+      throw new Error(`統計情報の取得に失敗しました: ${response.status} ${response.statusText}`)
+    }
+
+    const enhancedStats: EnhancedStats = await response.json()
+    console.log('✅ Enhanced統計情報取得成功:', enhancedStats)
+    
+    // Enhanced統計情報を従来の形式に変換
+    const convertedStats = {
+      totalSessions: enhancedStats.stats.sqlite.totalSessions || enhancedStats.stats.traditional.totalSessions,
+      totalMessages: enhancedStats.stats.sqlite.totalMessages || 0,
+      cursorSessions: enhancedStats.stats.sqlite.totalSessions || 0,
+      cursorMessages: enhancedStats.stats.sqlite.totalMessages || 0,
+      regularSessions: enhancedStats.stats.traditional.totalSessions || 0,
+      regularMessages: 0,
+      lastSync: enhancedStats.timestamp,
+      isWatching: enhancedStats.stats.incremental.processing,
+      error: undefined
+    }
+    
+    console.log('🔄 変換後の統計情報:', convertedStats)
+    return convertedStats
+  } catch (error) {
+    console.error('❌ 統計情報取得エラー:', error)
+    
+    // フォールバック: デフォルト値を返す
+    const fallbackStats = {
+      totalSessions: 0,
+      totalMessages: 0,
+      cursorSessions: 0,
+      cursorMessages: 0,
+      regularSessions: 0,
+      regularMessages: 0,
+      lastSync: new Date().toISOString(),
+      isWatching: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+    
+    console.log('🔄 フォールバック統計情報:', fallbackStats)
+    return fallbackStats
+  }
+}
+
+/**
+ * Enhanced統計情報を直接取得
+ */
+export const getEnhancedStats = async (): Promise<EnhancedStats> => {
+  try {
+    const response = await fetch('/api/integration/enhanced-stats', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -64,12 +239,12 @@ export const getIntegrationStats = async (): Promise<IntegrationStats> => {
 
     if (!response.ok) {
       const errorData: ApiError = await response.json()
-      throw new Error(errorData.message || '統計情報の取得に失敗しました')
+      throw new Error(errorData.message || 'Enhanced統計情報の取得に失敗しました')
     }
 
     return await response.json()
   } catch (error) {
-    console.error('統計情報取得エラー:', error)
+    console.error('Enhanced統計情報取得エラー:', error)
     throw error
   }
 }
@@ -126,7 +301,7 @@ export const initializeIntegration = async (config: IntegrationConfig): Promise<
  */
 export const scanCursor = async (): Promise<ScanResult> => {
   try {
-    const response = await fetch('/api/integration/cursor/scan', {
+    const response = await fetchWithConnectionCheck('/api/integration/cursor/scan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -151,7 +326,7 @@ export const scanCursor = async (): Promise<ScanResult> => {
  */
 export const startWatching = async (): Promise<void> => {
   try {
-    const response = await fetch('/api/integration/cursor/watch/start', {
+    const response = await fetchWithConnectionCheck('/api/integration/cursor/watch/start', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -173,7 +348,7 @@ export const startWatching = async (): Promise<void> => {
  */
 export const stopWatching = async (): Promise<void> => {
   try {
-    const response = await fetch('/api/integration/cursor/watch/stop', {
+    const response = await fetchWithConnectionCheck('/api/integration/cursor/watch/stop', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

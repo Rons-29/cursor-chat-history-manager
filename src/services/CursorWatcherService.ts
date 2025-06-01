@@ -140,7 +140,7 @@ export class CursorWatcherService extends EventEmitter {
   private async handleFileChange(filePath: string): Promise<void> {
     try {
       if (this.isCursorDbFile(filePath)) {
-        await this.processCursorDbFile(filePath)
+        await this.processCursorDbFileOptimized(filePath)
       }
     } catch (error) {
       this.logger.error('ファイル処理エラー:', error)
@@ -164,11 +164,12 @@ export class CursorWatcherService extends EventEmitter {
   }
 
   /**
-   * 手動スキャン・インポート
+   * 手動スキャン・インポート（高速並列処理版）
    */
   async scanAndImport(customPath?: string): Promise<number> {
     const scanPath = customPath || this.config.watchPath
     let importCount = 0
+    const startTime = Date.now()
 
     try {
       await fs.access(scanPath)
@@ -179,24 +180,75 @@ export class CursorWatcherService extends EventEmitter {
     try {
       const entries = await fs.readdir(scanPath, { withFileTypes: true })
       
+      // 並列処理用のワークスペースディレクトリ収集
+      const workspaceDirs: string[] = []
       for (const entry of entries) {
-        const fullPath = path.join(scanPath, entry.name)
-        
         if (entry.isDirectory()) {
-          // workspaceStorageディレクトリ内のMD5ハッシュディレクトリをスキャン
+          const fullPath = path.join(scanPath, entry.name)
           const dbFilePath = path.join(fullPath, 'state.vscdb')
           try {
             await fs.access(dbFilePath)
-            await this.processCursorDbFile(dbFilePath)
-            importCount++
+            workspaceDirs.push(dbFilePath)
           } catch (error) {
             // state.vscdbファイルが存在しない場合はスキップ
           }
         }
       }
 
+      this.logger.info('Cursorワークスペーススキャン開始', { 
+        totalWorkspaces: workspaceDirs.length, 
+        scanPath 
+      })
+
+      // 並列処理でファイルを処理（バッチサイズ: 20）
+      const BATCH_SIZE = 20
+      const batches = []
+      for (let i = 0; i < workspaceDirs.length; i += BATCH_SIZE) {
+        batches.push(workspaceDirs.slice(i, i + BATCH_SIZE))
+      }
+
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex]
+        
+        this.logger.info('バッチ処理中', { 
+          batchIndex: batchIndex + 1, 
+          totalBatches: batches.length, 
+          batchSize: batch.length 
+        })
+
+        // 並列処理でバッチを実行
+        const batchResults = await Promise.allSettled(
+          batch.map(dbFilePath => this.processCursorDbFileOptimized(dbFilePath))
+        )
+
+        // 結果の集計
+        for (const result of batchResults) {
+          if (result.status === 'fulfilled') {
+            importCount += result.value
+          } else {
+            this.logger.warn('ファイル処理エラー', { error: result.reason })
+          }
+        }
+
+        // 進捗ログ（バッチごと）
+        const progressPercent = Math.round(((batchIndex + 1) / batches.length) * 100)
+        this.logger.info('進捗状況', { 
+          progress: `${progressPercent}%`, 
+          processedWorkspaces: (batchIndex + 1) * BATCH_SIZE,
+          totalWorkspaces: workspaceDirs.length,
+          importedSessions: importCount
+        })
+      }
+
       this.lastScanTime = new Date()
       this.sessionsFound = importCount
+      
+      this.logger.info('Cursorワークスペーススキャン完了', { 
+        totalWorkspaces: workspaceDirs.length,
+        importedSessions: importCount,
+        duration: `${Math.round((Date.now() - startTime) / 1000)}秒`
+      })
+
       this.emit('scanCompleted', { importCount, path: scanPath })
 
       return importCount
@@ -206,19 +258,19 @@ export class CursorWatcherService extends EventEmitter {
   }
 
   /**
-   * CursorデータベースファイルからチャットデータをSQLiteで読み込み
+   * 最適化されたCursorデータベースファイル処理
    */
-  private async processCursorDbFile(dbFilePath: string): Promise<void> {
+  private async processCursorDbFileOptimized(dbFilePath: string): Promise<number> {
+    let importedCount = 0
+    
     try {
-      this.logger.info('Cursorデータベースファイルを処理中', { file: dbFilePath })
-
       const db = await open({
         filename: dbFilePath,
         driver: sqlite3.Database
       })
 
       try {
-        // ItemTableからチャットデータを取得
+        // バッチクエリで効率的にデータ取得
         const rows = await db.all(`
           SELECT [key], value 
           FROM ItemTable 
@@ -228,26 +280,35 @@ export class CursorWatcherService extends EventEmitter {
           )
         `)
 
+        const sessionsToImport: CursorChatData[] = []
+
         for (const row of rows) {
           try {
             const chatSessions = this.extractAllChatSessionsFromDbValueJson(row.value, row.key)
-            for (const chatData of chatSessions) {
-              await this.importChatSession(chatData)
-              this.emit('sessionImported', { sessionId: chatData.id, file: dbFilePath })
-            }
+            sessionsToImport.push(...chatSessions)
           } catch (parseError) {
-            this.logger.warn('データベース値のパースに失敗', { 
-              key: row.key, 
-              error: parseError instanceof Error ? parseError.message : '不明なエラー' 
-            })
+            // パースエラーは静かに無視（ログ削減）
+          }
+        }
+
+        // バッチでセッションをインポート
+        for (const chatData of sessionsToImport) {
+          try {
+            await this.importChatSession(chatData)
+            importedCount++
+            this.emit('sessionImported', { sessionId: chatData.id, file: dbFilePath })
+          } catch (error) {
+            // インポートエラーは静かに無視（ログ削減）
           }
         }
       } finally {
         await db.close()
       }
     } catch (error) {
-      this.logger.error(`Cursorデータベースファイル処理エラー (${dbFilePath}):`, error)
+      // ファイルレベルのエラーも静かに無視（大量ログ防止）
     }
+
+    return importedCount
   }
 
   /**

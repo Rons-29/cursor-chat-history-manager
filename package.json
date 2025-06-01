@@ -6,23 +6,30 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js",
+    "dev": "concurrently \"npm run server:dev\" \"npm run web:dev\"",
+    "dev:all": "concurrently \"npm run server:prod\" \"npm run web:dev\"",
+    "start:all": "concurrently \"npm run server:prod\" \"npm run web:preview\"",
+    "dev:quick": "concurrently \"npm run simple-server\" \"npm run web:dev\"",
+    "server:dev": "tsc --incremental && node dist/server/real-api-server.js",
+    "server:prod": "tsc && node dist/server/real-api-server.js",
+    "cli": "ts-node --esm src/cli.ts",
     "build": "tsc",
-    "server": "tsc && node dist/server/app.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "web:dev": "vite",
-    "web:build": "vite build",
-    "dev:full": "concurrently \"npm run dev\" \"npm run web:dev\"",
+    "web:dev": "cd web && npm run dev",
+    "web:build": "cd web && npm run build",
+    "web:preview": "cd web && npm run preview",
+    "quality": "npm run lint && npm run format && npm run build",
+    "lint": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "test": "jest",
+    "claude-dev:integrate": "ts-node --esm scripts/claude-dev-integration.ts",
+    "claude-dev:analyze": "echo '📊 Claude Dev拡張機能の分析レポートを表示します' && cat docs/CLAUDE_DEV_ANALYSIS.md",
     "integration": "tsc && node dist/cli-integration.js",
     "integration:scan": "npm run integration scan",
     "integration:watch": "npm run integration watch",
     "integration:status": "npm run integration status",
     "integration:config": "npm run integration config",
-    "real-server": "tsc && node dist/server/real-api-server.js",
-    "test:real-integration": "tsc && node dist/scripts/test-real-integration.js",
-    "dev:real": "concurrently \"npm run real-server\" \"npm run web:dev\""
+    "simple-server": "node simple-api-server.cjs",
+    "test:real-integration": "tsc && node dist/scripts/test-real-integration.js"
   },
   "keywords": [
     "cursor",
@@ -116,5 +123,9 @@
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=7.0.0"
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
   }
 }

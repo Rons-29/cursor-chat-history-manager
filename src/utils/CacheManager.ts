@@ -20,6 +20,9 @@ export class CacheManager<T> {
   private stats: {
     hits: number
     misses: number
+    sets: number
+    deletes: number
+    lastStatsLog: number
   }
 
   constructor(config: CacheConfig, logger: Logger) {
@@ -31,7 +34,10 @@ export class CacheManager<T> {
     this.logger = logger
     this.stats = {
       hits: 0,
-      misses: 0
+      misses: 0,
+      sets: 0,
+      deletes: 0,
+      lastStatsLog: Date.now()
     }
   }
 
@@ -41,7 +47,12 @@ export class CacheManager<T> {
   set(key: string, value: T): void {
     try {
       this.cache.set(key, value)
-      this.logger.debug(`キャッシュに値を設定: ${key}`)
+      this.stats.sets++
+      
+      // 1000回の操作ごとにまとめて統計ログを出力
+      if (this.stats.sets % 1000 === 0) {
+        this.logStats()
+      }
     } catch (error) {
       this.logger.error('キャッシュの設定に失敗しました:', error)
       throw error
@@ -56,11 +67,11 @@ export class CacheManager<T> {
       const value = this.cache.get(key)
       if (value === undefined) {
         this.stats.misses++
-        this.logger.debug(`キャッシュミス: ${key}`)
+        // デバッグログ削除: 大量出力の原因
         return undefined
       }
       this.stats.hits++
-      this.logger.debug(`キャッシュヒット: ${key}`)
+      // デバッグログ削除: 大量出力の原因
       return value
     } catch (error) {
       this.logger.error('キャッシュの取得に失敗しました:', error)
@@ -74,7 +85,8 @@ export class CacheManager<T> {
   delete(key: string): void {
     try {
       this.cache.del(key)
-      this.logger.debug(`キャッシュから値を削除: ${key}`)
+      this.stats.deletes++
+      // デバッグログ削除: 大量出力の原因
     } catch (error) {
       this.logger.error('キャッシュの削除に失敗しました:', error)
       throw error
@@ -89,13 +101,38 @@ export class CacheManager<T> {
       this.cache.clear()
       this.stats = {
         hits: 0,
-        misses: 0
+        misses: 0,
+        sets: 0,
+        deletes: 0,
+        lastStatsLog: Date.now()
       }
       this.logger.info('キャッシュをクリアしました')
     } catch (error) {
       this.logger.error('キャッシュのクリアに失敗しました:', error)
       throw error
     }
+  }
+
+  /**
+   * キャッシュの統計情報を出力
+   */
+  private logStats(): void {
+    const now = Date.now()
+    const duration = now - this.stats.lastStatsLog
+    const total = this.stats.hits + this.stats.misses
+    const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(1) : '0.0'
+    
+    this.logger.info('キャッシュ統計情報', {
+      size: this.cache.size,
+      hits: this.stats.hits,
+      misses: this.stats.misses,
+      sets: this.stats.sets,
+      deletes: this.stats.deletes,
+      hitRate: `${hitRate}%`,
+      duration: `${Math.round(duration / 1000)}秒間`
+    })
+    
+    this.stats.lastStatsLog = now
   }
 
   /**
@@ -136,5 +173,12 @@ export class CacheManager<T> {
    */
   maxAge(): number {
     return this.cache.maxAge
+  }
+
+  /**
+   * 強制的に統計情報を出力
+   */
+  forceLogStats(): void {
+    this.logStats()
   }
 } 

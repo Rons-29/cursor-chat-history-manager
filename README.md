@@ -4,11 +4,38 @@ Cursorエディタのチャット履歴を管理・検索・分析するため�
 
 ## ⚠️ **重要なセキュリティ注意事項**
 
-**このツールはチャット履歴を管理しますが、機密情報（APIキー、パスワード、企業秘密等）が含まれる可能性があります。**
+**このツールはチャット履歴を管理しますが、機密情報が含まれる可能性があります。**
 
 - 📋 **共有前に必ず内容を確認してください**
 - 🔒 **詳細なセキュリティガイドライン**: [SECURITY.md](./SECURITY.md)を参照
-- 🛡️ **機密情報の検索**: `node dist/cli.js search --keyword "password"`等で事前確認
+- 🛡️ **機密情報の検索**: 検索機能を使用して事前確認を行ってください
+
+## 🚀 クイックスタート
+
+### 1つのコマンドで全サービス起動
+
+```bash
+# 開発モード（推奨）
+npm run dev:all
+
+# または、シェルスクリプト使用
+./scripts/start-all.sh dev
+```
+
+これで以下のサービスが同時に起動します：
+- 🔵 **APIサーバー**: http://localhost:3001
+- 🟢 **Webダッシュボード**: http://localhost:5173
+- 🟡 **CLI統合サービス**: Cursor監視・データ処理
+
+## 📋 起動方法一覧
+
+| コマンド | 説明 | サービス構成 |
+|---------|------|-------------|
+| `npm run dev:all` | 開発モード（フル機能） | Real API + Web Dev + CLI監視 |
+| `npm run dev:quick` | クイック開発モード | Mock API + Web Dev |
+| `npm run start:all` | 本番モード | Real API + Web Preview |
+
+詳細な起動方法は [起動ガイド](./docs/STARTUP_GUIDE.md) をご覧ください。
 
 ## ✨ 主な機能
 
@@ -85,7 +112,7 @@ node dist/cli.js cursor-start
 node dist/cli.js autosave-start
 ```
 
-### �� WebUI使用方法
+### 📊 WebUI使用方法
 
 ```bash
 # フロントエンド + バックエンドを同時起動
@@ -345,4 +372,36 @@ MIT License - 詳細は[LICENSE](LICENSE)ファイルを参照
 - [SECURITY.md](SECURITY.md) - セキュリティガイドライン
 - [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
 - [PROJECT_RULES.md](PROJECT_RULES.md) - プロジェクト開発ルール
-- [TODO.md](TODO.md) - 開発タスク・改善項目 
+- [TODO.md](TODO.md) - 開発タスク・改善項目
+
+## 🔧 Claude Dev拡張機能との統合
+
+### 📊 概要
+Chat History ManagerはClaude Dev拡張機能と統合することで、**AIの返答を含む完全な会話履歴**を管理できます。
+
+### 🚀 統合機能
+
+#### **Claude Devデータの統合**
+```bash
+# Claude Dev拡張機能のデータをChat History Managerに統合
+npm run claude-dev:integrate
+```
+
+#### **分析レポートの表示**
+```bash
+# Claude Dev拡張機能の詳細分析レポートを表示
+npm run claude-dev:analyze
+```
+
+### 📁 統合されるデータ
+- **完全な会話履歴**: ユーザープロンプト + AIの返答
+- **環境情報**: VSCodeの状態、ファイル情報
+- **ツール使用履歴**: read_file、execute_command等の詳細
+- **タイムスタンプ**: 正確な作業時刻
+
+### 💡 活用方法
+1. **プロンプトエンジニアリング**: 効果的なパターンの分析
+2. **開発履歴管理**: 詳細な作業プロセスの記録
+3. **ナレッジベース**: チーム内でのベストプラクティス共有
+
+詳細は [Claude Dev拡張機能ガイド](docs/CHAT_HISTORY_MANAGER_GUIDE.md) をご覧ください。 

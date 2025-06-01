@@ -1,32 +1,28 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist",
-    "rootDir": "src",
     "declaration": true,
-    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
     "resolveJsonModule": true,
-    "allowJs": true,
-    "checkJs": false,
-    "isolatedModules": true,
-    "noEmit": false,
-    "allowSyntheticDefaultImports": true,
-    "jsx": "react-jsx",
-    "lib": ["ES2020", "DOM"],
-    "types": ["node", "jest"],
-    "baseUrl": ".",
-    "paths": {
-      "*": ["node_modules/*"]
-    },
-    "verbatimModuleSyntax": true,
-    "typeRoots": ["node_modules/@types", "src/types"]
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*", "src/types/lru-cache.d.ts"],
-  "exclude": ["node_modules", "dist", "web"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "web",
+    "**/*.test.ts",
+    "**/__tests__/*",
+    "**/*.tsx",
+    "**/components/*"
+  ]
 } 

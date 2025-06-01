@@ -8,6 +8,7 @@ import Search from './pages/Search.tsx'
 import Settings from './pages/Settings.tsx'
 import Integration from './pages/Integration.tsx'
 import TestIntegration from './pages/TestIntegration.tsx'
+import ProgressDemoPage from './pages/ProgressDemoPage.tsx'
 import NotFound from './pages/NotFound.tsx'
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
         <Route path="/search" element={<Search />} />
         <Route path="/integration" element={<Integration />} />
         <Route path="/test-integration" element={<TestIntegration />} />
+        <Route path="/progress-demo" element={<ProgressDemoPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

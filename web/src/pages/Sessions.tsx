@@ -14,7 +14,7 @@ const Sessions: React.FC = () => {
     'newest'
   )
   const [currentPage, setCurrentPage] = useState(1)
-  const [limit] = useState(10)
+  const [limit, setLimit] = useState(50)
 
   // セッション一覧取得
   const {
@@ -90,8 +90,9 @@ const Sessions: React.FC = () => {
     }
   })
 
-  const totalSessions = sessionsData?.sessions?.length || 0
-  const totalPages = Math.ceil(sortedSessions.length / limit)
+  // APIから返される実際の総数を使用
+  const totalSessions = sessionsData?.pagination?.total || sessionsData?.sessions?.length || 0
+  const totalPages = sessionsData?.pagination?.totalPages || Math.ceil(sortedSessions.length / limit)
   const startIndex = (currentPage - 1) * limit
   const endIndex = startIndex + limit
   const paginatedSessions = sortedSessions.slice(startIndex, endIndex)
@@ -144,7 +145,7 @@ const Sessions: React.FC = () => {
 
       {/* フィルター・検索 */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               キーワード検索
@@ -173,12 +174,23 @@ const Sessions: React.FC = () => {
               <option value="messages">メッセージ数順</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <div className="text-sm text-gray-500">
-              {keyword &&
-                filteredSessions.length !== totalSessions &&
-                `${filteredSessions.length} / ${totalSessions} 件表示`}
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              表示件数
+            </label>
+            <select
+              className="input-field"
+              value={limit}
+              onChange={e => {
+                setLimit(parseInt(e.target.value))
+                setCurrentPage(1) // ページを1にリセット
+              }}
+            >
+              <option value={10}>10件</option>
+              <option value={25}>25件</option>
+              <option value={50}>50件</option>
+              <option value={100}>100件</option>
+            </select>
           </div>
         </div>
       </div>

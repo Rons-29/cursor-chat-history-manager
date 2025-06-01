@@ -57,13 +57,11 @@ class ChatHistoryService {
 
     this.sessionsPath = path.join(this.config.storagePath, 'sessions')
     this.logger = Logger.getInstance(path.join(this.config.storagePath, 'logs'))
-    this.sessionCache = new CacheManager<ChatSession>(
-      this.logger,
-      {
-        maxSize: 1000,
-        ttl: 3600000, // 1時間
-      }
-    )
+    this.sessionCache = new CacheManager<ChatSession>({
+      max: 1000,
+      maxAge: 3600000, // 1時間
+      updateAgeOnGet: true
+    })
     this.indexManager = new IndexManager(
       path.join(this.config.storagePath, 'index.json'),
       this.logger

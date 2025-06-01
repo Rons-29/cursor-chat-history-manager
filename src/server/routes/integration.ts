@@ -3,8 +3,7 @@
  * .mdcルール準拠: Cursor統合機能のAPIエンドポイント
  */
 
-import { Router } from 'express'
-import type { Request, Response } from 'express'
+import { Router, type Request, type Response, type RequestHandler } from 'express'
 import { IntegrationService } from '../services/IntegrationService.js'
 import { Logger } from '../utils/Logger.js'
 import type {
@@ -12,6 +11,9 @@ import type {
   IntegrationAnalyticsRequest,
   IntegrationSearchOptions
 } from '../types/integration.js'
+
+// 型安全なルートハンドラー
+type AsyncRequestHandler = (req: Request, res: Response) => Promise<Response | void>
 
 const router = Router()
 
@@ -27,10 +29,14 @@ export function setupIntegrationRoutes(service: IntegrationService, serviceLogge
   logger = serviceLogger
 }
 
+// 型安全なハンドラーラッパー
+const asyncHandler = (fn: AsyncRequestHandler): RequestHandler => 
+  (req, res, next) => Promise.resolve(fn(req, res)).catch(next)
+
 /**
  * 統合検索エンドポイント
  */
-router.get('/search', async (req: Request, res: Response) => {
+router.get('/search', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -68,12 +74,12 @@ router.get('/search', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * 統計情報取得エンドポイント
  */
-router.get('/stats', async (req: Request, res: Response) => {
+router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -95,12 +101,12 @@ router.get('/stats', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * 分析データ取得エンドポイント
  */
-router.get('/analytics', async (req: Request, res: Response) => {
+router.get('/analytics', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -128,12 +134,12 @@ router.get('/analytics', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * 同期開始エンドポイント
  */
-router.post('/sync/start', async (req: Request, res: Response) => {
+router.post('/sync/start', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -156,12 +162,12 @@ router.post('/sync/start', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * 同期停止エンドポイント
  */
-router.post('/sync/stop', async (req: Request, res: Response) => {
+router.post('/sync/stop', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -184,12 +190,12 @@ router.post('/sync/stop', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * 同期ステータス取得エンドポイント
  */
-router.get('/sync/status', async (req: Request, res: Response) => {
+router.get('/sync/status', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -211,12 +217,12 @@ router.get('/sync/status', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * Cursorログスキャンエンドポイント
  */
-router.post('/scan', async (req: Request, res: Response) => {
+router.post('/scan', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -241,12 +247,12 @@ router.post('/scan', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * リアルタイムイベント（WebSocket準備）
  */
-router.get('/events', async (req: Request, res: Response) => {
+router.get('/events', asyncHandler(async (req: Request, res: Response) => {
   try {
     if (!integrationService) {
       return res.status(503).json({ 
@@ -324,15 +330,15 @@ router.get('/events', async (req: Request, res: Response) => {
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
-})
+}))
 
 /**
  * ヘルスチェックエンドポイント
  */
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', asyncHandler(async (req: Request, res: Response) => {
   try {
     const isServiceAvailable = integrationService !== null
-    const status = isServiceAvailable ? integrationService.getCursorWatcherStatus() : null
+    const status = isServiceAvailable ? integrationService?.getCursorWatcherStatus() : null
     
     res.json({
       status: isServiceAvailable ? 'healthy' : 'unavailable',
@@ -354,6 +360,6 @@ router.get('/health', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     })
   }
-})
+}))
 
 export default router 

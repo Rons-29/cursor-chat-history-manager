@@ -117,13 +117,16 @@ export class AutoSaveService extends EventEmitter {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const sessionTitle = `自動保存セッション ${timestamp}`
 
-    this.currentSession = await this.chatHistoryService.createSession(
-      sessionTitle,
-      {
-        tags: ['auto-save'],
-        source: 'auto-save',
+    this.currentSession = await this.chatHistoryService.createSession({
+      id: `auto-save-${Date.now()}`,
+      title: sessionTitle,
+      messages: [],
+      tags: ['auto-save'],
+      startTime: new Date(),
+      metadata: {
+        source: 'auto-save'
       }
-    )
+    })
 
     this.sessionStartTime = new Date()
     this.lastActivityTime = new Date()

@@ -31,18 +31,36 @@ async function initializeServices() {
     
     // チャット履歴サービス初期化
     chatHistoryService = new ChatHistoryService({
+      storageType: 'file',
       storagePath: path.join(process.cwd(), 'data', 'chat-history'),
       maxSessions: 10000,
-      autoSave: true
+      maxMessagesPerSession: 500,
+      autoCleanup: true,
+      cleanupDays: 30,
+      enableSearch: true,
+      enableBackup: false,
+      backupInterval: 24,
+      autoSave: {
+        enabled: true,
+        interval: 5,
+        watchDirectories: [],
+        filePatterns: ['*.ts', '*.js', '*.tsx', '*.jsx'],
+        maxSessionDuration: 120,
+        idleTimeout: 30
+      }
     })
     await chatHistoryService.initialize()
     
     // Cursorログサービス初期化
     cursorLogService = new CursorLogService({
+      enabled: true,
       watchPath: path.join(process.env.HOME || '', 'Library/Application Support/Cursor/User/workspaceStorage'),
-      outputPath: path.join(process.cwd(), 'data', 'cursor-logs'),
-      autoProcess: true
-    })
+      logDir: path.join(process.cwd(), 'data', 'cursor-logs'),
+      autoImport: true,
+      syncInterval: 300,
+      batchSize: 100,
+      retryAttempts: 3
+    }, logger)
     await cursorLogService.initialize()
     
     // 統合サービス初期化

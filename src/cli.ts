@@ -46,7 +46,13 @@ async function initializeServices(): Promise<void> {
     analyticsService = new AnalyticsService(chatHistoryService)
     const logger = Logger.getInstance('./logs')
     await logger.initialize()
-    exportService = new ExportService(chatHistoryService, configService, logger)
+    const exportConfig = {
+      outputDir: './exports',
+      format: 'json' as const,
+      includeMetadata: true,
+      compression: false
+    }
+    exportService = new ExportService(exportConfig, chatHistoryService, logger)
     autoSaveService = new AutoSaveService(chatHistoryService, configService)
     // cursorWatcherService = new CursorWatcherService(chatHistoryService, configService)
     
@@ -100,6 +106,7 @@ async function main() {
     .action(async (options) => {
       try {
         const message: ChatMessage = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           role: options.role,
           content: options.content,
           timestamp: new Date()

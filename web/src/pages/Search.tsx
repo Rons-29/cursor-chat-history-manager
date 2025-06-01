@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { apiClient, queryKeys } from '../api/client'
+import { apiClient, queryKeys } from '../api/client.js'
 
 interface SearchResult {
   sessionId: string

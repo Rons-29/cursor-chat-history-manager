@@ -73,8 +73,11 @@ async function main() {
       try {
         const tags = options.tags ? options.tags.split(',').map((t: string) => t.trim()) : []
         const session = await chatHistoryService.createSession({
+          id: Date.now().toString(),
           title: options.title || 'New Session',
-          tags
+          messages: [],
+          tags,
+          startTime: new Date()
         })
         console.log(chalk.green(`✅ セッション作成: ${session.id}`))
         console.log(`タイトル: ${session.title}`)
@@ -628,30 +631,16 @@ async function main() {
         console.log(chalk.blue('\n⚙️  現在の設定'))
         console.log(`ストレージパス: ${config.storagePath}`)
         console.log(`最大セッション数: ${config.maxSessions}`)
-        console.log(`セッション当たり最大メッセージ数: ${config.maxMessagesPerSession}`)
-        console.log(`自動クリーンアップ: ${config.autoCleanup ? chalk.green('有効') : chalk.red('無効')}`)
+        console.log(`最大メッセージ数/セッション: ${config.maxMessagesPerSession}`)
+        console.log(`自動クリーンアップ: ${config.autoCleanup ? '有効' : '無効'}`)
+        console.log(`クリーンアップ間隔: ${config.cleanupDays}日`)
       } catch (error) {
         console.error(chalk.red('❌ エラー:'), error)
+        process.exit(1)
       }
     })
 
-  // パース・実行
-  await program.parseAsync()
+  program.parse(process.argv)
 }
 
-// エラーハンドリング
-process.on('uncaughtException', (error) => {
-  console.error(chalk.red('未処理の例外:'), error)
-  process.exit(1)
-})
-
-process.on('unhandledRejection', (reason) => {
-  console.error(chalk.red('未処理のPromise拒否:'), reason)
-  process.exit(1)
-})
-
-// CLI実行
-main().catch((error) => {
-  console.error(chalk.red('CLIエラー:'), error)
-  process.exit(1)
-}) 
+main()

@@ -2,457 +2,494 @@ import { v4 as uuidv4 } from 'uuid'
 import { format, isAfter, isBefore, parseISO } from 'date-fns'
 import fs from 'fs-extra'
 import path from 'path'
-import {
+import type {
   ChatMessage,
   ChatSession,
   ChatHistoryFilter,
   ChatHistorySearchResult,
   ChatHistoryConfig,
   ChatHistoryStats,
+  Message,
+  SessionMetadata,
 } from '../types/index.js'
+import {
+  ChatHistoryError,
+  SessionNotFoundError,
+  StorageError,
+  ValidationError,
+  BackupError,
+  ImportError,
+} from '../errors/ChatHistoryError.js'
+import { Logger } from '../utils/Logger.js'
+import { CacheManager } from '../utils/CacheManager.js'
+import { IndexManager } from '../utils/IndexManager.js'
+import { BatchProcessor } from '../utils/BatchProcessor.js'
+import { ConfigService } from './ConfigService.js'
+import { AnalyticsService } from './AnalyticsService.js'
+import { AutoSaveService } from './AutoSaveService.js'
+import { ExportService } from './ExportService.js'
+import { CursorIntegrationService } from './CursorIntegrationService.js'
+import { CursorLogService } from './CursorLogService.js'
 
-export class ChatHistoryService {
+class ChatHistoryService {
   private config: ChatHistoryConfig
   private sessionsPath: string
-  private indexPath: string
+  private logger: Logger
+  private sessionCache: CacheManager<ChatSession>
+  private indexManager: IndexManager
+  private messageBatchProcessor: BatchProcessor<{
+    sessionId: string
+    message: Omit<ChatMessage, 'id' | 'timestamp'>
+  }>
+  private isInitialized: boolean = false
 
   constructor(config: ChatHistoryConfig) {
     this.config = {
-      maxSessions: 1000,
-      maxMessagesPerSession: 500,
-      autoCleanup: true,
-      cleanupDays: 30,
-      enableSearch: true,
-      enableBackup: false,
-      backupInterval: 24,
       ...config,
+      maxSessions: config.maxSessions ?? 1000,
+      maxMessagesPerSession: config.maxMessagesPerSession ?? 500,
+      autoCleanup: config.autoCleanup ?? true,
+      cleanupDays: config.cleanupDays ?? 30,
+      enableSearch: config.enableSearch ?? true,
+      enableBackup: config.enableBackup ?? false,
+      backupInterval: config.backupInterval ?? 24,
     }
 
     this.sessionsPath = path.join(this.config.storagePath, 'sessions')
-    this.indexPath = path.join(this.config.storagePath, 'index.json')
+    this.logger = new Logger({
+      logPath: path.join(this.config.storagePath, 'logs'),
+      level: 'info'
+    })
+    this.sessionCache = new CacheManager<ChatSession>(
+      this.logger,
+      {
+        maxSize: 1000,
+        ttl: 3600000, // 1時間
+      }
+    )
+    this.indexManager = new IndexManager(
+      path.join(this.config.storagePath, 'index.json'),
+      this.logger
+    )
+    this.messageBatchProcessor = new BatchProcessor(
+      {
+        maxSize: 50,
+        maxWaitTime: 1000,
+        onBatch: async (items) => {
+          for (const { sessionId, message } of items) {
+            await this.addMessageInternal(sessionId, message)
+          }
+        },
+      },
+      this.logger
+    )
   }
 
   async initialize(): Promise<void> {
-    await this.initializeStorage()
-  }
-
-  private async initializeStorage(): Promise<void> {
-    await fs.ensureDir(this.sessionsPath)
-
-    if (!(await fs.pathExists(this.indexPath))) {
-      await this.saveIndex([])
+    if (this.isInitialized) {
+      return
     }
-  }
 
-  private async loadIndex(): Promise<string[]> {
     try {
-      const indexData = await fs.readJson(this.indexPath)
-      return indexData.sessions || []
+      await this.logger.initialize()
+      await fs.ensureDir(this.sessionsPath)
+      await this.indexManager.initialize()
+      this.isInitialized = true
+      await this.logger.info('ChatHistoryServiceを初期化しました', {
+        storagePath: this.config.storagePath,
+      })
     } catch (error) {
-      console.warn('インデックスファイルの読み込みに失敗しました:', error)
-      return []
+      await this.logger.error('初期化に失敗しました', { error })
+      throw new StorageError('初期化', error as Error)
     }
   }
 
-  private async saveIndex(sessionIds: string[]): Promise<void> {
-    const indexData = {
-      sessions: sessionIds,
-      lastUpdated: new Date().toISOString(),
-      version: '1.0.0',
-    }
-    await fs.writeJson(this.indexPath, indexData, { spaces: 2 })
-  }
-
-  private getSessionFilePath(sessionId: string): string {
-    return path.join(this.sessionsPath, `${sessionId}.json`)
-  }
-
-  /**
-   * 新しいチャットセッションを作成
-   */
-  async createSession(
-    titleOrOptions?: string | { 
-      id?: string
-      title?: string
-      tags?: string[]
-      metadata?: ChatSession['metadata']
-    },
-    metadata?: ChatSession['metadata']
-  ): Promise<ChatSession> {
-    let sessionId: string
-    let title: string
-    let tags: string[]
-    let sessionMetadata: ChatSession['metadata'] = {}
-
-    // 引数の処理
-    if (typeof titleOrOptions === 'string') {
-      sessionId = uuidv4()
-      title = titleOrOptions || `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
-      tags = []
-      sessionMetadata = metadata || {}
-    } else if (typeof titleOrOptions === 'object' && titleOrOptions !== null) {
-      sessionId = titleOrOptions.id || uuidv4()
-      title = titleOrOptions.title || `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
-      tags = titleOrOptions.tags || []
-      sessionMetadata = titleOrOptions.metadata || {}
-    } else {
-      sessionId = uuidv4()
-      title = `セッション ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
-      tags = []
-      sessionMetadata = {}
-    }
-
-    const session: ChatSession = {
-      id: sessionId,
-      title,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      startTime: new Date(),
-      tags,
-      messages: [],
-      metadata: {
-        totalMessages: 0,
-        ...sessionMetadata,
-      },
-    }
-
-    await this.saveSession(session)
-
-    const sessionIds = await this.loadIndex()
-    sessionIds.push(session.id)
-    await this.saveIndex(sessionIds)
-
-    return session
-  }
-
-  /**
-   * セッションにメッセージを追加
-   */
-  async addMessage(
+  private async addMessageInternal(
     sessionId: string,
     message: Omit<ChatMessage, 'id' | 'timestamp'>
-  ): Promise<ChatMessage> {
+  ): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     const session = await this.getSession(sessionId)
     if (!session) {
-      throw new Error(`セッション ${sessionId} が見つかりません`)
+      throw new SessionNotFoundError(sessionId)
     }
 
     const newMessage: ChatMessage = {
-      id: uuidv4(),
+      id: this.generateId(),
       timestamp: new Date(),
       ...message,
-      metadata: {
-        sessionId,
-        ...message.metadata,
-      },
     }
 
     session.messages.push(newMessage)
-    session.metadata = {
-      ...session.metadata,
-      totalMessages: session.messages.length,
-    }
-
-    // メッセージ数制限チェック
-    if (
-      this.config.maxMessagesPerSession &&
-      session.messages.length > this.config.maxMessagesPerSession
-    ) {
-      session.messages = session.messages.slice(
-        -this.config.maxMessagesPerSession
-      )
-    }
+    session.updatedAt = new Date()
 
     await this.saveSession(session)
-    return newMessage
+    await this.sessionCache.set(sessionId, session)
   }
 
-  /**
-   * セッションを取得
-   */
+  async addMessage(
+    sessionId: string,
+    message: Omit<ChatMessage, 'id' | 'timestamp'>
+  ): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    await this.messageBatchProcessor.add({ sessionId, message })
+  }
+
   async getSession(sessionId: string): Promise<ChatSession | null> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     try {
-      const sessionPath = this.getSessionFilePath(sessionId)
-      if (!(await fs.pathExists(sessionPath))) {
+      const cachedSession = await this.sessionCache.get(sessionId)
+      if (cachedSession) {
+        return cachedSession
+      }
+
+      const filePath = path.join(this.sessionsPath, `${sessionId}.json`)
+      if (!(await fs.pathExists(filePath))) {
+        await this.logger.debug('セッションが見つかりません', { sessionId })
         return null
       }
 
-      const sessionData = await fs.readJson(sessionPath)
-      // 日付文字列をDateオブジェクトに変換
-      sessionData.createdAt = new Date(sessionData.createdAt)
-      sessionData.updatedAt = new Date(sessionData.updatedAt)
-      sessionData.startTime = new Date(sessionData.startTime)
-      if (sessionData.endTime) {
-        sessionData.endTime = new Date(sessionData.endTime)
+      const data = await fs.readJson(filePath)
+      if (!this.validateSessionData(data)) {
+        throw new ValidationError('Invalid session data format')
       }
-      sessionData.messages.forEach((msg: any) => {
-        msg.timestamp = new Date(msg.timestamp)
+
+      await this.sessionCache.set(sessionId, data)
+      return data
+    } catch (error) {
+      await this.logger.error('セッションの取得に失敗しました', {
+        error,
+        sessionId,
+      })
+      throw new StorageError('セッション取得', error as Error)
+    }
+  }
+
+  private async saveSession(session: ChatSession): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const sessionPath = path.join(this.sessionsPath, `${session.id}.json`)
+      await fs.writeJson(sessionPath, session, { spaces: 2 })
+      await this.sessionCache.set(session.id, session)
+      await this.indexManager.addSession(session.id, {
+        tags: session.tags,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        size: session.messages.length
+      })
+    } catch (error) {
+      await this.logger.error('セッションの保存に失敗しました', {
+        error,
+        sessionId: session.id,
+      })
+      throw new StorageError('セッション保存', error as Error)
+    }
+  }
+
+  async searchSessions(
+    filter: ChatHistoryFilter
+  ): Promise<ChatHistorySearchResult> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const sessionIds = await this.indexManager.getAllSessions()
+      const results: ChatSession[] = []
+
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (!session) continue
+
+        if (filter.keyword) {
+          const keyword = filter.keyword.toLowerCase()
+          if (
+            !session.title.toLowerCase().includes(keyword) &&
+            !session.messages.some((msg) =>
+              msg.content.toLowerCase().includes(keyword)
+            )
+          ) {
+            continue
+          }
+        }
+
+        if (filter.tags && filter.tags.length > 0) {
+          if (!filter.tags.some((tag) => session.tags?.includes(tag))) {
+            continue
+          }
+        }
+
+        if (filter.startDate) {
+          if (!isAfter(session.createdAt, filter.startDate)) {
+            continue
+          }
+        }
+
+        if (filter.endDate) {
+          if (!isBefore(session.createdAt, filter.endDate)) {
+            continue
+          }
+        }
+
+        results.push(session)
+      }
+
+      results.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+
+      const total = results.length
+      const page = filter.page || 1
+      const pageSize = filter.pageSize || 10
+      const totalPages = Math.ceil(total / pageSize)
+      const pagedResults = results.slice((page - 1) * pageSize, page * pageSize)
+
+      await this.logger.debug('セッションを検索しました', {
+        filter,
+        total,
+        page,
+        pageSize,
       })
 
-      return sessionData
+      return {
+        sessions: pagedResults,
+        total,
+        totalCount: total,
+        page,
+        currentPage: page,
+        pageSize,
+        totalPages,
+        hasMore: page < totalPages
+      }
     } catch (error) {
-      console.error(`セッション ${sessionId} の読み込みエラー:`, error)
-      return null
+      await this.logger.error('セッションの検索に失敗しました', {
+        error,
+        filter,
+      })
+      throw new StorageError('セッション検索', error as Error)
     }
   }
 
-  /**
-   * セッションを保存
-   */
-  private async saveSession(session: ChatSession): Promise<void> {
-    const sessionPath = this.getSessionFilePath(session.id)
-    await fs.writeJson(sessionPath, session, { spaces: 2 })
-  }
-
-  /**
-   * セッションを検索
-   */
-  async searchSessions(
-    filter: ChatHistoryFilter = {}
-  ): Promise<ChatHistorySearchResult> {
-    const sessionIds = await this.loadIndex()
-    const limit = filter.limit || 20
-    const offset = filter.offset || 0
-
-    const filteredSessions = []
-
-    for (const sessionId of sessionIds) {
-      const session = await this.getSession(sessionId)
-      if (!session) continue
-
-      if (this.matchesFilter(session, filter)) {
-        filteredSessions.push(session)
-      }
-    }
-
-    // 日付でソート（新しい順）
-    filteredSessions.sort(
-      (a, b) => b.startTime.getTime() - a.startTime.getTime()
-    )
-
-    const totalCount = filteredSessions.length
-    const paginatedSessions = filteredSessions.slice(offset, offset + limit)
-
-    return {
-      sessions: paginatedSessions,
-      totalCount,
-      hasMore: offset + limit < totalCount,
-      currentPage: Math.floor(offset / limit) + 1,
-      totalPages: Math.ceil(totalCount / limit),
-    }
-  }
-
-  private matchesFilter(
-    session: ChatSession,
-    filter: ChatHistoryFilter
-  ): boolean {
-    // セッションIDフィルター
-    if (filter.sessionId && session.id !== filter.sessionId) {
-      return false
-    }
-
-    // プロジェクトIDフィルター
-    if (filter.projectId && session.metadata?.projectId !== filter.projectId) {
-      return false
-    }
-
-    // ユーザーIDフィルター
-    if (filter.userId && session.metadata?.userId !== filter.userId) {
-      return false
-    }
-
-    // 日付範囲フィルター
-    if (filter.startDate && isBefore(session.startTime, filter.startDate)) {
-      return false
-    }
-    if (filter.endDate && isAfter(session.startTime, filter.endDate)) {
-      return false
-    }
-
-    // タグフィルター
-    if (filter.tags && filter.tags.length > 0) {
-      const sessionTags = session.tags || []
-      if (!filter.tags.some(tag => sessionTags.includes(tag))) {
-        return false
-      }
-    }
-
-    // キーワード検索
-    if (filter.keyword) {
-      const keyword = filter.keyword.toLowerCase()
-      // タイトルの型安全チェック
-      const title = typeof session.title === 'string' ? session.title : (session.title as any)?.title || ''
-      const titleMatch = title.toLowerCase().includes(keyword)
-      const messageMatch = session.messages.some(msg =>
-        msg.content.toLowerCase().includes(keyword)
-      )
-      if (!titleMatch && !messageMatch) {
-        return false
-      }
-    }
-
-    // ロールフィルター
-    if (filter.role) {
-      const hasRole = session.messages.some(msg => msg.role === filter.role)
-      if (!hasRole) {
-        return false
-      }
-    }
-
-    return true
-  }
-
-  /**
-   * セッションを削除
-   */
-  async deleteSession(sessionId: string): Promise<boolean> {
-    try {
-      const sessionPath = this.getSessionFilePath(sessionId)
-      if (await fs.pathExists(sessionPath)) {
-        await fs.remove(sessionPath)
-      }
-
-      const sessionIds = await this.loadIndex()
-      const updatedIds = sessionIds.filter(id => id !== sessionId)
-      await this.saveIndex(updatedIds)
-
-      return true
-    } catch (error) {
-      console.error(`セッション ${sessionId} の削除エラー:`, error)
-      return false
-    }
-  }
-
-  /**
-   * セッションを更新
-   */
-  async updateSession(
-    sessionId: string,
-    updates: Partial<ChatSession>
-  ): Promise<ChatSession | null> {
-    const session = await this.getSession(sessionId)
-    if (!session) {
-      return null
-    }
-
-    const updatedSession = {
-      ...session,
-      ...updates,
-      id: session.id, // IDは変更不可
-      messages: updates.messages || session.messages,
-    }
-
-    await this.saveSession(updatedSession)
-    return updatedSession
-  }
-
-  /**
-   * 統計情報を取得
-   */
   async getStats(): Promise<ChatHistoryStats> {
-    const sessionIds = await this.loadIndex()
-    let totalMessages = 0
-    let thisMonthMessages = 0
-    let oldestSession: Date | undefined
-    let newestSession: Date | undefined
-    const activeProjects = new Set<number>()
-
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-
-    for (const sessionId of sessionIds) {
-      const session = await this.getSession(sessionId)
-      if (!session) continue
-
-      totalMessages += session.messages.length
-
-      // 今月のメッセージ数を計算
-      if (session.startTime >= monthStart) {
-        thisMonthMessages += session.messages.length
-      }
-
-      // プロジェクトIDを記録
-      if (session.metadata?.projectId) {
-        activeProjects.add(session.metadata.projectId)
-      }
-
-      if (!oldestSession || session.startTime < oldestSession) {
-        oldestSession = session.startTime
-      }
-      if (!newestSession || session.startTime > newestSession) {
-        newestSession = session.startTime
-      }
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
     }
 
-    // ストレージサイズを計算（文字列として）
-    let storageSizeString = '0 B'
     try {
-      const storageSize = await this.calculateDirectorySize(this.config.storagePath)
-      const sizeInMB = storageSize / 1024 / 1024
-      storageSizeString = `${sizeInMB.toFixed(2)} MB`
-    } catch (error) {
-      console.warn('ストレージサイズの計算に失敗しました:', error)
-    }
+      const sessionCount = await this.indexManager.getSessionCount()
+      const sessions = await Promise.all(
+        (await this.indexManager.getAllSessions()).map((id) =>
+          this.getSession(id)
+        )
+      )
 
-    return {
-      totalSessions: sessionIds.length,
-      totalMessages,
-      thisMonthMessages,
-      activeProjects: activeProjects.size,
-      storageSize: storageSizeString,
-      lastActivity: newestSession,
-      averageMessagesPerSession: sessionIds.length > 0 ? totalMessages / sessionIds.length : 0,
-      oldestSession,
-      newestSession,
+      const totalMessages = sessions.reduce(
+        (sum, session) => sum + (session?.messages.length || 0),
+        0
+      )
+      const totalSize = await this.calculateDirectorySize(this.sessionsPath)
+
+      const tags = new Map<string, number>()
+      sessions.forEach((session) => {
+        if (session) {
+          session.tags?.forEach((tag) => {
+            tags.set(tag, (tags.get(tag) || 0) + 1)
+          })
+        }
+      })
+
+      const tagDistribution = Object.fromEntries(tags)
+
+      const stats: ChatHistoryStats = {
+        totalSessions: sessionCount,
+        totalMessages,
+        totalSize,
+        storageSize: totalSize,
+        thisMonthMessages: 0,
+        activeProjects: 0,
+        averageMessagesPerSession:
+          sessionCount > 0 ? totalMessages / sessionCount : 0,
+        tagDistribution,
+        lastUpdated: new Date(),
+        lastActivity: sessions.length > 0 ? (sessions[sessions.length - 1]?.updatedAt || null) : null,
+        oldestSession: sessions.length > 0 ? (sessions[0]?.createdAt || null) : null,
+        newestSession: sessions.length > 0 ? (sessions[sessions.length - 1]?.createdAt || null) : null,
+      }
+
+      await this.logger.debug('統計情報を取得しました', { ...stats })
+
+      return stats
+    } catch (error) {
+      await this.logger.error('統計情報の取得に失敗しました', { error })
+      throw new StorageError('統計情報取得', error as Error)
     }
   }
 
   private async calculateDirectorySize(dirPath: string): Promise<number> {
-    let size = 0
-    const items = await fs.readdir(dirPath)
-
-    for (const item of items) {
-      const itemPath = path.join(dirPath, item)
-      const stats = await fs.stat(itemPath)
-
-      if (stats.isDirectory()) {
-        size += await this.calculateDirectorySize(itemPath)
-      } else {
-        size += stats.size
-      }
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
     }
 
-    return size
+    try {
+      let size = 0
+      const items = await fs.readdir(dirPath)
+
+      for (const item of items) {
+        const itemPath = path.join(dirPath, item)
+        const stats = await fs.stat(itemPath)
+
+        if (stats.isDirectory()) {
+          size += await this.calculateDirectorySize(itemPath)
+        } else {
+          size += stats.size
+        }
+      }
+
+      return size
+    } catch (error) {
+      await this.logger.error('ディレクトリサイズの計算に失敗しました', {
+        error,
+        dirPath,
+      })
+      throw new StorageError('ディレクトリサイズ計算', error as Error)
+    }
   }
 
-  /**
-   * 古いセッションをクリーンアップ
-   */
   async cleanup(): Promise<number> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     if (!this.config.autoCleanup || !this.config.cleanupDays) {
       return 0
     }
 
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - this.config.cleanupDays)
+    try {
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - this.config.cleanupDays)
 
-    const sessionIds = await this.loadIndex()
-    let deletedCount = 0
+      const sessionIds = await this.indexManager.getAllSessions()
+      let deletedCount = 0
 
-    for (const sessionId of sessionIds) {
-      const session = await this.getSession(sessionId)
-      if (session && session.startTime < cutoffDate) {
-        await this.deleteSession(sessionId)
-        deletedCount++
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (session && session.createdAt < cutoffDate) {
+          await this.deleteSession(sessionId)
+          deletedCount++
+        }
       }
-    }
 
-    return deletedCount
+      await this.logger.info('クリーンアップを実行しました', {
+        deletedCount,
+        cutoffDate,
+      })
+
+      return deletedCount
+    } catch (error) {
+      await this.logger.error('クリーンアップに失敗しました', { error })
+      throw new StorageError('クリーンアップ', error as Error)
+    }
   }
 
-  /**
-   * セッションデータをインポート
-   */
+  async optimize(): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      await this.indexManager.optimize()
+      await this.sessionCache.clear()
+      await this.logger.info('最適化を完了しました')
+    } catch (error) {
+      await this.logger.error('最適化に失敗しました', { error })
+      throw new StorageError('最適化', error as Error)
+    }
+  }
+
+  private generateId(): string {
+    return uuidv4()
+  }
+
+  async deleteSession(sessionId: string): Promise<boolean> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const filePath = path.join(this.sessionsPath, `${sessionId}.json`)
+      if (!(await fs.pathExists(filePath))) {
+        await this.logger.debug('削除対象のセッションが見つかりません', {
+          sessionId,
+        })
+        return false
+      }
+
+      await fs.remove(filePath)
+      await this.indexManager.removeSession(sessionId)
+      await this.sessionCache.delete(sessionId)
+
+      await this.logger.info('セッションを削除しました', { sessionId })
+      return true
+    } catch (error) {
+      await this.logger.error('セッションの削除に失敗しました', {
+        error,
+        sessionId,
+      })
+      throw new StorageError('セッション削除', error as Error)
+    }
+  }
+
+  async updateSession(
+    sessionId: string,
+    updates: Partial<ChatSession>
+  ): Promise<ChatSession | null> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const session = await this.getSession(sessionId)
+      if (!session) {
+        await this.logger.debug('更新対象のセッションが見つかりません', {
+          sessionId,
+        })
+        return null
+      }
+
+      const updatedSession = {
+        ...session,
+        ...updates,
+        updatedAt: new Date(),
+      }
+
+      await this.saveSession(updatedSession)
+
+      await this.logger.info('セッションを更新しました', {
+        sessionId,
+        updates,
+      })
+
+      return updatedSession
+    } catch (error) {
+      await this.logger.error('セッションの更新に失敗しました', {
+        error,
+        sessionId,
+        updates,
+      })
+      throw new StorageError('セッション更新', error as Error)
+    }
+  }
+
   async importSessions(
     filePath: string,
     options: {
@@ -465,6 +502,10 @@ export class ChatHistoryService {
     skipped: number
     errors: string[]
   }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     const {
       overwrite = false,
       skipDuplicates = true,
@@ -477,42 +518,34 @@ export class ChatHistoryService {
     }
 
     try {
-      // ファイルの存在確認
       if (!(await fs.pathExists(filePath))) {
-        throw new Error(`インポートファイルが見つかりません: ${filePath}`)
+        throw new ImportError(`インポートファイルが見つかりません: ${filePath}`)
       }
 
-      // ファイル拡張子による処理分岐
       const ext = path.extname(filePath).toLowerCase()
       let sessionsData: ChatSession[] = []
 
       if (ext === '.json') {
         const data = await fs.readJson(filePath)
 
-        // 単一セッションか複数セッションかを判定
         if (Array.isArray(data)) {
           sessionsData = data
         } else if (data.sessions && Array.isArray(data.sessions)) {
-          // エクスポート形式の場合
           sessionsData = data.sessions
         } else if (data.id && data.messages) {
-          // 単一セッション形式
           sessionsData = [data]
         } else {
-          throw new Error('不正なJSONフォーマットです')
+          throw new ImportError('不正なJSONフォーマットです')
         }
       } else {
-        throw new Error(`サポートされていないファイル形式: ${ext}`)
+        throw new ImportError(`サポートされていないファイル形式: ${ext}`)
       }
 
-      // 既存のセッションIDを取得
-      const existingSessionIds = await this.loadIndex()
+      const existingSessionIds = await this.indexManager.getAllSessions()
       const existingIds = new Set(existingSessionIds)
 
-      // 各セッションをインポート
       for (const sessionData of sessionsData) {
         try {
-          // データ検証
           if (validateData && !this.validateSessionData(sessionData)) {
             result.errors.push(
               `無効なセッションデータ: ${sessionData.id || 'ID不明'}`
@@ -520,20 +553,16 @@ export class ChatHistoryService {
             continue
           }
 
-          // 日付文字列をDateオブジェクトに変換
           const session: ChatSession = {
             ...sessionData,
-            startTime: new Date(sessionData.startTime),
-            endTime: sessionData.endTime
-              ? new Date(sessionData.endTime)
-              : undefined,
+            createdAt: new Date(sessionData.createdAt),
+            updatedAt: new Date(sessionData.updatedAt),
             messages: sessionData.messages.map(msg => ({
               ...msg,
               timestamp: new Date(msg.timestamp),
             })),
           }
 
-          // 重複チェック
           if (existingIds.has(session.id)) {
             if (skipDuplicates && !overwrite) {
               result.skipped++
@@ -541,17 +570,19 @@ export class ChatHistoryService {
             }
 
             if (!overwrite) {
-              // 新しいIDを生成
               session.id = uuidv4()
             }
           }
 
-          // セッションを保存
           await this.saveSession(session)
 
-          // インデックスに追加（新しいIDの場合のみ）
           if (!existingIds.has(session.id)) {
-            existingSessionIds.push(session.id)
+            await this.indexManager.addSession(session.id, {
+              tags: session.tags,
+              createdAt: session.createdAt,
+              updatedAt: session.updatedAt,
+              size: session.messages.length
+            })
             existingIds.add(session.id)
           }
 
@@ -563,8 +594,17 @@ export class ChatHistoryService {
         }
       }
 
-      // インデックスを更新
-      await this.saveIndex(existingSessionIds)
+      for (const sessionId of existingIds) {
+        const session = await this.getSession(sessionId)
+        if (session) {
+          await this.indexManager.addSession(sessionId, {
+            tags: session.tags,
+            createdAt: session.createdAt,
+            updatedAt: session.updatedAt,
+            size: session.messages.length
+          })
+        }
+      }
 
       return result
     } catch (error) {
@@ -573,18 +613,15 @@ export class ChatHistoryService {
     }
   }
 
-  /**
-   * セッションデータの検証
-   */
-  private validateSessionData(data: any): boolean {
+  private validateSessionData(data: unknown): data is ChatSession {
     if (!data || typeof data !== 'object') return false
-    if (!data.id || typeof data.id !== 'string') return false
-    if (!data.title || typeof data.title !== 'string') return false
-    if (!data.startTime) return false
-    if (!Array.isArray(data.messages)) return false
+    const session = data as ChatSession
+    if (!session.id || typeof session.id !== 'string') return false
+    if (!session.title || typeof session.title !== 'string') return false
+    if (!session.createdAt) return false
+    if (!Array.isArray(session.messages)) return false
 
-    // メッセージの検証
-    for (const msg of data.messages) {
+    for (const msg of session.messages) {
       if (!msg.id || typeof msg.id !== 'string') return false
       if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role))
         return false
@@ -595,20 +632,32 @@ export class ChatHistoryService {
     return true
   }
 
-  /**
-   * バックアップファイルからの復元
-   */
+  private async loadIndex(): Promise<string[]> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    return this.indexManager.getAllSessions()
+  }
+
+  private getSessionFilePath(sessionId: string): string {
+    return path.join(this.sessionsPath, `${sessionId}.json`)
+  }
+
   async restoreFromBackup(backupPath: string): Promise<{
     restored: number
     errors: string[]
   }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     const result = {
       restored: 0,
       errors: [] as string[],
     }
 
     try {
-      // 現在のデータをクリア
       const sessionIds = await this.loadIndex()
       for (const sessionId of sessionIds) {
         const sessionPath = this.getSessionFilePath(sessionId)
@@ -616,9 +665,8 @@ export class ChatHistoryService {
           await fs.remove(sessionPath)
         }
       }
-      await this.saveIndex([])
+      await this.indexManager.initialize()
 
-      // バックアップからインポート
       const importResult = await this.importSessions(backupPath, {
         overwrite: true,
         skipDuplicates: false,
@@ -635,14 +683,15 @@ export class ChatHistoryService {
     }
   }
 
-  /**
-   * 手動バックアップの作成
-   */
   async createBackup(backupPath?: string): Promise<{
     backupPath: string
     sessionCount: number
     size: number
   }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss')
     const defaultBackupPath = path.join(
       this.config.storagePath,
@@ -652,48 +701,49 @@ export class ChatHistoryService {
 
     const finalBackupPath = backupPath || defaultBackupPath
 
-    // バックアップディレクトリを作成
-    await fs.ensureDir(path.dirname(finalBackupPath))
+    try {
+      await fs.ensureDir(path.dirname(finalBackupPath))
 
-    // 全セッションを取得
-    const sessionIds = await this.loadIndex()
-    const sessions: ChatSession[] = []
+      const sessionIds = await this.loadIndex()
+      const sessions: ChatSession[] = []
 
-    for (const sessionId of sessionIds) {
-      const session = await this.getSession(sessionId)
-      if (session) {
-        sessions.push(session)
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (session) {
+          sessions.push(session)
+        }
       }
-    }
 
-    // バックアップデータを作成
-    const backupData = {
-      metadata: {
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
+      const backupData = {
+        metadata: {
+          version: '1.0.0',
+          createdAt: new Date().toISOString(),
+          sessionCount: sessions.length,
+          totalMessages: sessions.reduce((sum, s) => sum + s.messages.length, 0),
+        },
+        sessions,
+      }
+
+      await fs.writeJson(finalBackupPath, backupData, { spaces: 2 })
+
+      const stats = await fs.stat(finalBackupPath)
+
+      return {
+        backupPath: finalBackupPath,
         sessionCount: sessions.length,
-        totalMessages: sessions.reduce((sum, s) => sum + s.messages.length, 0),
-      },
-      sessions,
-    }
-
-    // バックアップファイルを保存
-    await fs.writeJson(finalBackupPath, backupData, { spaces: 2 })
-
-    // ファイルサイズを取得
-    const stats = await fs.stat(finalBackupPath)
-
-    return {
-      backupPath: finalBackupPath,
-      sessionCount: sessions.length,
-      size: stats.size,
+        size: stats.size,
+      }
+    } catch (error) {
+      await this.logger.error('バックアップの作成に失敗しました', { error })
+      throw new BackupError('バックアップ作成', error as Error)
     }
   }
 
-  /**
-   * 自動バックアップの実行
-   */
   async performAutoBackup(): Promise<boolean> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     if (!this.config.enableBackup) {
       return false
     }
@@ -702,7 +752,6 @@ export class ChatHistoryService {
       const backupDir = path.join(this.config.storagePath, 'backups')
       await fs.ensureDir(backupDir)
 
-      // 最後のバックアップ時刻をチェック
       const lastBackupPath = path.join(backupDir, 'last_backup.json')
       let shouldBackup = true
 
@@ -720,10 +769,8 @@ export class ChatHistoryService {
         return false
       }
 
-      // バックアップを作成
       const result = await this.createBackup()
 
-      // 最後のバックアップ情報を更新
       await fs.writeJson(lastBackupPath, {
         timestamp: new Date().toISOString(),
         backupPath: result.backupPath,
@@ -731,49 +778,54 @@ export class ChatHistoryService {
         size: result.size,
       })
 
-      // 古いバックアップをクリーンアップ
       await this.cleanupOldBackups()
 
       return true
     } catch (error) {
-      console.error('自動バックアップエラー:', error)
+      await this.logger.error('自動バックアップに失敗しました', { error })
       return false
     }
   }
 
-  /**
-   * 古いバックアップファイルのクリーンアップ
-   */
   private async cleanupOldBackups(): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     const backupDir = path.join(this.config.storagePath, 'backups')
-    const maxBackups = 10 // 最大保持バックアップ数
+    const maxBackups = 10
 
     try {
       const files = await fs.readdir(backupDir)
-      const backupFiles = files
-        .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
-        .map(file => ({
-          name: file,
-          path: path.join(backupDir, file),
-          stat: fs.statSync(path.join(backupDir, file)),
-        }))
-        .sort((a, b) => b.stat.mtime.getTime() - a.stat.mtime.getTime())
+      const backupFiles = await Promise.all(
+        files
+          .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
+          .map(async file => {
+            const filePath = path.join(backupDir, file)
+            const stat = await fs.stat(filePath)
+            return {
+              name: file,
+              path: filePath,
+              stat
+            }
+          })
+      )
 
-      // 古いバックアップを削除
-      if (backupFiles.length > maxBackups) {
-        const filesToDelete = backupFiles.slice(maxBackups)
+      const sortedBackupFiles = backupFiles.sort(
+        (a, b) => b.stat.mtime.getTime() - a.stat.mtime.getTime()
+      )
+
+      if (sortedBackupFiles.length > maxBackups) {
+        const filesToDelete = sortedBackupFiles.slice(maxBackups)
         for (const file of filesToDelete) {
           await fs.remove(file.path)
         }
       }
     } catch (error) {
-      console.warn('バックアップクリーンアップエラー:', error)
+      await this.logger.error('バックアップのクリーンアップに失敗しました', { error })
     }
   }
 
-  /**
-   * バックアップ一覧を取得
-   */
   async getBackupList(): Promise<
     Array<{
       path: string
@@ -783,6 +835,10 @@ export class ChatHistoryService {
       sessionCount?: number
     }>
   > {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
     const backupDir = path.join(this.config.storagePath, 'backups')
 
     if (!(await fs.pathExists(backupDir))) {
@@ -798,7 +854,6 @@ export class ChatHistoryService {
           const filePath = path.join(backupDir, file)
           const stats = await fs.stat(filePath)
 
-          // バックアップファイルのメタデータを読み取り
           let sessionCount: number | undefined
           try {
             const backupData = await fs.readJson(filePath)
@@ -817,13 +872,397 @@ export class ChatHistoryService {
         }
       }
 
-      // 作成日時でソート（新しい順）
       return backupFiles.sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
       )
     } catch (error) {
-      console.error('バックアップ一覧取得エラー:', error)
+      await this.logger.error('バックアップ一覧の取得に失敗しました', { error })
       return []
     }
   }
+
+  async getMessage(sessionId: string, messageId: string): Promise<ChatMessage | null> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const session = await this.getSession(sessionId)
+      if (!session) {
+        return null
+      }
+
+      const message = session.messages.find(msg => msg.id === messageId)
+      return message || null
+    } catch (error) {
+      await this.logger.error('メッセージの取得に失敗しました', {
+        error,
+        sessionId,
+        messageId,
+      })
+      throw new StorageError('メッセージ取得', error as Error)
+    }
+  }
+
+  async updateMessage(
+    sessionId: string,
+    messageId: string,
+    updates: Partial<ChatMessage>
+  ): Promise<ChatMessage | null> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const session = await this.getSession(sessionId)
+      if (!session) {
+        return null
+      }
+
+      const messageIndex = session.messages.findIndex(msg => msg.id === messageId)
+      if (messageIndex === -1) {
+        return null
+      }
+
+      const updatedMessage = {
+        ...session.messages[messageIndex],
+        ...updates,
+        id: messageId,
+        timestamp: session.messages[messageIndex].timestamp,
+      }
+
+      session.messages[messageIndex] = updatedMessage
+      session.updatedAt = new Date()
+
+      await this.saveSession(session)
+      await this.sessionCache.set(sessionId, session)
+
+      return updatedMessage
+    } catch (error) {
+      await this.logger.error('メッセージの更新に失敗しました', {
+        error,
+        sessionId,
+        messageId,
+        updates,
+      })
+      throw new StorageError('メッセージ更新', error as Error)
+    }
+  }
+
+  async deleteMessage(sessionId: string, messageId: string): Promise<boolean> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const session = await this.getSession(sessionId)
+      if (!session) {
+        return false
+      }
+
+      const messageIndex = session.messages.findIndex(msg => msg.id === messageId)
+      if (messageIndex === -1) {
+        return false
+      }
+
+      session.messages.splice(messageIndex, 1)
+      session.updatedAt = new Date()
+
+      await this.saveSession(session)
+      await this.sessionCache.set(sessionId, session)
+
+      return true
+    } catch (error) {
+      await this.logger.error('メッセージの削除に失敗しました', {
+        error,
+        sessionId,
+        messageId,
+      })
+      throw new StorageError('メッセージ削除', error as Error)
+    }
+  }
+
+  async getSessionMessages(
+    sessionId: string,
+    options: {
+      limit?: number
+      offset?: number
+      before?: Date
+      after?: Date
+    } = {}
+  ): Promise<{
+    messages: ChatMessage[]
+    total: number
+    hasMore: boolean
+  }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const session = await this.getSession(sessionId)
+      if (!session) {
+        return {
+          messages: [],
+          total: 0,
+          hasMore: false,
+        }
+      }
+
+      let filteredMessages = session.messages
+
+      if (options.before) {
+        filteredMessages = filteredMessages.filter(
+          msg => msg.timestamp < options.before!
+        )
+      }
+
+      if (options.after) {
+        filteredMessages = filteredMessages.filter(
+          msg => msg.timestamp > options.after!
+        )
+      }
+
+      const total = filteredMessages.length
+      const offset = options.offset || 0
+      const limit = options.limit || total
+
+      const messages = filteredMessages
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(offset, offset + limit)
+
+      return {
+        messages,
+        total,
+        hasMore: offset + limit < total,
+      }
+    } catch (error) {
+      await this.logger.error('セッションメッセージの取得に失敗しました', {
+        error,
+        sessionId,
+        options,
+      })
+      throw new StorageError('セッションメッセージ取得', error as Error)
+    }
+  }
+
+  async searchMessages(
+    query: string,
+    options: {
+      limit?: number
+      offset?: number
+      sessionId?: string
+      role?: 'user' | 'assistant' | 'system'
+    } = {}
+  ): Promise<{
+    messages: Array<{
+      message: ChatMessage
+      sessionId: string
+      sessionTitle: string
+    }>
+    total: number
+    hasMore: boolean
+  }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const sessionIds = options.sessionId
+        ? [options.sessionId]
+        : await this.indexManager.getAllSessions()
+
+      const results: Array<{
+        message: ChatMessage
+        sessionId: string
+        sessionTitle: string
+      }> = []
+
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (!session) continue
+
+        const matchedMessages = session.messages.filter(msg => {
+          if (options.role && msg.role !== options.role) {
+            return false
+          }
+
+          return msg.content.toLowerCase().includes(query.toLowerCase())
+        })
+
+        results.push(
+          ...matchedMessages.map(message => ({
+            message,
+            sessionId,
+            sessionTitle: session.title,
+          }))
+        )
+      }
+
+      const total = results.length
+      const offset = options.offset || 0
+      const limit = options.limit || total
+
+      const messages = results
+        .sort((a, b) => b.message.timestamp.getTime() - a.message.timestamp.getTime())
+        .slice(offset, offset + limit)
+
+      return {
+        messages,
+        total,
+        hasMore: offset + limit < total,
+      }
+    } catch (error) {
+      await this.logger.error('メッセージ検索に失敗しました', {
+        error,
+        query,
+        options,
+      })
+      throw new StorageError('メッセージ検索', error as Error)
+    }
+  }
+
+  async getSessionTags(): Promise<Array<{ tag: string; count: number }>> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const sessionIds = await this.indexManager.getAllSessions()
+      const tagCounts = new Map<string, number>()
+
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (session) {
+          session.tags?.forEach(tag => {
+            tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1)
+          })
+        }
+      }
+
+      return Array.from(tagCounts.entries()).map(([tag, count]) => ({
+        tag,
+        count,
+      }))
+    } catch (error) {
+      await this.logger.error('タグ一覧の取得に失敗しました', { error })
+      throw new StorageError('タグ一覧取得', error as Error)
+    }
+  }
+
+  async getSessionsByTag(tag: string): Promise<ChatSession[]> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const sessionIds = await this.indexManager.getAllSessions()
+      const sessions: ChatSession[] = []
+
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (session && session.tags?.includes(tag)) {
+          sessions.push(session)
+        }
+      }
+
+      return sessions.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    } catch (error) {
+      await this.logger.error('タグによるセッション取得に失敗しました', {
+        error,
+        tag,
+      })
+      throw new StorageError('タグによるセッション取得', error as Error)
+    }
+  }
+
+  async getSessionTimeline(
+    options: {
+      startDate?: Date
+      endDate?: Date
+      limit?: number
+    } = {}
+  ): Promise<Array<{
+    date: string
+    sessions: ChatSession[]
+  }>> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const sessionIds = await this.indexManager.getAllSessions()
+      const sessions: ChatSession[] = []
+
+      for (const sessionId of sessionIds) {
+        const session = await this.getSession(sessionId)
+        if (session) {
+          if (options.startDate && session.createdAt < options.startDate) {
+            continue
+          }
+          if (options.endDate && session.createdAt > options.endDate) {
+            continue
+          }
+          sessions.push(session)
+        }
+      }
+
+      const timeline = new Map<string, ChatSession[]>()
+
+      sessions.forEach(session => {
+        const date = format(session.createdAt, 'yyyy-MM-dd')
+        const dateSessions = timeline.get(date) || []
+        dateSessions.push(session)
+        timeline.set(date, dateSessions)
+      })
+
+      return Array.from(timeline.entries())
+        .map(([date, sessions]) => ({
+          date,
+          sessions: sessions.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+        }))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, options.limit)
+    } catch (error) {
+      await this.logger.error('タイムラインの取得に失敗しました', {
+        error,
+        options,
+      })
+      throw new StorageError('タイムライン取得', error as Error)
+    }
+  }
+
+  async createSession(session: Omit<ChatSession, 'createdAt' | 'updatedAt'>): Promise<ChatSession> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const now = new Date()
+      const newSession: ChatSession = {
+        ...session,
+        createdAt: now,
+        updatedAt: now,
+      }
+
+      await this.saveSession(newSession)
+      await this.indexManager.addSession(newSession.id, {
+        tags: newSession.tags,
+        createdAt: newSession.createdAt,
+        updatedAt: newSession.updatedAt,
+        size: newSession.messages.length
+      })
+
+      return newSession
+    } catch (error) {
+      await this.logger.error('セッションの作成に失敗しました', {
+        error,
+        session,
+      })
+      throw new StorageError('セッション作成', error as Error)
+    }
+  }
 }
+
+export { ChatHistoryService };
+

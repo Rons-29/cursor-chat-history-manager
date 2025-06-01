@@ -1,7 +1,11 @@
 import { ChatHistoryService } from './ChatHistoryService.js'
 import { ConfigService } from './ConfigService.js'
-import { ChatSession } from '../types/index.js'
+import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
 import { EventEmitter } from 'events'
+import { Logger } from '../utils/Logger.js'
+import { CursorIntegrationService } from './CursorIntegrationService.js'
+import { CursorLogService } from './CursorLogService.js'
+import { ExportService } from './ExportService.js'
 
 export interface AutoSaveConfig {
   enabled?: boolean
@@ -88,7 +92,7 @@ export class AutoSaveService extends EventEmitter {
         content,
         metadata: {
           tags: ['auto-saved'],
-          sessionId: this.currentSession.id,
+          source: 'auto-save',
         },
       })
 
@@ -151,7 +155,7 @@ export class AutoSaveService extends EventEmitter {
       content: `セッション終了 (時間: ${duration}分, メッセージ数: ${this.messageCount})`,
       metadata: {
         tags: ['session-end'],
-        sessionId: this.currentSession.id,
+        source: 'auto-save',
       },
     })
 

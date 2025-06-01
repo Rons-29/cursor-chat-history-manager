@@ -1,76 +1,37 @@
-/** @type {import('jest').Config} */
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
-  // 実行環境
-  preset: 'ts-jest/presets/default-esm',
-  testEnvironment: 'node',
-  
-  // ES Module対応
-  extensionsToTreatAsEsm: ['.ts'],
-  
-  // モジュール解決
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
+      useESM: true,
+      isolatedModules: true,
+      tsconfig: 'tsconfig.json'
+    }],
+  },
+  transformIgnorePatterns: [
+    'node_modules/(?!(uuid)/)'
+  ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  
-  // Transform設定
-  transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      useESM: true,
-    }],
-  },
-  
-  // テストファイルパターン
-  testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.test.ts',
-    '<rootDir>/src/**/*.test.ts',
-    '<rootDir>/src/tests/**/*.test.ts'
-  ],
-  
-  // カバレッジ設定
-  collectCoverage: false, // テスト修正中は無効化
-  coverageDirectory: 'coverage',
-  coverageReporters: [
-    'text',
-    'lcov',
-    'html'
-  ],
-  
-  // カバレッジ対象
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/**/__tests__/**',
-    '!src/**/node_modules/**',
-    '!src/cli.ts', // CLIエントリーポイントは除外
-    '!src/index.ts', // メインインデックスは除外
-  ],
-  
-  // セットアップ
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
-  
-  // タイムアウト
-  testTimeout: 30000,
-  
-  // 並列実行
-  maxWorkers: '50%',
-  
-  // ファイル変更監視の除外
-  watchPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/dist/',
-    '<rootDir>/web/',
-    '<rootDir>/data/',
-    '<rootDir>/exports/',
-    '<rootDir>/coverage/',
+  testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/tests/**/*',
   ],
-  
-  // 詳細出力
-  verbose: true,
-  
-  // モック設定
-  clearMocks: true,
-  restoreMocks: true,
-  
-  // エラー時の詳細出力
-  errorOnDeprecated: true,
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  globals: {
+    __dirname: '/Users/shirokki22/project/chat-history-manager'
+  }
 } 

@@ -4,12 +4,17 @@
  */
 
 import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { apiDataService } from '../api-router.js'
+import { ChatHistoryService } from '../../services/ChatHistoryService.js'
+import { Logger } from '../../utils/Logger.js'
 
 const router = Router()
+const logger = new Logger({ logPath: './logs', level: 'info' })
+const chatHistoryService = new ChatHistoryService()
 
 // ヘルスチェック
-router.get('/health', (req, res) => {
+router.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -18,7 +23,7 @@ router.get('/health', (req, res) => {
 })
 
 // サービス状態確認
-router.get('/status', (req, res) => {
+router.get('/status', (req: Request, res: Response) => {
   try {
     const status = apiDataService.getServiceStatus()
     res.json(status)
@@ -31,7 +36,7 @@ router.get('/status', (req, res) => {
 })
 
 // 統計情報取得
-router.get('/stats', async (req, res) => {
+router.get('/stats', async (req: Request, res: Response) => {
   try {
     const stats = await apiDataService.getStats()
     res.json(stats)
@@ -52,7 +57,7 @@ router.get('/stats', async (req, res) => {
 })
 
 // セッション一覧取得
-router.get('/sessions', async (req, res) => {
+router.get('/sessions', async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
@@ -82,7 +87,7 @@ router.get('/sessions', async (req, res) => {
 })
 
 // セッション詳細取得
-router.get('/sessions/:id', async (req, res) => {
+router.get('/sessions/:id', async (req: Request, res: Response) => {
   try {
     const sessionId = req.params.id
     const session = await apiDataService.getSession(sessionId)
@@ -96,35 +101,29 @@ router.get('/sessions/:id', async (req, res) => {
   }
 })
 
-// 検索機能
-router.post('/search', async (req: any, res: any) => {
-  try {
-    const { keyword, filters = {} } = req.body
-    
-    if (!keyword) {
-      return res.status(400).json({
-        error: 'キーワードが必要です'
-      })
-    }
+interface SearchRequestBody {
+  query: string
+  filters?: {
+    startDate?: string
+    endDate?: string
+    tags?: string[]
+  }
+}
 
-    const result = await apiDataService.searchSessions(keyword, filters)
-    res.json(result)
+// 検索機能
+router.post('/search', async (req: Request<{}, {}, SearchRequestBody>, res: Response) => {
+  try {
+    const { query, filters } = req.body
+    const results = await chatHistoryService.search(query, filters)
+    res.json(results)
   } catch (error) {
-    console.error('Search API Error:', error)
-    
-    // フォールバック: 空の検索結果で応答
-    res.json({
-      keyword: req.body.keyword || '',
-      results: [],
-      total: 0,
-      hasMore: false,
-      mode: 'fallback'
-    })
+    logger.error('Search error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 
 // 設定管理
-router.get('/config', async (req, res) => {
+router.get('/config', async (req: Request, res: Response) => {
   try {
     const config = await apiDataService.getConfig()
     res.json(config)
@@ -137,7 +136,7 @@ router.get('/config', async (req, res) => {
   }
 })
 
-router.put('/config', async (req, res) => {
+router.put('/config', async (req: Request, res: Response) => {
   try {
     const updatedConfig = await apiDataService.updateConfig(req.body)
     res.json(updatedConfig)
@@ -151,7 +150,7 @@ router.put('/config', async (req, res) => {
 })
 
 // キャッシュクリア
-router.post('/cache/clear', async (req, res) => {
+router.post('/cache/clear', async (req: Request, res: Response) => {
   try {
     await apiDataService.clearCache()
     res.json({
@@ -168,7 +167,7 @@ router.post('/cache/clear', async (req, res) => {
 })
 
 // データ更新
-router.post('/data/refresh', async (req, res) => {
+router.post('/data/refresh', async (req: Request, res: Response) => {
   try {
     await apiDataService.refreshData()
     res.json({
@@ -185,7 +184,7 @@ router.post('/data/refresh', async (req, res) => {
 })
 
 // エラーハンドラー
-router.use((error: any, req: any, res: any, next: any) => {
+router.use((error: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('API Error:', error)
   res.status(500).json({
     error: 'サーバーエラー',

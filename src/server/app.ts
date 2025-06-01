@@ -12,6 +12,7 @@ import {
   getStatsHandler,
   searchHandler,
 } from './middleware/real-data-middleware.js'
+import integrationRoutes, { setupIntegrationRoutes } from './routes/integration.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -58,6 +59,9 @@ app.get('/api/stats', getStatsHandler)
 // 検索API
 app.post('/api/search', searchHandler)
 
+// 統合機能API
+app.use('/api/integration', integrationRoutes)
+
 // 404ハンドラー
 app.use((req, res, next) => {
   if (!res.headersSent) {
@@ -99,8 +103,36 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🔄 Middleware方式: 実データ統合 + Express型安全性確保`)
 
     // 実データサービス初期化（非ブロッキング）
-    initializeRealDataMiddleware()
+    await initializeRealDataMiddleware()
+    
+    // 統合機能のセットアップ
+    await setupIntegrationService()
   })
+}
+
+// 統合機能のセットアップ関数
+async function setupIntegrationService() {
+  try {
+    const { getApiDataService } = await import('./middleware/real-data-middleware.js')
+    const apiDataService = getApiDataService()
+    
+    if (apiDataService) {
+      const integrationService = apiDataService.getIntegrationService()
+      const { Logger } = await import('../utils/Logger.js')
+      const logger = new Logger()
+      
+      if (integrationService) {
+        setupIntegrationRoutes(integrationService, logger)
+        console.log('✅ 統合機能のセットアップが完了しました')
+      } else {
+        console.warn('⚠️ IntegrationServiceが利用できません')
+      }
+    } else {
+      console.warn('⚠️ ApiDataServiceが利用できません')
+    }
+  } catch (error) {
+    console.error('❌ 統合機能のセットアップでエラー:', error)
+  }
 }
 
 export default app

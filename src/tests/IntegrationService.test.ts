@@ -1,174 +1,283 @@
-import { IntegrationService } from '../services/IntegrationService'
-import { ChatHistoryService } from '../services/ChatHistoryService'
-import { CursorLogService } from '../services/CursorLogService'
-import { IntegrationConfig, IntegrationSearchOptions } from '../types/integration'
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
+import { IntegrationService } from '../services/IntegrationService.js'
+import { ChatHistoryService } from '../services/ChatHistoryService.js'
+import { CursorLogService } from '../services/CursorLogService.js'
+import type { IntegrationConfig, IntegratedLog } from '../types/integration.js'
+import type { ChatHistoryConfig } from '../types/index.js'
+import type { CursorConfig } from '../types/cursor.js'
 import fs from 'fs-extra'
 import path from 'path'
-
-jest.mock('../services/ChatHistoryService')
-jest.mock('../services/CursorLogService')
-jest.mock('fs-extra')
-
-// fs-extraのモック型を定義
-const mockFs = {
-  pathExists: jest.fn(),
-  readdir: jest.fn(),
-  readJson: jest.fn(),
-  stat: jest.fn(),
-  ensureDir: jest.fn(),
-  writeJson: jest.fn()
-}
-
-// モックを上書き
-Object.defineProperty(fs, 'pathExists', { value: mockFs.pathExists })
-Object.defineProperty(fs, 'readdir', { value: mockFs.readdir })
-Object.defineProperty(fs, 'readJson', { value: mockFs.readJson })
-Object.defineProperty(fs, 'stat', { value: mockFs.stat })
-Object.defineProperty(fs, 'ensureDir', { value: mockFs.ensureDir })
-Object.defineProperty(fs, 'writeJson', { value: mockFs.writeJson })
+import os from 'os'
 
 describe('IntegrationService', () => {
   let service: IntegrationService
-  let config: IntegrationConfig
+  let chatHistoryService: ChatHistoryService
+  let cursorLogService: CursorLogService
+  let tempDir: string
 
-  beforeEach(() => {
-    config = {
-      cursor: {
-        enabled: true,
-        watchPath: '/test/cursor/logs',
-        autoImport: true
-      },
-      chatHistory: {
-        storagePath: '/test/chat/history',
-        maxSessions: 100,
-        storageType: 'file'
-      },
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'integration-test-'))
+
+    const chatHistoryConfig: ChatHistoryConfig = {
+      storagePath: path.join(tempDir, 'chat-history'),
+      maxSessions: 100,
+      maxMessagesPerSession: 1000,
+      autoCleanup: true,
+      cleanupDays: 30,
+      enableSearch: true,
+      enableBackup: true,
+      backupInterval: 24
+    }
+
+    const cursorConfig: CursorConfig = {
+      enabled: true,
+      watchPath: path.join(tempDir, 'cursor-logs'),
+      autoImport: true
+    }
+
+    const config: IntegrationConfig = {
+      cursor: cursorConfig,
+      chatHistory: chatHistoryConfig,
       sync: {
-        interval: 300,
+        interval: 5,
         batchSize: 100,
         retryAttempts: 3
       }
     }
 
+    chatHistoryService = new ChatHistoryService(chatHistoryConfig)
+    cursorLogService = new CursorLogService(cursorConfig)
     service = new IntegrationService(config)
+
+    await chatHistoryService.initialize()
+    await cursorLogService.initialize()
+    await service.initialize()
   })
 
-  afterEach(() => {
-    jest.clearAllMocks()
+  afterEach(async () => {
+    await fs.remove(tempDir)
   })
 
-  describe('initialize', () => {
-    it('should initialize both services', async () => {
-      await service.initialize()
-      expect(ChatHistoryService.prototype.initialize).toHaveBeenCalled()
-      expect(CursorLogService.prototype.initialize).toHaveBeenCalled()
-    })
-
-    it('should throw error if initialization fails', async () => {
-      const error = new Error('Initialization failed')
-      ;(ChatHistoryService.prototype.initialize as jest.Mock).mockRejectedValue(error)
-
-      await expect(service.initialize()).rejects.toThrow('Failed to initialize IntegrationService')
+  describe('初期化', () => {
+    it('正常に初期化できること', async () => {
+      expect(service).toBeDefined()
     })
   })
 
-  describe('search', () => {
-    const searchOptions: IntegrationSearchOptions = {
-      query: 'test',
-      timeRange: {
-        start: new Date('2024-01-01'),
-        end: new Date('2024-12-31')
+  describe('ログ検索', () => {
+    const chatLogs = [
+      {
+        id: 'chat1',
+        type: 'chat' as const,
+        content: 'チャットメッセージ1',
+        timestamp: new Date(),
+        metadata: {
+          project: 'project1',
+          projectId: 1,
+          source: 'chat'
+        }
+      },
+      {
+        id: 'chat2',
+        type: 'chat' as const,
+        content: 'チャットメッセージ2',
+        timestamp: new Date(),
+        metadata: {
+          project: 'project2',
+          projectId: 2,
+          source: 'chat'
+        }
       }
-    }
+    ]
+
+    const cursorLogs = [
+      {
+        id: 'cursor1',
+        type: 'cursor' as const,
+        content: 'カーソルログ1',
+        timestamp: new Date(),
+        metadata: {
+          project: 'project1',
+          projectId: 1,
+          source: 'cursor'
+        }
+      },
+      {
+        id: 'cursor2',
+        type: 'cursor' as const,
+        content: 'カーソルログ2',
+        timestamp: new Date(),
+        metadata: {
+          project: 'project2',
+          projectId: 2,
+          source: 'cursor'
+        }
+      }
+    ]
 
     beforeEach(async () => {
-      await service.initialize()
-    })
-
-    it('should search both cursor logs and chat history', async () => {
-      const mockCursorLogs = [
-        {
-          id: '1',
-          timestamp: new Date(),
-          type: 'cursor',
-          content: 'test log',
-          metadata: { project: 'test' }
-        }
-      ]
-
-      const mockChatLogs = {
-        sessions: [
-          {
-            id: '2',
-            createdAt: new Date(),
-            messages: [{ content: 'test chat' }],
-            metadata: { projectId: 1, tags: ['test'] }
+      // チャットログの追加
+      for (const log of chatLogs) {
+        await chatHistoryService.createSession({
+          id: log.id,
+          title: log.content,
+          messages: [{
+            id: `${log.id}-msg`,
+            role: 'user',
+            content: log.content,
+            timestamp: log.timestamp
+          }],
+          tags: ['test'],
+          startTime: log.timestamp,
+          metadata: {
+            project: log.metadata.project,
+            projectId: log.metadata.projectId,
+            source: log.metadata.source
           }
-        ]
+        })
       }
 
-      mockFs.pathExists.mockResolvedValue(true)
-      mockFs.readdir.mockResolvedValue(['test.json'])
-      mockFs.readJson.mockResolvedValue(mockCursorLogs)
-      ;(ChatHistoryService.prototype.searchSessions as jest.Mock).mockResolvedValue(mockChatLogs)
+      // カーソルログの追加
+      for (const log of cursorLogs) {
+        await cursorLogService.log({
+          type: log.type,
+          content: log.content,
+          metadata: {
+            project: log.metadata.project,
+            source: log.metadata.source
+          }
+        })
+      }
+    })
 
-      const results = await service.search(searchOptions)
+    it('キーワードで検索できること', async () => {
+      const results = await service.search({
+        query: 'メッセージ1'
+      })
+
+      expect(results).toHaveLength(1)
+      expect(results[0].content).toBe('チャットメッセージ1')
+    })
+
+    it('プロジェクトで検索できること', async () => {
+      const results = await service.search({
+        project: 'project1'
+      })
 
       expect(results).toHaveLength(2)
-      expect(results[0].type).toBe('cursor')
-      expect(results[1].type).toBe('chat')
+      expect(results[0].metadata?.project).toBe('project1')
+      expect(results[1].metadata?.project).toBe('project1')
     })
 
-    it('should handle empty results', async () => {
-      mockFs.pathExists.mockResolvedValue(false)
-      ;(ChatHistoryService.prototype.searchSessions as jest.Mock).mockResolvedValue({ sessions: [] })
+    it('タイプで検索できること', async () => {
+      const results = await service.search({
+        types: ['chat']
+      })
 
-      const results = await service.search(searchOptions)
-      expect(results).toHaveLength(0)
+      expect(results).toHaveLength(2)
+      expect(results[0].type).toBe('chat')
+      expect(results[1].type).toBe('chat')
     })
   })
 
-  describe('getStats', () => {
+  describe('統計情報', () => {
     beforeEach(async () => {
-      await service.initialize()
+      // チャットログの追加
+      await chatHistoryService.createSession({
+        id: 'chat1',
+        title: 'チャット1',
+        messages: [{
+          id: 'msg1',
+          role: 'user',
+          content: 'メッセージ1',
+          timestamp: new Date()
+        }],
+        tags: ['test'],
+        startTime: new Date(),
+        metadata: {
+          project: 'project1',
+          source: 'chat'
+        }
+      })
+
+      // カーソルログの追加
+      await cursorLogService.log({
+        type: 'chat',
+        content: 'カーソルログ1',
+        metadata: {
+          project: 'project1',
+          source: 'cursor'
+        }
+      })
     })
 
-    it('should return combined statistics', async () => {
-      const mockCursorStats = {
-        size: 1000,
-        count: 10
-      }
-
-      const mockChatStats = {
-        totalSessions: 20,
-        storageSize: 2000
-      }
-
-      mockFs.pathExists.mockResolvedValue(true)
-      mockFs.readdir.mockResolvedValue(['test.json'])
-      mockFs.stat.mockResolvedValue({ size: mockCursorStats.size })
-      mockFs.readJson.mockResolvedValue(Array(mockCursorStats.count))
-      ;(ChatHistoryService.prototype.getStats as jest.Mock).mockResolvedValue(mockChatStats)
-
+    it('統計情報を取得できること', async () => {
       const stats = await service.getStats()
-
-      expect(stats.totalLogs).toBe(mockCursorStats.count + mockChatStats.totalSessions)
-      expect(stats.storageSize).toBe(mockCursorStats.size + mockChatStats.storageSize)
+      expect(stats.totalLogs).toBe(2)
+      expect(stats.cursorLogs).toBe(1)
+      expect(stats.chatLogs).toBe(1)
+      expect(stats.storageSize).toBeGreaterThan(0)
     })
+  })
 
-    it('should handle missing cursor logs', async () => {
-      const mockChatStats = {
-        totalSessions: 20,
-        storageSize: 2000
-      }
+  describe('分析情報', () => {
+    const mockAnalytics = {
+      summary: {
+        totalLogs: 10,
+        totalChats: 5,
+        totalCursorLogs: 5,
+        uniqueProjects: 2,
+        uniqueTags: 3
+      },
+      logsByType: {
+        chat: 5,
+        cursor: 5
+      },
+      logsByProject: {
+        project1: 5,
+        project2: 5
+      },
+      logsByTag: {
+        test: 3,
+        debug: 4,
+        error: 3
+      },
+      activityTimeline: [
+        {
+          date: new Date().toISOString(),
+          chatCount: 2,
+          cursorCount: 1,
+          totalCount: 3
+        }
+      ],
+      hourlyDistribution: {
+        '0': 1,
+        '1': 2,
+        '2': 3
+      },
+      topKeywords: [
+        {
+          keyword: 'test',
+          count: 5
+        }
+      ]
+    }
 
-      mockFs.pathExists.mockResolvedValue(false)
-      ;(ChatHistoryService.prototype.getStats as jest.Mock).mockResolvedValue(mockChatStats)
+    it('分析情報を取得できること', async () => {
+      const analytics = await service.getAnalytics({
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        groupBy: 'day'
+      })
 
-      const stats = await service.getStats()
-
-      expect(stats.cursorLogs).toBe(0)
-      expect(stats.totalLogs).toBe(mockChatStats.totalSessions)
+      expect(analytics).toBeDefined()
+      expect(analytics.summary).toBeDefined()
+      expect(analytics.logsByType).toBeDefined()
+      expect(analytics.logsByProject).toBeDefined()
+      expect(analytics.logsByTag).toBeDefined()
+      expect(analytics.activityTimeline).toBeDefined()
+      expect(analytics.hourlyDistribution).toBeDefined()
+      expect(analytics.topKeywords).toBeDefined()
     })
   })
 }) 

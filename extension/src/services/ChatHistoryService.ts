@@ -1,9 +1,9 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { ChatSession, ChatMessage, ChatHistoryConfig, SessionStats } from '../types';
+import { ChatSession, ChatMessage, ChatHistoryConfig, SessionStats } from '../types/index.js';
 
-export class ChatHistoryService {
+class ChatHistoryService {
   private sessions: Map<string, ChatSession> = new Map();
   private config: ChatHistoryConfig;
   private dataPath: string;
@@ -142,4 +142,6 @@ export class ChatHistoryService {
       throw error;
     }
   }
-} 
+}
+
+export { ChatHistoryService }; 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient, queryKeys } from '../api/client'
+import { apiClient, queryKeys } from '../api/client.js'
 
 const SessionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()

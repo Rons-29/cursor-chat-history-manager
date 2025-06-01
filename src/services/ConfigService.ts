@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import os from 'os'
-import { ChatHistoryConfig, AutoSaveConfig } from '../types/index.js'
+import type { ChatHistoryConfig, AutoSaveConfig } from '../types/index.js'
 
 export interface CursorConfig {
   enabled?: boolean
@@ -275,34 +275,17 @@ export class ConfigService {
    */
   async getConfig(): Promise<ChatHistoryConfig> {
     const userConfig = await this.loadConfig()
+    const defaultConfig = this.defaultConfig
     
-    // UserConfigをChatHistoryConfigに変換
     return {
       storagePath: userConfig.storagePath,
-      storageType: userConfig.storageType,
-      maxSessions: userConfig.maxSessions,
-      maxMessagesPerSession: userConfig.maxMessagesPerSession,
-      autoCleanup: userConfig.autoCleanup,
-      cleanupDays: userConfig.cleanupDays,
-      enableSearch: userConfig.enableSearch,
-      enableBackup: userConfig.enableBackup,
-      backupInterval: userConfig.backupInterval,
-      autoSave: userConfig.autoSave || {
-        enabled: true,
-        interval: userConfig.autoSaveInterval || 5,
-        watchDirectories: [],
-        filePatterns: ['*.md', '*.ts', '*.js', '*.tsx', '*.jsx'],
-        maxSessionDuration: 2 * 60 * 60 * 1000, // 2時間
-        idleTimeout: (userConfig.autoSaveInterval || 5) * 60 * 1000 // 分をミリ秒に変換
-      },
-      cursor: userConfig.cursor ? {
-        enabled: userConfig.cursor.enabled ?? false,
-        watchPath: userConfig.cursor.cursorDataPath,
-        autoImport: userConfig.cursor.autoImport ?? false
-      } : {
-        enabled: false,
-        autoImport: false
-      }
+      maxSessions: userConfig.maxSessions ?? defaultConfig.maxSessions!,
+      maxMessagesPerSession: userConfig.maxMessagesPerSession ?? defaultConfig.maxMessagesPerSession!,
+      autoCleanup: userConfig.autoCleanup ?? defaultConfig.autoCleanup!,
+      cleanupDays: userConfig.cleanupDays ?? defaultConfig.cleanupDays!,
+      enableSearch: userConfig.enableSearch ?? defaultConfig.enableSearch!,
+      enableBackup: userConfig.enableBackup ?? defaultConfig.enableBackup!,
+      backupInterval: userConfig.backupInterval ?? defaultConfig.backupInterval!
     }
   }
 
@@ -310,23 +293,15 @@ export class ConfigService {
    * ChatHistoryConfig形式で設定を保存
    */
   async saveConfig(config: ChatHistoryConfig): Promise<void> {
-    // ChatHistoryConfigをUserConfigに変換
     const userConfig: Partial<UserConfig> = {
       storagePath: config.storagePath,
-      storageType: config.storageType,
       maxSessions: config.maxSessions,
       maxMessagesPerSession: config.maxMessagesPerSession,
       autoCleanup: config.autoCleanup,
       cleanupDays: config.cleanupDays,
       enableSearch: config.enableSearch,
       enableBackup: config.enableBackup,
-      backupInterval: config.backupInterval,
-      autoSave: config.autoSave,
-      cursor: config.cursor ? {
-        enabled: config.cursor.enabled,
-        cursorDataPath: config.cursor.watchPath,
-        autoImport: config.cursor.autoImport
-      } : undefined
+      backupInterval: config.backupInterval
     }
 
     await this.saveUserConfig(userConfig)

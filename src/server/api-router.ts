@@ -8,22 +8,28 @@
 import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { ConfigService } from '../services/ConfigService.js'
 import { AnalyticsService } from '../services/AnalyticsService.js'
+import { IntegrationService } from '../services/IntegrationService.js'
+import { Logger } from '../utils/Logger.js'
 import type {
   ChatHistoryFilter,
   ChatHistorySearchResult,
   ChatHistoryConfig,
 } from '../types/index.js'
+import type { IntegrationConfig } from '../types/integration.js'
 
 // サービス管理クラス（型安全な実データ統合）
 export class ApiDataService {
   private configService: ConfigService
   private chatHistoryService: ChatHistoryService | null = null
   private analyticsService: AnalyticsService | null = null
+  private integrationService: IntegrationService | null = null
+  private logger: Logger
   private initialized = false
   private initializationError: string | null = null
 
   constructor() {
     this.configService = new ConfigService()
+    this.logger = new Logger()
   }
 
   // 非同期初期化（型安全）
@@ -31,10 +37,31 @@ export class ApiDataService {
     try {
       console.log('🔧 ApiDataService: 実データサービス初期化開始')
 
+      await this.logger.initialize()
+      await this.configService.initialize()
+
       const config: ChatHistoryConfig = await this.configService.getConfig()
       this.chatHistoryService = new ChatHistoryService(config)
       await this.chatHistoryService.initialize()
       this.analyticsService = new AnalyticsService(this.chatHistoryService)
+
+      // 統合サービスの初期化
+      const integrationConfig: IntegrationConfig = {
+        cursor: {
+          enabled: config.cursor?.enabled ?? true,
+          watchPath: config.cursor?.watchPath ?? this.getDefaultCursorPath(),
+          autoImport: config.cursor?.autoImport ?? true
+        },
+        chatHistory: config,
+        sync: {
+          interval: 300,
+          batchSize: 100,
+          retryAttempts: 3
+        }
+      }
+
+      this.integrationService = new IntegrationService(integrationConfig, this.logger)
+      await this.integrationService.initialize()
 
       this.initialized = true
       console.log('✅ ApiDataService: 実データサービス初期化完了')
@@ -46,6 +73,23 @@ export class ApiDataService {
     }
   }
 
+  // デフォルトのCursorパスを取得
+  private getDefaultCursorPath(): string {
+    const os = process.platform
+    const homeDir = process.env.HOME || process.env.USERPROFILE || ''
+
+    switch (os) {
+      case 'darwin': // macOS
+        return `${homeDir}/Library/Application Support/Cursor/User/workspaceStorage`
+      case 'win32': // Windows
+        return `${homeDir}/AppData/Roaming/Cursor/User/workspaceStorage`
+      case 'linux': // Linux
+        return `${homeDir}/.config/Cursor/User/workspaceStorage`
+      default:
+        return `${homeDir}/.cursor/workspaceStorage`
+    }
+  }
+
   // サービス状態取得
   getServiceStatus() {
     return {
@@ -53,8 +97,14 @@ export class ApiDataService {
       error: this.initializationError,
       chatHistory: !!this.chatHistoryService,
       analytics: !!this.analyticsService,
+      integration: !!this.integrationService,
       mode: this.initialized ? 'real-data' : 'error',
     }
+  }
+
+  // 統合サービスを取得
+  getIntegrationService(): IntegrationService | null {
+    return this.integrationService
   }
 
   // 実データセッション一覧取得（型安全）

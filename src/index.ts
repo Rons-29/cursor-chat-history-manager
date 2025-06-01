@@ -8,7 +8,10 @@ import { ExportService } from './services/ExportService.js'
 import { ConfigService } from './services/ConfigService.js'
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { AutoSaveService } from './services/AutoSaveService.js'
-import { ChatHistoryConfig } from './types/index.js'
+import type { ChatHistoryConfig } from './types/index.js'
+import { Logger } from './utils/Logger.js'
+import { CursorIntegrationService } from './services/CursorIntegrationService.js'
+import { CursorLogService } from './services/CursorLogService.js'
 
 const program = new Command()
 
@@ -53,6 +56,7 @@ let historyService: ChatHistoryService
 let configService: ConfigService
 let analyticsService: AnalyticsService
 let autoSaveService: AutoSaveService
+let logger: Logger
 
 async function initializeService(): Promise<void> {
   configService = new ConfigService()
@@ -64,6 +68,7 @@ async function initializeService(): Promise<void> {
 
   analyticsService = new AnalyticsService(historyService)
   autoSaveService = new AutoSaveService(historyService, configService)
+  logger = new Logger()
 }
 
 program
@@ -853,12 +858,11 @@ program
     try {
       await initializeService()
 
-      const { CursorIntegrationService } = await import(
-        './services/CursorIntegrationService.js'
-      )
       const cursorService = new CursorIntegrationService(
         historyService,
-        configService
+        configService,
+        new CursorLogService(configService.getConfig().cursor, logger),
+        logger
       )
 
       await cursorService.start()
@@ -886,9 +890,6 @@ program
     try {
       await initializeService()
 
-      const { CursorIntegrationService } = await import(
-        './services/CursorIntegrationService.js'
-      )
       const cursorService = new CursorIntegrationService(
         historyService,
         configService
@@ -914,9 +915,6 @@ program
     try {
       await initializeService()
 
-      const { CursorIntegrationService } = await import(
-        './services/CursorIntegrationService.js'
-      )
       const cursorService = new CursorIntegrationService(
         historyService,
         configService

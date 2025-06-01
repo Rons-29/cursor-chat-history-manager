@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
-import { ChatHistoryService } from './services/ChatHistoryService';
-import { AutoSaveService } from './services/AutoSaveService';
-import { ExportService } from './services/ExportService';
-import { ChatHistoryConfig } from './types';
+import { ChatHistoryService } from './services/ChatHistoryService.js';
+import { AutoSaveService } from './services/AutoSaveService.js';
+import { ExportService } from './services/ExportService.js';
+import { ChatHistoryConfig } from './types/index.js';
 
 export class CursorChatHistoryExtension {
   private chatHistoryService!: ChatHistoryService;

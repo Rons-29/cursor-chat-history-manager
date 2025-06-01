@@ -1,7 +1,12 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { format } from 'date-fns'
-import { ChatSession, ChatMessage } from '../types/index.js'
+import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
+import { Logger } from '../utils/Logger.js'
+import { ConfigService } from './ConfigService.js'
+import { ChatHistoryService } from './ChatHistoryService.js'
+import { CursorIntegrationService } from './CursorIntegrationService.js'
+import { CursorLogService } from './CursorLogService.js'
 
 export interface ExportOptions {
   format: 'json' | 'markdown' | 'txt'
@@ -13,7 +18,61 @@ export interface ExportOptions {
   }
 }
 
+interface ExportConfig {
+  outputDir: string
+  format: 'json' | 'markdown' | 'text'
+  includeMetadata: boolean
+  compression: boolean
+}
+
+interface ExportResult {
+  success: boolean
+  filePath?: string
+  error?: string
+  stats?: {
+    sessionsExported: number
+    messagesExported: number
+    fileSize: number
+  }
+}
+
 export class ExportService {
+  private config: ExportConfig
+  private logger: Logger
+  private chatHistoryService: ChatHistoryService
+  private isInitialized: boolean = false
+
+  constructor(
+    config: ExportConfig,
+    chatHistoryService: ChatHistoryService,
+    logger: Logger
+  ) {
+    this.config = {
+      outputDir: config.outputDir,
+      format: config.format || 'json',
+      includeMetadata: config.includeMetadata ?? true,
+      compression: config.compression ?? false
+    }
+    this.logger = logger
+    this.chatHistoryService = chatHistoryService
+  }
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return
+    }
+
+    try {
+      await fs.ensureDir(this.config.outputDir)
+      this.isInitialized = true
+      this.logger.info('ExportServiceを初期化しました')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      this.logger.error('初期化エラー', { error: errorMessage })
+      throw new Error(`Failed to initialize ExportService: ${errorMessage}`)
+    }
+  }
+
   /**
    * セッションをエクスポート
    */
@@ -175,10 +234,212 @@ export class ExportService {
   /**
    * 単一セッションをエクスポート
    */
-  async exportSession(
-    session: ChatSession,
-    options: ExportOptions
-  ): Promise<void> {
-    await this.exportSessions([session], options)
+  async exportSession(sessionId: string): Promise<ExportResult> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      const session = await this.chatHistoryService.getSession(sessionId)
+      if (!session) {
+        return {
+          success: false,
+          error: 'Session not found'
+        }
+      }
+
+      const exportData = this.prepareExportData(session)
+      const filePath = await this.writeExportFile(sessionId, exportData)
+
+      return {
+        success: true,
+        filePath,
+        stats: {
+          sessionsExported: 1,
+          messagesExported: session.messages.length,
+          fileSize: (await fs.stat(filePath)).size
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      this.logger.error('エクスポートエラー', { sessionId, error: errorMessage })
+      return {
+        success: false,
+        error: errorMessage
+      }
+    }
+  }
+
+  private prepareExportData(session: ChatSession): unknown {
+    switch (this.config.format) {
+      case 'json':
+        return this.prepareJsonExport(session)
+      case 'markdown':
+        return this.prepareMarkdownExport(session)
+      case 'text':
+        return this.prepareTextExport(session)
+      default:
+        throw new Error(`Unsupported export format: ${this.config.format}`)
+    }
+  }
+
+  private prepareJsonExport(session: ChatSession): unknown {
+    const exportData = {
+      id: session.id,
+      title: session.title,
+      messages: session.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp
+      }))
+    }
+
+    if (this.config.includeMetadata) {
+      return {
+        ...exportData,
+        metadata: session.metadata,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt
+      }
+    }
+
+    return exportData
+  }
+
+  private prepareMarkdownExport(session: ChatSession): string {
+    let markdown = `# ${session.title}\n\n`
+    
+    if (this.config.includeMetadata) {
+      markdown += `## Metadata\n\n`
+      markdown += `- Created: ${new Date(session.createdAt).toLocaleString()}\n`
+      markdown += `- Updated: ${new Date(session.updatedAt).toLocaleString()}\n`
+      if (session.metadata.tags?.length) {
+        markdown += `- Tags: ${session.metadata.tags.join(', ')}\n`
+      }
+      markdown += '\n'
+    }
+
+    markdown += `## Messages\n\n`
+    for (const msg of session.messages) {
+      markdown += `### ${msg.role}\n\n`
+      markdown += `${msg.content}\n\n`
+      markdown += `*${new Date(msg.timestamp).toLocaleString()}*\n\n`
+    }
+
+    return markdown
+  }
+
+  private prepareTextExport(session: ChatSession): string {
+    let text = `${session.title}\n\n`
+    
+    if (this.config.includeMetadata) {
+      text += `Created: ${new Date(session.createdAt).toLocaleString()}\n`
+      text += `Updated: ${new Date(session.updatedAt).toLocaleString()}\n`
+      if (session.metadata.tags?.length) {
+        text += `Tags: ${session.metadata.tags.join(', ')}\n`
+      }
+      text += '\n'
+    }
+
+    for (const msg of session.messages) {
+      text += `${msg.role.toUpperCase()}:\n`
+      text += `${msg.content}\n\n`
+      text += `[${new Date(msg.timestamp).toLocaleString()}]\n\n`
+    }
+
+    return text
+  }
+
+  private async writeExportFile(sessionId: string, data: unknown): Promise<string> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const extension = this.config.format === 'json' ? 'json' : 'md'
+    const fileName = `session_${sessionId}_${timestamp}.${extension}`
+    const filePath = path.join(this.config.outputDir, fileName)
+
+    if (this.config.format === 'json') {
+      await fs.writeJson(filePath, data, { spaces: 2 })
+    } else {
+      await fs.writeFile(filePath, data as string, 'utf-8')
+    }
+
+    return filePath
+  }
+
+  async getStats(): Promise<{
+    totalExports: number
+    totalSessions: number
+    totalMessages: number
+    storageSize: number
+  }> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    try {
+      let totalExports = 0
+      let totalSessions = 0
+      let totalMessages = 0
+      let totalSize = 0
+
+      const files = await fs.readdir(this.config.outputDir)
+      for (const file of files) {
+        if (file.endsWith('.json') || file.endsWith('.md')) {
+          const filePath = path.join(this.config.outputDir, file)
+          const stats = await fs.stat(filePath)
+          totalSize += stats.size
+          totalExports++
+
+          if (file.endsWith('.json')) {
+            const data = await fs.readJson(filePath)
+            if (data.messages) {
+              totalSessions++
+              totalMessages += data.messages.length
+            }
+          }
+        }
+      }
+
+      return {
+        totalExports,
+        totalSessions,
+        totalMessages,
+        storageSize: totalSize
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      this.logger.error('統計取得エラー', { error: errorMessage })
+      throw new Error(`Failed to get stats: ${errorMessage}`)
+    }
   }
 }
+
+async function addMessage(sessionId: string, content: string) {
+  try {
+    const message = await chatHistoryService.addMessage(sessionId, {
+      role: 'user',
+      content
+    })
+    console.log('メッセージを追加しました:')
+    console.log(`   ID: ${message?.id}`)
+    console.log(`   ロール: ${message?.role}`)
+    console.log(`   時刻: ${message?.timestamp?.toLocaleString()}`)
+    console.log(
+      `   内容: ${message?.content?.substring(0, 100)}${message?.content?.length > 100 ? '...' : ''}`
+    )
+  } catch (error) {
+    console.error('メッセージの追加に失敗しました:', error)
+  }
+}
+
+const exportService = new ExportService({
+  format: 'json',
+  outputPath: './exports',
+  includeMetadata: true
+})
+
+const cursorService = new CursorIntegrationService(
+  historyService,
+  configService,
+  new CursorLogService(configService.getConfig().cursor, logger),
+  logger
+)

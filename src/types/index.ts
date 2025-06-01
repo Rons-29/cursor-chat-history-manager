@@ -4,10 +4,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
   metadata?: {
-    projectId?: number
-    issueId?: number
-    userId?: number
-    sessionId?: string
+    project?: string
     tags?: string[]
     attachments?: string[]
     source?: string
@@ -18,44 +15,42 @@ export interface ChatMessage {
 export interface ChatSession {
   id: string
   title: string
+  messages: ChatMessage[]
   createdAt: Date
   updatedAt: Date
   startTime: Date
   endTime?: Date
-  messages: ChatMessage[]
   tags: string[]
   metadata?: {
-    projectId?: number
-    userId?: number
-    summary?: string
-    totalMessages?: number
+    project?: string
     source?: string
-    taskId?: string
-    projectPath?: string
-    importedAt?: string
-    originalCreatedAt?: string
-    originalUpdatedAt?: string
+    summary?: string
+    status?: 'active' | 'archived' | 'deleted'
     tags?: string[]
+    totalMessages?: number
+    taskId?: string
+    cursorId?: string
   }
 }
 
 export interface ChatHistoryFilter {
-  sessionId?: string
-  projectId?: number
-  userId?: number
+  keyword?: string
+  query?: string // 検索用クエリ
+  tags?: string[]
   startDate?: Date
   endDate?: Date
-  tags?: string[]
-  keyword?: string
-  role?: 'user' | 'assistant' | 'system'
+  page?: number
+  pageSize?: number
   limit?: number
-  offset?: number
 }
 
 export interface ChatHistorySearchResult {
   sessions: ChatSession[]
-  totalCount: number
+  total: number
   hasMore: boolean
+  page: number
+  pageSize: number
+  totalCount: number
   currentPage: number
   totalPages: number
 }
@@ -80,32 +75,35 @@ export interface AutoSaveStatus {
 
 export interface ChatHistoryConfig {
   storagePath: string
-  storageType: 'file' | 'database'
-  maxSessions?: number
-  maxMessagesPerSession?: number
-  autoCleanup?: boolean
-  cleanupDays?: number
-  enableSearch?: boolean
-  enableBackup?: boolean
-  backupInterval?: number // hours
+  maxSessions: number
+  maxMessagesPerSession: number
+  autoCleanup: boolean
+  cleanupDays: number
+  enableSearch: boolean
+  enableBackup: boolean
+  backupInterval: number
   autoSave?: AutoSaveConfig
   cursor?: {
     enabled: boolean
-    watchPath?: string
     autoImport: boolean
+    watchPath?: string
   }
+  storageType?: 'file' | 'database'
 }
 
 export interface ChatHistoryStats {
   totalSessions: number
   totalMessages: number
+  totalSize: number
+  storageSize: number
   thisMonthMessages: number
   activeProjects: number
-  storageSize: string
-  lastActivity?: Date
   averageMessagesPerSession: number
-  oldestSession?: Date
-  newestSession?: Date
+  tagDistribution: Record<string, number>
+  lastUpdated: Date
+  lastActivity: Date | null
+  oldestSession: Date | null
+  newestSession: Date | null
 }
 
 export interface UsageStats {

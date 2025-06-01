@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ChatHistoryService } from './ChatHistoryService';
-import { AutoSaveStatus, AutoSaveConfig } from '../types';
+import { ChatHistoryService } from './ChatHistoryService.js';
+import { AutoSaveStatus, AutoSaveConfig } from '../types/index.js';
 
 export class AutoSaveService {
   private chatHistoryService: ChatHistoryService;

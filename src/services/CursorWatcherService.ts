@@ -1,15 +1,20 @@
 /**
  * Cursor Watcher Service
  * .mdcルール準拠: Cursorチャット履歴の自動監視・インポート機能
+ * SQLiteデータベース（state.vscdb）対応版
  */
 
 import { EventEmitter } from 'events'
-import { promises as fs } from 'fs'
+import fs from 'fs-extra'
 import path from 'path'
-import { watch, FSWatcher } from 'chokidar'
+import { watch, type FSWatcher } from 'fs'
+import sqlite3 from 'sqlite3'
+import { open } from 'sqlite'
 import type { ChatHistoryService } from './ChatHistoryService.js'
 import type { ConfigService } from './ConfigService.js'
 import type { ChatSession, Message } from '../types/index.js'
+import { Logger } from '../utils/Logger.js'
+import type { CursorChatData, CursorConfig } from '../types/cursor.js'
 
 export interface CursorWatcherStatus {
   isWatching: boolean
@@ -19,20 +24,9 @@ export interface CursorWatcherStatus {
   error?: string
 }
 
-export interface CursorChatData {
-  id: string
-  title: string
-  messages: Array<{
-    role: 'user' | 'assistant' | 'system'
-    content: string
-    timestamp: string
-  }>
-  createdAt: string
-  updatedAt: string
-}
-
 /**
  * Cursorチャット履歴の監視・インポートサービス
+ * SQLiteデータベース（state.vscdb）対応
  */
 export class CursorWatcherService extends EventEmitter {
   private chatHistoryService: ChatHistoryService
@@ -42,14 +36,25 @@ export class CursorWatcherService extends EventEmitter {
   private cursorPath: string
   private lastScanTime: Date | null = null
   private sessionsFound = 0
-  private config: any
+  private config: CursorConfig
+  private logger: Logger
+  private isInitialized: boolean = false
 
-  constructor(chatHistoryService: ChatHistoryService, configService: ConfigService) {
+  constructor(chatHistoryService: ChatHistoryService, configService: ConfigService, config: CursorConfig, logger: Logger) {
     super()
     this.chatHistoryService = chatHistoryService
     this.configService = configService
     this.cursorPath = this.getDefaultCursorPath()
-    this.config = configService.getConfig()
+    this.config = {
+      ...config,
+      enabled: config.enabled ?? true,
+      watchPath: config.watchPath ?? this.cursorPath,
+      autoImport: config.autoImport ?? true,
+      syncInterval: config.syncInterval ?? 300,
+      batchSize: config.batchSize ?? 100,
+      retryAttempts: config.retryAttempts ?? 3
+    }
+    this.logger = logger
   }
 
   /**
@@ -75,29 +80,37 @@ export class CursorWatcherService extends EventEmitter {
    * 監視を開始
    */
   async startWatching(): Promise<void> {
-    if (!this.config.cursor?.enabled) {
-      throw new Error('Cursor統合が無効です')
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
     }
 
-    this.cursorPath = this.config.cursor.watchPath || this.getDefaultCursorPath()
-    console.log(`Cursorチャット履歴を監視開始: ${this.cursorPath}`)
+    try {
+      // workspaceStorageディレクトリ内のstate.vscdbファイルを監視
+      this.watcher = watch(this.config.watchPath, {
+        recursive: true,
+        persistent: true
+      })
 
-    this.isWatching = true
+      this.watcher.on('change', async (eventType: string, filename: string | null) => {
+        if (filename && filename.endsWith('state.vscdb')) {
+          await this.handleFileChange(path.join(this.config.watchPath, filename))
+        }
+      })
 
-    // ファイルウォッチャーを作成
-    this.watcher = watch(`${this.cursorPath}/**/*.db`, {
-      ignored: [/^\\./, /node_modules/],
-      persistent: true,
-      ignoreInitial: false,
-      depth: 10
-    })
+      this.watcher.on('error', (error: Error) => {
+        this.handleWatchError(error)
+      })
 
-    this.watcher.on('add', this.handleFileChange.bind(this))
-    this.watcher.on('change', this.handleFileChange.bind(this))
-    this.watcher.on('error', this.handleWatchError.bind(this))
+      this.logger.info('Cursorログファイル監視を開始しました', { path: this.config.watchPath })
+      this.isWatching = true
 
-    // 初回スキャンを実行
-    await this.scanAndImport()
+      // 初回スキャンを実行
+      await this.scanAndImport()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      this.logger.error('監視開始エラー', { error: errorMessage })
+      throw new Error(`Failed to start watching: ${errorMessage}`)
+    }
   }
 
   /**
@@ -111,6 +124,7 @@ export class CursorWatcherService extends EventEmitter {
     if (this.watcher) {
       await this.watcher.close()
       this.watcher = null
+      this.logger.info('Cursorログファイル監視を停止しました')
     }
 
     this.isWatching = false
@@ -122,12 +136,11 @@ export class CursorWatcherService extends EventEmitter {
    */
   private async handleFileChange(filePath: string): Promise<void> {
     try {
-      // チャット履歴ファイルかチェック
-      if (this.isChatHistoryFile(filePath)) {
-        await this.processChatFile(filePath)
+      if (this.isCursorDbFile(filePath)) {
+        await this.processCursorDbFile(filePath)
       }
     } catch (error) {
-      console.error('ファイル処理エラー:', error)
+      this.logger.error('ファイル処理エラー:', error)
     }
   }
 
@@ -136,26 +149,22 @@ export class CursorWatcherService extends EventEmitter {
    */
   private handleWatchError(err: unknown): void {
     const error = err instanceof Error ? err : new Error(String(err))
-    console.error('ファイル監視エラー:', error)
+    this.logger.error('ファイル監視エラー:', error)
     this.emit('error', error)
   }
 
   /**
-   * チャット履歴ファイルかどうかを判定
+   * Cursorデータベースファイルかどうかを判定
    */
-  private isChatHistoryFile(filePath: string): boolean {
-    // Cursorのチャット履歴ファイルパターンを検出
-    // 実際のCursorのファイル構造に応じて調整が必要
-    return filePath.includes('chat') || 
-           filePath.includes('conversation') ||
-           filePath.endsWith('.json')
+  private isCursorDbFile(filePath: string): boolean {
+    return filePath.endsWith('state.vscdb')
   }
 
   /**
    * 手動スキャン・インポート
    */
   async scanAndImport(customPath?: string): Promise<number> {
-    const scanPath = customPath || this.cursorPath
+    const scanPath = customPath || this.config.watchPath
     let importCount = 0
 
     try {
@@ -171,14 +180,14 @@ export class CursorWatcherService extends EventEmitter {
         const fullPath = path.join(scanPath, entry.name)
         
         if (entry.isDirectory()) {
-          // 再帰的にディレクトリをスキャン
-          importCount += await this.scanAndImport(fullPath)
-        } else if (this.isChatHistoryFile(fullPath)) {
+          // workspaceStorageディレクトリ内のMD5ハッシュディレクトリをスキャン
+          const dbFilePath = path.join(fullPath, 'state.vscdb')
           try {
-            await this.processChatFile(fullPath)
+            await fs.access(dbFilePath)
+            await this.processCursorDbFile(dbFilePath)
             importCount++
           } catch (error) {
-            console.error(`ファイル処理エラー (${fullPath}):`, error)
+            // state.vscdbファイルが存在しない場合はスキップ
           }
         }
       }
@@ -194,102 +203,140 @@ export class CursorWatcherService extends EventEmitter {
   }
 
   /**
-   * チャットファイルを処理
+   * CursorデータベースファイルからチャットデータをSQLiteで読み込み
    */
-  private async processChatFile(filePath: string): Promise<void> {
+  private async processCursorDbFile(dbFilePath: string): Promise<void> {
     try {
-      const content = await fs.readFile(filePath, 'utf-8')
-      const chatData = this.parseChatData(content, filePath)
-      
-      if (chatData) {
-        await this.importChatSession(chatData)
-        this.emit('sessionImported', { sessionId: chatData.id, file: filePath })
-      }
-    } catch (error) {
-      console.error(`チャットファイル処理エラー (${filePath}):`, error)
-    }
-  }
+      this.logger.info('Cursorデータベースファイルを処理中', { file: dbFilePath })
 
-  /**
-   * チャットデータをパース
-   */
-  private parseChatData(content: string, filePath: string): CursorChatData | null {
-    try {
-      // 複数のフォーマットに対応
-      if (content.trim().startsWith('{')) {
-        return this.parseJsonChatData(content, filePath)
-      } else {
-        return this.parseTextChatData(content, filePath)
-      }
-    } catch (error) {
-      console.error('チャットデータパースエラー:', error)
-      return null
-    }
-  }
+      const db = await open({
+        filename: dbFilePath,
+        driver: sqlite3.Database
+      })
 
-  /**
-   * JSONフォーマットのチャットデータをパース
-   */
-  private parseJsonChatData(content: string, filePath: string): CursorChatData | null {
-    try {
-      const data = JSON.parse(content)
-      
-      // Cursorの実際のデータ構造に応じて調整
-      return {
-        id: data.id || path.basename(filePath, path.extname(filePath)),
-        title: data.title || `Cursor Chat ${new Date().toLocaleDateString()}`,
-        messages: this.extractMessages(data),
-        createdAt: data.createdAt || new Date().toISOString(),
-        updatedAt: data.updatedAt || new Date().toISOString()
-      }
-    } catch (error) {
-      return null
-    }
-  }
+      try {
+        // ItemTableからチャットデータを取得
+        const rows = await db.all(`
+          SELECT [key], value 
+          FROM ItemTable 
+          WHERE [key] IN (
+            'aiService.prompts', 
+            'workbench.panel.aichat.view.aichat.chatdata'
+          )
+        `)
 
-  /**
-   * テキストフォーマットのチャットデータをパース
-   */
-  private parseTextChatData(content: string, filePath: string): CursorChatData | null {
-    try {
-      const lines = content.split('\n').filter(line => line.trim())
-      const messages: CursorChatData['messages'] = []
-      
-      let currentRole: 'user' | 'assistant' | 'system' = 'user'
-      let currentContent = ''
-      
-      for (const line of lines) {
-        if (line.startsWith('User:') || line.startsWith('Human:')) {
-          if (currentContent) {
-            messages.push({
-              role: currentRole,
-              content: currentContent.trim(),
-              timestamp: new Date().toISOString()
+        for (const row of rows) {
+          try {
+            const chatSessions = this.extractAllChatSessionsFromDbValueJson(row.value, row.key)
+            for (const chatData of chatSessions) {
+              await this.importChatSession(chatData)
+              this.emit('sessionImported', { sessionId: chatData.id, file: dbFilePath })
+            }
+          } catch (parseError) {
+            this.logger.warn('データベース値のパースに失敗', { 
+              key: row.key, 
+              error: parseError instanceof Error ? parseError.message : '不明なエラー' 
             })
           }
-          currentRole = 'user'
-          currentContent = line.replace(/^(User:|Human:)/, '').trim()
-        } else if (line.startsWith('Assistant:') || line.startsWith('AI:')) {
-          if (currentContent) {
-            messages.push({
-              role: currentRole,
-              content: currentContent.trim(),
-              timestamp: new Date().toISOString()
-            })
+        }
+      } finally {
+        await db.close()
+      }
+    } catch (error) {
+      this.logger.error(`Cursorデータベースファイル処理エラー (${dbFilePath}):`, error)
+    }
+  }
+
+  /**
+   * データベースの値（JSON文字列）からチャットセッションデータを抽出
+   */
+  private extractAllChatSessionsFromDbValueJson(valueJson: string, key: string): CursorChatData[] {
+    try {
+      const data = JSON.parse(valueJson)
+      const sessions: CursorChatData[] = []
+
+      if (key === 'workbench.panel.aichat.view.aichat.chatdata') {
+        // チャットデータの場合
+        if (Array.isArray(data)) {
+          for (const item of data) {
+            const sessionData = this.parsePotentialChatSessionDataFromDbValue(item)
+            if (sessionData) {
+              sessions.push(sessionData)
+            }
           }
-          currentRole = 'assistant'
-          currentContent = line.replace(/^(Assistant:|AI:)/, '').trim()
-        } else {
-          currentContent += '\n' + line
+        } else if (typeof data === 'object' && data !== null) {
+          const sessionData = this.parsePotentialChatSessionDataFromDbValue(data)
+          if (sessionData) {
+            sessions.push(sessionData)
+          }
+        }
+      } else if (key === 'aiService.prompts') {
+        // プロンプトデータの場合
+        if (Array.isArray(data)) {
+          for (const prompt of data) {
+            if (prompt && typeof prompt === 'object') {
+              const sessionData: CursorChatData = {
+                id: prompt.id || `prompt-${Date.now()}-${Math.random()}`,
+                title: prompt.title || 'Cursor Prompt',
+                messages: [{
+                  role: 'user',
+                  content: prompt.content || prompt.text || '',
+                  timestamp: prompt.timestamp || new Date().toISOString()
+                }],
+                createdAt: prompt.createdAt || new Date().toISOString(),
+                updatedAt: prompt.updatedAt || new Date().toISOString()
+              }
+              sessions.push(sessionData)
+            }
+          }
         }
       }
-      
-      // 最後のメッセージを追加
-      if (currentContent) {
+
+      return sessions
+    } catch (error) {
+      this.logger.warn('JSON パースエラー', { error: error instanceof Error ? error.message : '不明なエラー' })
+      return []
+    }
+  }
+
+  /**
+   * データベースの値からチャットセッションデータをパース
+   */
+  private parsePotentialChatSessionDataFromDbValue(data: any): CursorChatData | null {
+    try {
+      if (!data || typeof data !== 'object') {
+        return null
+      }
+
+      const messages: CursorChatData['messages'] = []
+
+      // メッセージデータの抽出
+      if (Array.isArray(data.messages)) {
+        for (const msg of data.messages) {
+          if (msg && typeof msg === 'object') {
+            messages.push({
+              role: msg.role || 'user',
+              content: msg.content || msg.text || '',
+              timestamp: msg.timestamp || new Date().toISOString()
+            })
+          }
+        }
+      } else if (Array.isArray(data.conversation)) {
+        for (const msg of data.conversation) {
+          if (msg && typeof msg === 'object') {
+            messages.push({
+              role: msg.role || 'user',
+              content: msg.content || msg.text || '',
+              timestamp: msg.timestamp || new Date().toISOString()
+            })
+          }
+        }
+      } else if (data.content || data.text) {
+        // 単一メッセージの場合
         messages.push({
-          role: currentRole,
-          content: currentContent.trim(),
-          timestamp: new Date().toISOString()
+          role: data.role || 'user',
+          content: data.content || data.text,
+          timestamp: data.timestamp || new Date().toISOString()
         })
       }
 
@@ -298,43 +345,16 @@ export class CursorWatcherService extends EventEmitter {
       }
 
       return {
-        id: path.basename(filePath, path.extname(filePath)),
-        title: `Cursor Chat ${new Date().toLocaleDateString()}`,
+        id: data.id || `cursor-${Date.now()}-${Math.random()}`,
+        title: data.title || `Cursor Chat ${new Date().toLocaleDateString()}`,
         messages,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt || new Date().toISOString()
       }
     } catch (error) {
+      this.logger.warn('チャットセッションデータパースエラー', { error: error instanceof Error ? error.message : '不明なエラー' })
       return null
     }
-  }
-
-  /**
-   * データからメッセージを抽出
-   */
-  private extractMessages(data: any): CursorChatData['messages'] {
-    const messages: CursorChatData['messages'] = []
-    
-    // 複数のデータ構造に対応
-    if (Array.isArray(data.messages)) {
-      for (const msg of data.messages) {
-        messages.push({
-          role: msg.role || 'user',
-          content: msg.content || msg.text || '',
-          timestamp: msg.timestamp || new Date().toISOString()
-        })
-      }
-    } else if (Array.isArray(data.conversation)) {
-      for (const msg of data.conversation) {
-        messages.push({
-          role: msg.role || 'user',
-          content: msg.content || msg.text || '',
-          timestamp: msg.timestamp || new Date().toISOString()
-        })
-      }
-    }
-    
-    return messages
   }
 
   /**
@@ -353,7 +373,7 @@ export class CursorWatcherService extends EventEmitter {
         await this.createNewSession(chatData)
       }
     } catch (error) {
-      console.error('セッションインポートエラー:', error)
+      this.logger.error('セッションインポートエラー:', error)
       throw error
     }
   }
@@ -362,22 +382,41 @@ export class CursorWatcherService extends EventEmitter {
    * 既存セッションを更新
    */
   private async updateExistingSession(existingSession: ChatSession, chatData: CursorChatData): Promise<void> {
-    const existingMessageCount = existingSession.messages.length
-    const newMessages = chatData.messages.slice(existingMessageCount)
-    
-    if (newMessages.length > 0) {
-      for (const msgData of newMessages) {
-        const message: Omit<Message, 'id' | 'timestamp'> = {
-          role: msgData.role,
-          content: msgData.content,
-          metadata: {
-            source: 'cursor-import',
-            originalTimestamp: msgData.timestamp
-          }
-        }
+    try {
+      const existingMessageIds = new Set(existingSession.messages.map(msg => msg.id))
+      const newMessages: Message[] = []
+
+      for (const cursorMsg of chatData.messages) {
+        // メッセージIDを生成（内容とタイムスタンプのハッシュベース）
+        const messageId = `cursor-${Buffer.from(cursorMsg.content + cursorMsg.timestamp).toString('base64').slice(0, 16)}`
         
-        await this.chatHistoryService.addMessage(existingSession.id, message)
+        if (!existingMessageIds.has(messageId)) {
+          newMessages.push({
+            id: messageId,
+            role: cursorMsg.role as 'user' | 'assistant' | 'system',
+            content: cursorMsg.content,
+            timestamp: new Date(cursorMsg.timestamp),
+            metadata: {
+              source: 'cursor',
+              originalTimestamp: cursorMsg.timestamp
+            }
+          })
+        }
       }
+
+      if (newMessages.length > 0) {
+        for (const message of newMessages) {
+          await this.chatHistoryService.addMessage(existingSession.id, {
+            role: message.role,
+            content: message.content,
+            metadata: message.metadata
+          })
+        }
+        this.logger.info(`既存セッションに${newMessages.length}件の新しいメッセージを追加`, { sessionId: existingSession.id })
+      }
+    } catch (error) {
+      this.logger.error('既存セッション更新エラー:', error)
+      throw error
     }
   }
 
@@ -385,70 +424,128 @@ export class CursorWatcherService extends EventEmitter {
    * 新規セッションを作成
    */
   private async createNewSession(chatData: CursorChatData): Promise<void> {
-    const session = await this.chatHistoryService.createSession({
-      id: chatData.id,
-      title: chatData.title,
-      tags: ['cursor-import'],
-      metadata: {
-        source: 'cursor-import',
-        originalCreatedAt: chatData.createdAt,
-        originalUpdatedAt: chatData.updatedAt
-      }
-    })
-
-    // メッセージを追加
-    for (const msgData of chatData.messages) {
-      const message: Omit<Message, 'id' | 'timestamp'> = {
-        role: msgData.role,
-        content: msgData.content,
+    try {
+      const session = await this.chatHistoryService.createSession({
+        title: chatData.title,
         metadata: {
-          source: 'cursor-import',
-          originalTimestamp: msgData.timestamp
+          source: 'cursor',
+          cursorId: chatData.id,
+          tags: ['cursor-import']
         }
+      })
+
+      for (const cursorMsg of chatData.messages) {
+        await this.chatHistoryService.addMessage(session.id, {
+          role: cursorMsg.role as 'user' | 'assistant' | 'system',
+          content: cursorMsg.content,
+          metadata: {
+            source: 'cursor',
+            originalTimestamp: cursorMsg.timestamp
+          }
+        })
       }
-      
-      await this.chatHistoryService.addMessage(session.id, message)
+
+      this.logger.info(`新規セッションを作成`, { 
+        sessionId: session.id, 
+        title: chatData.title,
+        messageCount: chatData.messages.length 
+      })
+    } catch (error) {
+      this.logger.error('新規セッション作成エラー:', error)
+      throw error
     }
   }
 
   /**
-   * 監視状態を取得
+   * ステータスを取得
    */
   getStatus(): CursorWatcherStatus {
     return {
       isWatching: this.isWatching,
-      cursorPath: this.cursorPath,
+      cursorPath: this.config.watchPath,
       lastScan: this.lastScanTime || undefined,
-      sessionsFound: this.sessionsFound
+      sessionsFound: this.sessionsFound,
+      error: undefined
     }
   }
 
   /**
-   * Cursor統合設定を更新
+   * 設定を更新
    */
   async updateConfig(options: {
     enabled?: boolean
     watchPath?: string
     autoImport?: boolean
   }): Promise<void> {
-    const config = await this.configService.getConfig()
-
-    if (!config.cursor) {
-      config.cursor = { enabled: false, autoImport: false }
-    }
-
     if (options.enabled !== undefined) {
-      config.cursor.enabled = options.enabled
+      this.config.enabled = options.enabled
     }
-
     if (options.watchPath !== undefined) {
-      config.cursor.watchPath = options.watchPath
+      this.config.watchPath = options.watchPath
     }
-
     if (options.autoImport !== undefined) {
-      config.cursor.autoImport = options.autoImport
+      this.config.autoImport = options.autoImport
     }
 
-    await this.configService.saveConfig(config)
+    // 監視中の場合は再起動
+    if (this.isWatching) {
+      await this.stopWatching()
+      if (this.config.enabled) {
+        await this.startWatching()
+      }
+    }
+
+    this.logger.info('Cursor統合設定を更新しました', options)
+  }
+
+  /**
+   * サービスを初期化
+   */
+  async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return
+    }
+
+    try {
+      await this.logger.initialize()
+      this.isInitialized = true
+      this.logger.info('CursorWatcherServiceを初期化しました', { 
+        watchPath: this.config.watchPath,
+        enabled: this.config.enabled 
+      })
+    } catch (error) {
+      this.logger.error('初期化に失敗しました:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 検索機能（プレースホルダー）
+   */
+  async search(options: {
+    query?: string
+    timeRange?: { start: Date; end: Date }
+    types?: string[]
+  }): Promise<CursorChatData[]> {
+    // TODO: 統合管理機能で実装予定
+    this.logger.warn('検索機能は未実装です')
+    return []
+  }
+
+  /**
+   * 統計情報取得（プレースホルダー）
+   */
+  async getStats(): Promise<{
+    totalFiles: number
+    totalMessages: number
+    storageSize: number
+  }> {
+    // TODO: 統合管理機能で実装予定
+    this.logger.warn('統計情報取得機能は未実装です')
+    return {
+      totalFiles: 0,
+      totalMessages: 0,
+      storageSize: 0
+    }
   }
 } 

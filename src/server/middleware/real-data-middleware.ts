@@ -5,8 +5,11 @@
  * 戦略: Middleware方式で実データ統合を実現
  */
 
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { apiDataService } from '../api-router.js'
+import { Logger } from '../../utils/Logger.js'
+
+const logger = new Logger({ logPath: './logs', level: 'info' })
 
 // 実データサービス状態
 let realDataAvailable = false
@@ -28,16 +31,42 @@ export async function initializeRealDataMiddleware(): Promise<void> {
 }
 
 // リクエストに実データサービス情報を追加するMiddleware
-export function realDataMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
-  // @ts-ignore カスタムプロパティ
-  req.realDataAvailable = realDataAvailable
-  // @ts-ignore カスタムプロパティ
-  req.apiDataService = realDataAvailable ? apiDataService : null
-  next()
+export const realDataMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // リクエストの検証
+    if (!req.body || typeof req.body !== 'object') {
+      throw new Error('Invalid request body')
+    }
+
+    // データの検証
+    const { data } = req.body
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format')
+    }
+
+    // データの型チェック
+    if (!Array.isArray(data.messages)) {
+      throw new Error('Messages must be an array')
+    }
+
+    // メッセージの検証
+    for (const message of data.messages) {
+      if (!message.role || !message.content) {
+        throw new Error('Invalid message format')
+      }
+    }
+
+    // 実データサービス情報の追加
+    // @ts-ignore カスタムプロパティ
+    req.realDataAvailable = realDataAvailable
+    // @ts-ignore カスタムプロパティ
+    req.apiDataService = realDataAvailable ? apiDataService : null
+
+    next()
+  } catch (error) {
+    logger.error('Middleware error:', error)
+    res.status(400).json({ error: 'Invalid request format' })
+  }
 }
 
 // セッション取得ハンドラー（実データ統合版）
@@ -290,6 +319,11 @@ export async function searchHandler(
 }
 
 // ヘルスチェックハンドラー
+// ApiDataServiceを取得する関数
+export function getApiDataService() {
+  return realDataAvailable ? apiDataService : null
+}
+
 export function healthHandler(req: Request, res: Response): void {
   const status = realDataAvailable ? apiDataService.getServiceStatus() : null
 

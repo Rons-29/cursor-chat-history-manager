@@ -1,0 +1,6 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Link } from 'react-router-dom';
+const NotFound = () => {
+    return (_jsxs("div", { className: "text-center space-y-6", children: [_jsxs("div", { className: "space-y-4", children: [_jsx("h1", { className: "text-6xl font-bold text-gray-300", children: "404" }), _jsx("h2", { className: "text-2xl font-semibold text-gray-900", children: "\u30DA\u30FC\u30B8\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093" }), _jsx("p", { className: "text-gray-600", children: "\u304A\u63A2\u3057\u306E\u30DA\u30FC\u30B8\u306F\u5B58\u5728\u3057\u306A\u3044\u304B\u3001\u79FB\u52D5\u3055\u308C\u305F\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002" })] }), _jsxs(Link, { to: "/", className: "btn-primary inline-flex items-center", children: [_jsx("svg", { className: "w-4 h-4 mr-2", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: _jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" }) }), "\u30DB\u30FC\u30E0\u306B\u623B\u308B"] })] }));
+};
+export default NotFound;

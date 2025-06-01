@@ -1,7 +1,7 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { ChatHistoryService } from './ChatHistoryService';
-import { ChatSession } from '../types';
+import { ChatHistoryService } from './ChatHistoryService.js';
+import { ChatSession } from '../types/index.js';
 
 export class ExportService {
   private chatHistoryService: ChatHistoryService;

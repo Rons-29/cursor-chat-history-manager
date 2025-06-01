@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient, queryKeys } from '../api/client'
+import { apiClient, queryKeys } from '../api/client.js'
 
 const Settings: React.FC = () => {
   const queryClient = useQueryClient()

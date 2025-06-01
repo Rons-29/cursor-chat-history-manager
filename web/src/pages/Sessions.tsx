@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { apiClient, queryKeys } from '../api/client'
+import { apiClient, queryKeys } from '../api/client.js'
 
 const Sessions: React.FC = () => {
   const navigate = useNavigate()

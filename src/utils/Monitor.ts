@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 import type { MetricConfig, MetricValue, Report, ReportPeriod, GroupedAlert } from '../types/monitoring.js'
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { AlertNotifier } from './AlertNotifier.js'
 import type { ChatSession } from '../types/index.js'
 
@@ -286,5 +286,113 @@ export class Monitor extends EventEmitter {
     this.alerts.clear()
     this.alertNotifier.clearAlerts()
     this.logger.info('アラート履歴をクリアしました')
+  }
+
+  /**
+   * セッション監視を開始します
+   * @param sessionId セッションID
+   * @param session セッション情報
+   */
+  async startSessionMonitoring(sessionId: string, session?: ChatSession): Promise<void> {
+    if (!sessionId || sessionId.trim() === '') {
+      throw new Error('無効なセッションIDです')
+    }
+
+    if (session && (!session.title || session.title.trim() === '')) {
+      throw new Error('無効なセッションデータです')
+    }
+
+    await this.registerMetric(`session_${sessionId}_messages`, 'counter')
+    await this.registerMetric(`session_${sessionId}_duration`, 'gauge')
+    
+    this.logger.info(`セッション監視を開始: ${sessionId}`)
+  }
+
+  /**
+   * セッション監視を停止します
+   * @param sessionId セッションID
+   */
+  async stopSessionMonitoring(sessionId: string): Promise<void> {
+    if (!this.metrics.has(`session_${sessionId}_messages`)) {
+      throw new Error(`セッション "${sessionId}" の監視は開始されていません`)
+    }
+
+    this.metrics.delete(`session_${sessionId}_messages`)
+    this.metrics.delete(`session_${sessionId}_duration`)
+    
+    this.logger.info(`セッション監視を停止: ${sessionId}`)
+  }
+
+  /**
+   * メモリ使用量の監視を開始します
+   * @param options 監視オプション
+   */
+  async startMemoryMonitoring(options: MemoryMonitoringOptions): Promise<void> {
+    if (options.threshold <= 0) {
+      throw new Error('無効なメモリ閾値です')
+    }
+
+    if (options.interval <= 0) {
+      throw new Error('無効な監視間隔です')
+    }
+
+    await this.registerMetric('memory_usage', 'gauge')
+    
+    this.memoryMonitoringInterval = setInterval(async () => {
+      const memoryUsage = process.memoryUsage()
+      const usageInMB = memoryUsage.heapUsed / 1024 / 1024
+      
+      await this.recordMetric('memory_usage', usageInMB)
+      
+      if (usageInMB > options.threshold) {
+        this.emit('memoryThresholdExceeded', { usage: usageInMB, threshold: options.threshold })
+      }
+    }, options.interval)
+
+    this.logger.info(`メモリ使用量監視を開始: 閾値=${options.threshold}MB, 間隔=${options.interval}ms`)
+  }
+
+  /**
+   * メモリ使用量の監視を停止します
+   */
+  stopMemoryMonitoring(): void {
+    if (this.memoryMonitoringInterval) {
+      clearInterval(this.memoryMonitoringInterval)
+      this.memoryMonitoringInterval = undefined
+      this.logger.info('メモリ使用量監視を停止しました')
+    }
+  }
+
+  /**
+   * エラーをログに記録します
+   * @param message エラーメッセージ
+   * @param error エラーオブジェクト
+   * @param level ログレベル
+   */
+  async logError(message: string, error?: Error, level: ErrorLevel = 'error'): Promise<void> {
+    if (!error) {
+      throw new Error('エラーオブジェクトは必須です')
+    }
+
+    if (!['error', 'warn', 'info', 'debug'].includes(level)) {
+      throw new Error('無効なエラーレベルです')
+    }
+
+    switch (level) {
+      case 'error':
+        this.logger.error(message, error)
+        break
+      case 'warn':
+        this.logger.warn(message, error)
+        break
+      case 'info':
+        this.logger.info(message, error)
+        break
+      case 'debug':
+        this.logger.debug(message, error)
+        break
+    }
+
+    await this.recordMetric('error_count', 1)
   }
 } 

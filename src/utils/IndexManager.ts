@@ -1,6 +1,6 @@
 import fs from 'fs-extra'
 import path from 'path'
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { StorageError } from '../errors/ChatHistoryError.js'
 
 export interface SessionIndex {
@@ -101,7 +101,8 @@ export class IndexManager {
       lastUpdated: new Date(),
       version: this.VERSION
     }
-    await this.saveIndex()
+    // 初期化中なので直接ファイルに書き込み
+    await fs.writeJson(this.indexPath, this.indexData, { spaces: 2 })
   }
 
   private async saveIndex(): Promise<void> {

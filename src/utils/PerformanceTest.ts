@@ -1,4 +1,4 @@
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 
 export interface TestResult {
   name: string

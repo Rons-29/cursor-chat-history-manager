@@ -1,5 +1,5 @@
 import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { ConfigService } from './ConfigService.js'
 import { ChatHistoryService } from './ChatHistoryService.js'
 

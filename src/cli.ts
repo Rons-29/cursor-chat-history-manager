@@ -17,10 +17,12 @@ import type {
   ChatHistoryFilter, 
   ExportFormat,
   Message,
-  ChatSession 
+  ChatSession,
+  ChatMessage
 } from './types/index.js'
 import { format } from 'date-fns'
 import fs from 'fs-extra'
+import { Logger } from './server/utils/Logger.js'
 
 const program = new Command()
 
@@ -42,7 +44,9 @@ async function initializeServices(): Promise<void> {
     await chatHistoryService.initialize()
     
     analyticsService = new AnalyticsService(chatHistoryService)
-    exportService = new ExportService()
+    const logger = Logger.getInstance('./logs')
+    await logger.initialize()
+    exportService = new ExportService(chatHistoryService, configService, logger)
     autoSaveService = new AutoSaveService(chatHistoryService, configService)
     // cursorWatcherService = new CursorWatcherService(chatHistoryService, configService)
     
@@ -95,10 +99,10 @@ async function main() {
     .option('-r, --role <role>', 'ロール (user|assistant|system)', 'user')
     .action(async (options) => {
       try {
-        const message: Omit<Message, 'id' | 'timestamp'> = {
+        const message: ChatMessage = {
           role: options.role,
           content: options.content,
-          metadata: {}
+          timestamp: new Date()
         }
         await chatHistoryService.addMessage(options.session, message)
         console.log(chalk.green('✅ メッセージ追加完了'))

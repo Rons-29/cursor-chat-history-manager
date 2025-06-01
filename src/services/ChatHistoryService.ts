@@ -20,7 +20,7 @@ import {
   BackupError,
   ImportError,
 } from '../errors/ChatHistoryError.js'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { CacheManager } from '../utils/CacheManager.js'
 import { IndexManager } from '../utils/IndexManager.js'
 import { BatchProcessor } from '../utils/BatchProcessor.js'
@@ -56,10 +56,7 @@ class ChatHistoryService {
     }
 
     this.sessionsPath = path.join(this.config.storagePath, 'sessions')
-    this.logger = new Logger({
-      logPath: path.join(this.config.storagePath, 'logs'),
-      level: 'info'
-    })
+    this.logger = Logger.getInstance(path.join(this.config.storagePath, 'logs'))
     this.sessionCache = new CacheManager<ChatSession>(
       this.logger,
       {
@@ -91,7 +88,6 @@ class ChatHistoryService {
     }
 
     try {
-      await this.logger.initialize()
       await fs.ensureDir(this.sessionsPath)
       await this.indexManager.initialize()
       this.isInitialized = true
@@ -99,7 +95,7 @@ class ChatHistoryService {
         storagePath: this.config.storagePath,
       })
     } catch (error) {
-      await this.logger.error('初期化に失敗しました', { error })
+      await this.logger.error('初期化に失敗しました', error instanceof Error ? error : undefined)
       throw new StorageError('初期化', error as Error)
     }
   }
@@ -166,8 +162,8 @@ class ChatHistoryService {
       await this.sessionCache.set(sessionId, data)
       return data
     } catch (error) {
-      await this.logger.error('セッションの取得に失敗しました', {
-        error,
+      await this.logger.error('セッションの取得に失敗しました', { 
+        error: error instanceof Error ? error.message : String(error),
         sessionId,
       })
       throw new StorageError('セッション取得', error as Error)
@@ -191,7 +187,7 @@ class ChatHistoryService {
       })
     } catch (error) {
       await this.logger.error('セッションの保存に失敗しました', {
-        error,
+        error: error instanceof Error ? error.message : String(error),
         sessionId: session.id,
       })
       throw new StorageError('セッション保存', error as Error)

@@ -16,7 +16,7 @@ import type {
   IntegrationAnalyticsResponse
 } from '../types/integration.js'
 import type { ChatHistoryFilter, ChatHistorySearchResult, ChatHistoryStats } from '../types/index.js'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 
 export class IntegrationService extends EventEmitter {
   private config: IntegrationConfig

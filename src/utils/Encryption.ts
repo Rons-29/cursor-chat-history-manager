@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import fs from 'fs-extra'
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 
 interface EncryptionConfig {
   algorithm: string

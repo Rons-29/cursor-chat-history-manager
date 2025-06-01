@@ -9,7 +9,7 @@ import { ConfigService } from './services/ConfigService.js'
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { AutoSaveService } from './services/AutoSaveService.js'
 import type { ChatHistoryConfig } from './types/index.js'
-import { Logger } from './utils/Logger.js'
+import { Logger } from './server/utils/Logger.js'
 import { CursorIntegrationService } from './services/CursorIntegrationService.js'
 import { CursorLogService } from './services/CursorLogService.js'
 
@@ -68,7 +68,8 @@ async function initializeService(): Promise<void> {
 
   analyticsService = new AnalyticsService(historyService)
   autoSaveService = new AutoSaveService(historyService, configService)
-  logger = new Logger()
+  logger = Logger.getInstance('./logs')
+  await logger.initialize()
 }
 
 program
@@ -94,10 +95,15 @@ program
           : undefined,
       }
 
-      const session = await historyService.createSession(
-        options.title,
+      const sessionData = {
+        id: Date.now().toString(),
+        title: options.title || 'New Session',
+        messages: [],
+        tags: metadata.tags || [],
+        startTime: new Date(),
         metadata
-      )
+      }
+      const session = await historyService.createSession(sessionData)
       console.log('✅ 新しいセッションを作成しました:')
       console.log(`   ID: ${session.id}`)
       console.log(`   タイトル: ${session.title}`)
@@ -120,23 +126,26 @@ program
     try {
       await initializeService()
 
-      const message = await historyService.addMessage(options.session, {
+      const messageData = {
         role: options.role,
         content: options.content,
-        metadata: {
-          tags: options.tags
-            ? options.tags.split(',').map((tag: string) => tag.trim())
-            : undefined,
-        },
-      })
+        timestamp: new Date()
+      }
+      await historyService.addMessage(options.session, messageData)
+      
+      const session = await historyService.getSession(options.session)
+      const message = session?.messages[session.messages.length - 1]
 
-      console.log('✅ メッセージを追加しました:')
-      console.log(`   ID: ${message.id}`)
-      console.log(`   ロール: ${message.role}`)
-      console.log(`   時刻: ${message.timestamp.toLocaleString()}`)
-      console.log(
-        `   内容: ${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}`
-      )
+      if (message) {
+        console.log('✅ メッセージを追加しました:')
+        console.log(`   ロール: ${message.role}`)
+        console.log(`   時刻: ${message.timestamp.toLocaleString()}`)
+        console.log(
+          `   内容: ${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}`
+        )
+      } else {
+        console.log('❌ メッセージの追加に失敗しました')
+      }
     } catch (error) {
       console.error('❌ メッセージ追加エラー:', error)
       process.exit(1)
@@ -337,7 +346,13 @@ program
   .action(async options => {
     try {
       await initializeService()
-      const exportService = new ExportService()
+      const exportConfig = {
+        outputDir: './exports',
+        format: 'json' as const,
+        includeMetadata: true,
+        compression: false
+      }
+      const exportService = new ExportService(exportConfig, historyService, logger)
 
       let sessions
 
@@ -858,10 +873,11 @@ program
     try {
       await initializeService()
 
+      const config = await configService.getConfig()
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(configService.getConfig().cursor, logger),
+        new CursorLogService(config.cursor || { enabled: false, autoImport: false }, logger),
         logger
       )
 
@@ -890,9 +906,12 @@ program
     try {
       await initializeService()
 
+      const config = await configService.getConfig()
       const cursorService = new CursorIntegrationService(
         historyService,
-        configService
+        configService,
+        new CursorLogService(config.cursor || { enabled: false, autoImport: false }, logger),
+        logger
       )
 
       console.log('🔍 Cursorチャット履歴をスキャンしています...')
@@ -915,22 +934,25 @@ program
     try {
       await initializeService()
 
+      const config = await configService.getConfig()
       const cursorService = new CursorIntegrationService(
         historyService,
-        configService
+        configService,
+        new CursorLogService(config.cursor || { enabled: false, autoImport: false }, logger),
+        logger
       )
 
       const status = cursorService.getStatus()
-      const config = await configService.getConfig()
+      const cursorConfig = await configService.getConfig()
 
       console.log('\n📊 Cursor統合状態')
       console.log('='.repeat(30))
-      console.log(`Cursor統合: ${config.cursor?.enabled ? '✅ 有効' : '❌ 無効'}`)
+      console.log(`Cursor統合: ${cursorConfig.cursor?.enabled ? '✅ 有効' : '❌ 無効'}`)
       console.log(
-        `自動インポート: ${config.cursor?.autoImport ? '✅ はい' : '❌ いいえ'}`
+        `自動インポート: ${cursorConfig.cursor?.autoImport ? '✅ はい' : '❌ いいえ'}`
       )
       console.log(
-        `監視パス: ${config.cursor?.watchPath || 'デフォルト'}`
+        `監視パス: ${cursorConfig.cursor?.watchPath || 'デフォルト'}`
       )
     } catch (error) {
       console.error('❌ Cursor統合状態の取得に失敗しました:', error)

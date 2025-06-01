@@ -9,6 +9,17 @@ dist/
 build/
 web/dist/
 
+# Generated JavaScript and TypeScript definition files
+*.js
+*.d.ts
+!jest.config.js
+!simple-api-server.cjs
+!test-simple-server.js
+!web/postcss.config.js
+!scripts/*.js
+!*.config.js
+!vite.config.ts
+
 # Environment files
 .env
 .env.local

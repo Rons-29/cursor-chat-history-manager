@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 import type { Alert, GroupedAlert } from '../types/monitoring.js'
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 
 interface AlertNotifierConfig {
   cooldownPeriod: number // ms

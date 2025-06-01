@@ -13,6 +13,8 @@ import {
   searchHandler,
 } from './middleware/real-data-middleware.js'
 import integrationRoutes, { setupIntegrationRoutes } from './routes/integration.js'
+import { Logger } from './utils/Logger.js'
+import { IntegrationService } from './services/IntegrationService.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -118,10 +120,9 @@ async function setupIntegrationService() {
     
     if (apiDataService) {
       const integrationService = apiDataService.getIntegrationService()
-      const { Logger } = await import('../utils/Logger.js')
       const logger = new Logger()
       
-      if (integrationService) {
+      if (integrationService instanceof IntegrationService) {
         setupIntegrationRoutes(integrationService, logger)
         console.log('✅ 統合機能のセットアップが完了しました')
       } else {

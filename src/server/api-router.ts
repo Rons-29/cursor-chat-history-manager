@@ -9,13 +9,13 @@ import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { ConfigService } from '../services/ConfigService.js'
 import { AnalyticsService } from '../services/AnalyticsService.js'
 import { IntegrationService } from '../services/IntegrationService.js'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from './utils/Logger.js'
 import type {
   ChatHistoryFilter,
   ChatHistorySearchResult,
   ChatHistoryConfig,
 } from '../types/index.js'
-import type { IntegrationConfig } from '../types/integration.js'
+import type { IntegrationConfig } from './types/integration.js'
 
 // サービス管理クラス（型安全な実データ統合）
 export class ApiDataService {
@@ -50,7 +50,11 @@ export class ApiDataService {
         cursor: {
           enabled: config.cursor?.enabled ?? true,
           watchPath: config.cursor?.watchPath ?? this.getDefaultCursorPath(),
-          autoImport: config.cursor?.autoImport ?? true
+          logDir: config.cursor?.logDir ?? './logs/cursor',
+          autoImport: config.cursor?.autoImport ?? true,
+          syncInterval: config.cursor?.syncInterval ?? 300,
+          batchSize: config.cursor?.batchSize ?? 100,
+          retryAttempts: config.cursor?.retryAttempts ?? 3
         },
         chatHistory: config,
         sync: {
@@ -130,10 +134,9 @@ export class ApiDataService {
       throw new Error('サービスが初期化されていません')
     }
 
-    const offset = (page - 1) * limit
     const filter: ChatHistoryFilter = {
       limit,
-      offset,
+      page,
       keyword,
       startDate,
       endDate,
@@ -332,7 +335,7 @@ export class ApiDataService {
     const searchFilter: ChatHistoryFilter = {
       keyword,
       limit: filters.limit || 50,
-      offset: filters.offset || 0,
+      page: Math.floor((filters.offset || 0) / (filters.limit || 50)) + 1,
       startDate: filters.startDate ? new Date(filters.startDate) : undefined,
       endDate: filters.endDate ? new Date(filters.endDate) : undefined,
       tags: filters.tags,

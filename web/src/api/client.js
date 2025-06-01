@@ -45,7 +45,7 @@ class ApiClient {
     }
     // 統計情報取得
     async getStats() {
-        return this.request('/stats');
+        return this.request('/integration/stats');
     }
     // 検索実行
     async search(keyword, filters = {}) {

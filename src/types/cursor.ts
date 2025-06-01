@@ -6,6 +6,7 @@ export interface CursorConfig {
   batchSize?: number
   retryAttempts?: number
   logPath?: string
+  logDir: string
   maxLogSize?: number
   retentionDays?: number
   excludePatterns?: string[]
@@ -51,6 +52,8 @@ export interface CursorLogSearchOptions {
     start: Date
     end: Date
   }
+  startDate?: Date
+  endDate?: Date
   types?: ('chat' | 'command' | 'error' | 'info')[]
   project?: string
   tags?: string[]

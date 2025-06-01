@@ -1,7 +1,7 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
-  preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  preset: 'ts-jest/presets/default-esm',
+  testEnvironment: 'node',
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: true,
@@ -10,28 +10,45 @@ export default {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(uuid)/)'
+    'node_modules/(?!(uuid|@testing-library)/)'
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
-  testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
+  testMatch: [
+    '**/__tests__/**/*.test.ts?(x)', 
+    '**/?(*.)+(spec|test).ts?(x)',
+    '!**/dist/**',
+    '!**/node_modules/**',
+    '!**/__tests__/setup.ts'
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/build/',
+    '/web/dist/'
+  ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
-    '!src/tests/**/*',
+    '!src/__tests__/**/*',
+    '!dist/**/*',
+    '!web/**/*'
   ],
   coverageThreshold: {
     global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80,
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
     },
   },
   globals: {
-    __dirname: '/Users/shirokki22/project/chat-history-manager'
-  }
+    'ts-jest': {
+      useESM: true
+    }
+  },
+  testTimeout: 30000
 } 

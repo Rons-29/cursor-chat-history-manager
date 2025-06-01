@@ -28,40 +28,88 @@ const Search: React.FC = () => {
     queryFn: async (): Promise<SearchResult[]> => {
       if (!searchQuery.trim()) return []
 
-      // 実際の検索APIがない場合のモック実装
-      // 実装時にはapiClient.search(searchQuery)を呼び出す
-      const sessions = await apiClient.getSessions({ limit: 100 })
-      const results: SearchResult[] = []
+      try {
+        // 実際の検索APIを使用
+        const searchResponse = await apiClient.search(searchQuery)
+        const results: SearchResult[] = []
 
-      sessions.sessions.forEach(session => {
-        session.messages?.forEach((message, index) => {
-          if (
-            message.content.toLowerCase().includes(searchQuery.toLowerCase())
-          ) {
-            results.push({
-              sessionId: session.id,
-              sessionTitle:
-                session.title || `セッション ${session.id.slice(0, 8)}`,
-              messageIndex: index,
-              content: message.content,
-              timestamp: message.timestamp,
-              score: searchQuery
-                .toLowerCase()
-                .split(' ')
-                .reduce((score, word) => {
-                  const matches = (
-                    message.content
-                      .toLowerCase()
-                      .match(new RegExp(word, 'g')) || []
-                  ).length
-                  return score + matches
-                }, 0),
+        // 検索結果を処理
+        if (searchResponse.results && Array.isArray(searchResponse.results)) {
+          searchResponse.results.forEach(session => {
+            if (!session || !session.messages) return
+            session.messages.forEach((message, index) => {
+              if (
+                message.content.toLowerCase().includes(searchQuery.toLowerCase())
+              ) {
+                results.push({
+                  sessionId: session.id,
+                  sessionTitle:
+                    session.title || `セッション ${session.id.slice(0, 8)}`,
+                  messageIndex: index,
+                  content: message.content,
+                  timestamp: message.timestamp,
+                  score: searchQuery
+                    .toLowerCase()
+                    .split(' ')
+                    .reduce((score, word) => {
+                      const matches = (
+                        message.content
+                          .toLowerCase()
+                          .match(new RegExp(word, 'g')) || []
+                      ).length
+                      return score + matches
+                    }, 0),
+                })
+              }
             })
-          }
-        })
-      })
+          })
+        }
 
-      return results.sort((a, b) => b.score - a.score).slice(0, 50)
+        return results.sort((a, b) => b.score - a.score).slice(0, 50)
+      } catch (error) {
+        console.error('検索エラー:', error)
+        // フォールバック: セッション一覧から検索
+        const sessions = await apiClient.getSessions({ limit: 100 })
+        const results: SearchResult[] = []
+
+        // sessionsの構造を安全にチェック
+        const sessionList = sessions?.sessions || sessions || []
+        if (!Array.isArray(sessionList)) {
+          console.warn('Sessions data is not an array:', sessions)
+          return []
+        }
+
+        sessionList.forEach(session => {
+          if (!session || !session.messages) return
+          session.messages.forEach((message, index) => {
+            if (
+              message.content.toLowerCase().includes(searchQuery.toLowerCase())
+            ) {
+              results.push({
+                sessionId: session.id,
+                sessionTitle:
+                  session.title || `セッション ${session.id.slice(0, 8)}`,
+                messageIndex: index,
+                content: message.content,
+                timestamp: message.timestamp,
+                score: searchQuery
+                  .toLowerCase()
+                  .split(' ')
+                  .reduce((score, word) => {
+                    const matches = (
+                      message.content
+                        .toLowerCase()
+                        .match(new RegExp(word, 'g')) || []
+                    ).length
+                    return score + matches
+                  }, 0),
+              })
+            }
+          })
+        })
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 50)
+      }
     },
     enabled: false, // 手動実行
     retry: 1,

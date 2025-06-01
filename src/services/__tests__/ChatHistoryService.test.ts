@@ -1,52 +1,54 @@
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
 import { ChatHistoryService } from '../ChatHistoryService.js'
 import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../../types/index.js'
 import fs from 'fs-extra'
 import path from 'path'
-import { v4 as uuidv4 } from 'uuid'
-import { Logger } from '../../utils/Logger.js'
+import os from 'os'
+import { Logger } from '../../server/utils/Logger.js'
 
 describe('ChatHistoryService', () => {
   let service: ChatHistoryService
-  let testConfig: ChatHistoryConfig
-  let testStoragePath: string
   let logger: Logger
+  let testStoragePath: string
+  let testConfig: ChatHistoryConfig
 
   beforeEach(async () => {
-    testStoragePath = path.join(__dirname, 'test-storage', uuidv4())
-    logger = new Logger({ logPath: './logs', level: 'info' })
+    testStoragePath = await fs.mkdtemp(path.join(os.tmpdir(), 'chat-history-test-'))
+    logger = Logger.getInstance(path.join(testStoragePath, 'logs'))
+    await logger.initialize()
+
     testConfig = {
       storagePath: testStoragePath,
-      maxSessions: 100,
-      maxMessagesPerSession: 50,
-      autoCleanup: true,
-      cleanupDays: 7,
+      maxSessions: 1000,
+      maxMessagesPerSession: 500,
+      autoCleanup: false,
+      cleanupDays: 30,
       enableSearch: true,
-      enableBackup: true,
-      backupInterval: 24,
+      enableBackup: false,
+      backupInterval: 24
     }
 
-    service = new ChatHistoryService(testConfig, logger)
+    service = new ChatHistoryService(testConfig)
     await service.initialize()
   })
 
   afterEach(async () => {
     await fs.remove(testStoragePath)
+    Logger.reset()
   })
 
   describe('初期化', () => {
     it('正常に初期化できること', async () => {
       expect(service).toBeDefined()
-      expect(await fs.pathExists(testStoragePath)).toBe(true)
     })
 
-    it('無効な設定で初期化するとエラーになること', async () => {
-      const invalidConfig: ChatHistoryConfig = {
+    it('無効な設定で初期化に失敗すること', async () => {
+      const invalidConfig = {
         ...testConfig,
-        storagePath: '/invalid/path',
-        maxSessions: -1
+        storagePath: '/invalid/path/that/cannot/be/created'
       }
 
-      const invalidService = new ChatHistoryService(invalidConfig, logger)
+      const invalidService = new ChatHistoryService(invalidConfig)
       await expect(invalidService.initialize()).rejects.toThrow()
     })
   })

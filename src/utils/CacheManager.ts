@@ -1,5 +1,5 @@
 import LRU from 'lru-cache'
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 
 interface CacheConfig {
   max: number

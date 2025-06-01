@@ -1,9 +1,9 @@
 import { EventEmitter } from 'events'
 import fs from 'fs-extra'
 import path from 'path'
-import type { CursorLogConfig, CursorLog, CursorLogStats } from '../types/integration.js'
+import type { CursorLogConfig, CursorLog, CursorLogStats } from '../server/types/integration.js'
 import { v4 as uuidv4 } from 'uuid'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { CacheManager } from '../utils/CacheManager.js'
 
 export class CursorLogService extends EventEmitter {
@@ -264,7 +264,11 @@ export class CursorLogService extends EventEmitter {
       await fs.appendFile(logFile, logLine)
       this.logger.debug('ログを記録しました', { type, sessionId })
     } catch (error) {
-      this.logger.error('ログ記録エラー', { error, type, sessionId })
+      this.logger.error('ログ記録エラー', { 
+        error: error instanceof Error ? error.message : String(error), 
+        type, 
+        sessionId 
+      })
       throw error
     }
   }

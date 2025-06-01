@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import { format } from 'date-fns'
 import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { ConfigService } from './ConfigService.js'
 import { ChatHistoryService } from './ChatHistoryService.js'
 import { CursorIntegrationService } from './CursorIntegrationService.js'
@@ -412,34 +412,3 @@ export class ExportService {
     }
   }
 }
-
-async function addMessage(sessionId: string, content: string) {
-  try {
-    const message = await chatHistoryService.addMessage(sessionId, {
-      role: 'user',
-      content
-    })
-    console.log('メッセージを追加しました:')
-    console.log(`   ID: ${message?.id}`)
-    console.log(`   ロール: ${message?.role}`)
-    console.log(`   時刻: ${message?.timestamp?.toLocaleString()}`)
-    console.log(
-      `   内容: ${message?.content?.substring(0, 100)}${message?.content?.length > 100 ? '...' : ''}`
-    )
-  } catch (error) {
-    console.error('メッセージの追加に失敗しました:', error)
-  }
-}
-
-const exportService = new ExportService({
-  format: 'json',
-  outputPath: './exports',
-  includeMetadata: true
-})
-
-const cursorService = new CursorIntegrationService(
-  historyService,
-  configService,
-  new CursorLogService(configService.getConfig().cursor, logger),
-  logger
-)

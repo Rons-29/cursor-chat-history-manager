@@ -69,6 +69,25 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
+      name: 'Cursor統合',
+      href: '/integration',
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+          />
+        </svg>
+      ),
+    },
+    {
       name: '設定',
       href: '/settings',
       icon: (
@@ -102,7 +121,7 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
       {/* サイドバーヘッダー */}
       <div className="flex items-center justify-center h-16 px-4 bg-gray-50 border-b border-gray-200">
         <h2 className="text-lg font-medium text-gray-900">ナビゲーション</h2>

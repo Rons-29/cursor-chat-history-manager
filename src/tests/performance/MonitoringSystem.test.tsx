@@ -1,1 +1,0 @@
-logger = new Logger({ logPath: './logs', level: 'info' }); 

@@ -1,4 +1,4 @@
-import { Logger } from './Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import { EventEmitter } from 'events'
 import crypto from 'crypto'
 

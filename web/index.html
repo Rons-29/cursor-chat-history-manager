@@ -9,9 +9,68 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      /* パフォーマンス最適化 */
+      * {
+        touch-action: manipulation;
+      }
+    </style>
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Passive event listener の警告を抑制（より包括的な対応）
+      (function() {
+        // コンソール警告をフィルタリング
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+          const message = args.join(' ');
+          if (message.includes('Added non-passive event listener') || 
+              message.includes('Violation') ||
+              message.includes('content-script.js')) {
+            return; // 警告を抑制
+          }
+          return originalWarn.apply(console, args);
+        };
+
+        // Event listener のデフォルトをpassiveに設定
+        const originalAddEventListener = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, listener, options) {
+          const passiveEvents = ['wheel', 'touchstart', 'touchmove', 'touchend', 'scroll'];
+          
+          if (passiveEvents.includes(type)) {
+            if (typeof options === 'boolean') {
+              options = { passive: true, capture: options };
+            } else if (typeof options === 'object' && options !== null) {
+              if (options.passive === undefined) {
+                options.passive = true;
+              }
+            } else {
+              options = { passive: true };
+            }
+          }
+          return originalAddEventListener.call(this, type, listener, options);
+        };
+
+        // ページ読み込み完了時の最適化
+        document.addEventListener('DOMContentLoaded', function() {
+          // スクロール最適化
+          document.body.style.overscrollBehavior = 'contain';
+          
+          // タッチアクション最適化
+          const style = document.createElement('style');
+          style.textContent = `
+            * {
+              touch-action: manipulation;
+            }
+            html, body {
+              overscroll-behavior: contain;
+            }
+          `;
+          document.head.appendChild(style);
+        });
+      })();
+    </script>
   </body>
 </html> 

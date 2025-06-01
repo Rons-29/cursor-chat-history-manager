@@ -87,6 +87,10 @@ export interface ChatHistoryConfig {
     enabled: boolean
     autoImport: boolean
     watchPath?: string
+    logDir?: string
+    syncInterval?: number
+    batchSize?: number
+    retryAttempts?: number
   }
   storageType?: 'file' | 'database'
 }
@@ -136,6 +140,18 @@ export interface SessionSearchResult {
     totalPages: number
     hasMore: boolean
   }
+}
+
+// SessionMetadata型を追加
+export interface SessionMetadata {
+  project?: string
+  source?: string
+  summary?: string
+  status?: 'active' | 'archived' | 'deleted'
+  tags?: string[]
+  totalMessages?: number
+  taskId?: string
+  cursorId?: string
 }
 
 // WebUIで使用される統計データ型

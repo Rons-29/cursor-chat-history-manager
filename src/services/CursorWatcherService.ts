@@ -13,7 +13,7 @@ import { open } from 'sqlite'
 import type { ChatHistoryService } from './ChatHistoryService.js'
 import type { ConfigService } from './ConfigService.js'
 import type { ChatSession, Message } from '../types/index.js'
-import { Logger } from '../utils/Logger.js'
+import { Logger } from '../server/utils/Logger.js'
 import type { CursorChatData, CursorConfig } from '../types/cursor.js'
 
 export interface CursorWatcherStatus {

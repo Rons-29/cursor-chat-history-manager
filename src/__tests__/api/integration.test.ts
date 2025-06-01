@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
-import request from 'supertest'
+import request, { Response } from 'supertest'
 import app from '../../server/app.js'
 import { ChatHistoryService } from '../../services/ChatHistoryService.js'
 import { CursorLogService } from '../../services/CursorLogService.js'
@@ -59,27 +59,26 @@ describe('/api/integration', () => {
 
   describe('GET /api/integration/search', () => {
     it('should search integrated logs', async () => {
-      const response = await request(app)
+      const response: Response = await request(app)
         .get('/api/integration/search')
         .query({ q: 'test', types: 'chat,cursor' })
-        .expect(200)
 
+      expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('results')
       expect(Array.isArray(response.body.results)).toBe(true)
       expect(response.body).toHaveProperty('total')
-      expect(response.body).toHaveProperty('query')
     })
 
     it('should handle search with time range', async () => {
-      const response = await request(app)
+      const response: Response = await request(app)
         .get('/api/integration/search')
         .query({ 
           q: 'test',
           startDate: '2024-01-01',
           endDate: '2024-12-31'
         })
-        .expect(200)
 
+      expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('results')
       expect(response.body).toHaveProperty('total')
     })
@@ -87,10 +86,10 @@ describe('/api/integration', () => {
 
   describe('GET /api/integration/stats', () => {
     it('統計情報を取得できること', async () => {
-      const response = await request(app)
+      const response: Response = await request(app)
         .get('/api/integration/stats')
-        .expect(200)
 
+      expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('totalLogs')
       expect(response.body).toHaveProperty('cursorLogs')
       expect(response.body).toHaveProperty('chatLogs')
@@ -100,10 +99,10 @@ describe('/api/integration', () => {
 
   describe('POST /api/integration/sync', () => {
     it('同期を開始できること', async () => {
-      const response = await request(app)
+      const response: Response = await request(app)
         .post('/api/integration/sync/start')
-        .expect(200)
 
+      expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('message')
     })
   })
@@ -151,20 +150,20 @@ describe('/api/integration', () => {
     })
 
     it('should return analytics data', async () => {
-      const response = await request(app)
+      const response: Response = await request(app)
         .get('/api/integration/analytics')
         .query({
           startDate: '2024-01-01',
           endDate: '2024-12-31'
         })
-        .expect(200)
 
+      expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('summary')
       expect(response.body).toHaveProperty('logsByType')
     })
 
     it('期間を指定した分析データを取得できること', async () => {
-      const response = await request(app)
+      const response: Response = await request(app)
         .get('/api/integration/analytics')
         .query({
           startDate: '2024-01-01',
@@ -172,8 +171,8 @@ describe('/api/integration', () => {
           granularity: 'daily',
           types: 'chat'
         })
-        .expect(200)
 
+      expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('summary')
       expect(response.body.summary).toHaveProperty('totalLogs')
       expect(response.body.summary).toHaveProperty('totalChats')

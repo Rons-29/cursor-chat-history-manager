@@ -877,7 +877,12 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(config.cursor || { enabled: false, autoImport: false }, logger),
+        new CursorLogService(config.cursor || { 
+          enabled: false, 
+          autoImport: false, 
+          watchPath: './cursor-data',
+          logDir: './logs/cursor'
+        }, logger),
         logger
       )
 
@@ -910,7 +915,12 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(config.cursor || { enabled: false, autoImport: false }, logger),
+        new CursorLogService(config.cursor || { 
+          enabled: false, 
+          autoImport: false, 
+          watchPath: './cursor-data',
+          logDir: './logs/cursor'
+        }, logger),
         logger
       )
 
@@ -938,7 +948,12 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService(config.cursor || { enabled: false, autoImport: false }, logger),
+        new CursorLogService(config.cursor || { 
+          enabled: false, 
+          autoImport: false, 
+          watchPath: './cursor-data',
+          logDir: './logs/cursor'
+        }, logger),
         logger
       )
 

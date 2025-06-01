@@ -90,4 +90,7 @@ web/dist/
 # SQLite database files (個人データ含む)
 *.db
 *.sqlite
-*.sqlite3 
+*.sqlite3
+
+# Security tools (内部開発用)
+scripts/security-check.sh 

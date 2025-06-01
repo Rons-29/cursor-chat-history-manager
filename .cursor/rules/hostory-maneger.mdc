@@ -1,0 +1,495 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Chat History Manager - 統合開発ルール
+
+
+## 🎉 **開発開始時の掛け声 (毎回必須)**
+```
+🎉 やるぞ！Chat History Manager！
+- セキュリティ → 🔒 バッチリ！
+- パフォーマンス → ⚡ 最速！  
+- コード品質 → ✨ 完璧！
+今日も最高の履歴管理システムを作ります！
+```
+
+**このメッセージを毎回のチャット開始時・Command+K実行時に表示してから開発作業を開始してください。**
+
+---
+
+Cursor AIがChat History Managerプロジェクト開発時に自動的に遵守すべき包括的なルール集
+
+## 🎯 プロジェクト概要
+
+### 目的
+- Cursorチャット履歴の効率的な管理・検索・分析
+- SQLite高性能統合によるスケーラブルなデータ処理
+- WebUIによる直感的なユーザーエクスペリエンス
+- 開発履歴の包括的な管理と分析
+
+### 主要機能
+- チャット履歴のインポート・エクスポート・検索
+- SQLite統合による高速検索（10-100倍高速化）
+- 増分同期によるパフォーマンス最適化（90%向上）
+- リアルタイム監視とダッシュボード
+- VS Code拡張機能との連携
+
+## 🏗️ アーキテクチャ
+
+### プロジェクト構造
+```
+chat-history-manager/
+├── src/                     # CLI + バックエンド
+│   ├── cli.ts              # CLIエントリーポイント
+│   ├── services/           # ビジネスロジック
+│   │   ├── ChatHistoryService.ts    # チャット履歴管理
+│   │   ├── SqliteIndexService.ts    # SQLite高速検索
+│   │   ├── IncrementalIndexService.ts # 増分同期
+│   │   ├── IntegrationService.ts    # 統合管理
+│   │   └── CursorLogService.ts      # Cursorログ管理
+│   ├── server/             # Express サーバー
+│   │   ├── real-api-server.ts       # メインAPIサーバー
+│   │   ├── routes/         # API ルート
+│   │   └── middleware/     # ミドルウェア
+│   ├── types/              # 型定義
+│   └── utils/              # ユーティリティ
+├── web/                    # React フロントエンド
+│   ├── src/
+│   │   ├── components/     # UIコンポーネント
+│   │   ├── pages/          # ページコンポーネント
+│   │   ├── hooks/          # カスタムフック
+│   │   └── api/            # API クライアント
+│   └── index.html
+├── scripts/                # 運用・セキュリティスクリプト
+├── docs/                   # ドキュメント
+└── data/                   # 個人データ（gitignore済み）
+```
+
+### 技術スタック
+**バックエンド**
+- Node.js 18+ / TypeScript 5.3+
+- Express.js 5.1+
+- SQLite3 + better-sqlite3（高性能DB）
+- fs-extra（ファイル操作）
+
+**フロントエンド**
+- React 19.1+ / TypeScript
+- Vite 6.3+
+- TailwindCSS 4.1+
+- @tanstack/react-query 5.79+
+- React Router 7.6+
+
+**開発ツール**
+- ESLint 8.56+ / Prettier 3.5+
+- Jest 29.7+ / Concurrently 9.1+
+
+## 💻 基本開発方針
+
+### コード品質
+- TypeScript厳格モード: 100%準拠（any型禁止）
+- ESLint + Prettier: 統一フォーマット
+- 全ての関数・クラスにJSDocコメント必須
+- エラーハンドリング: 全非同期処理にtry-catch
+
+### アーキテクチャ原則
+- サービス層の責務分離
+- 型安全性の徹底
+- ミドルウェアパターンによる段階的統合
+- フォールバック機能の実装
+
+### 命名規則
+- ファイル・ディレクトリ: kebab-case
+- クラス・インターフェース・型: PascalCase
+- 変数・関数・メソッド: camelCase
+- 定数: SCREAMING_SNAKE_CASE
+- プライベートメンバー: _prefix
+
+## 🔒 セキュリティ必須事項
+
+### 機密情報保護
+- 機密情報のハードコード禁止
+- 環境変数でAPI Key管理
+- パスワード・token・secretの自動マスキング
+- 個人データは`data/`ディレクトリ（gitignore済み）
+
+### 🛡️ コミット前セキュリティチェック (必須実行)
+```bash
+# コミット前に必ず実行
+./scripts/security-check.sh
+
+# 検出対象パターン:
+# - OpenAI APIキー (sk-proj-*, sk-*)
+# - GitHub Token (ghp_*, gho_*, ghu_*, ghs_*)
+# - Stripe キー (pk_*, sk_*)
+# - メールアドレス・パスワード・認証情報
+# - 環境変数ファイル (.env系)
+
+# 注意: ステージされたファイルに機密情報がある場合、コミットは自動的に中止される
+```
+
+### CORS・バリデーション
+- すべてのユーザー入力をサニタイズ
+- CORS設定の明示的オリジン指定
+- ファイルパスサニタイズ
+
+## 🎨 実装パターン
+
+### サービスクラス
+```typescript
+/**
+ * サービスクラスの標準実装パターン
+ */
+export class XxxService {
+  private initialized = false
+  
+  /**
+   * サービス初期化
+   */
+  async initialize(): Promise<void> {
+    try {
+      // 初期化処理
+      this.initialized = true
+    } catch (error) {
+      throw new ServiceInitializationError('サービス初期化に失敗しました', { cause: error })
+    }
+  }
+  
+  /**
+   * メソッド実装例
+   */
+  async method(): Promise<Result> {
+    if (!this.initialized) {
+      throw new Error('サービスが初期化されていません')
+    }
+    
+    try {
+      // ビジネスロジック
+      return result
+    } catch (error) {
+      logger.error('サービスエラー:', error)
+      throw new ServiceError('処理に失敗しました', { cause: error })
+    }
+  }
+}
+```
+
+### API エンドポイント
+```typescript
+/**
+ * Express API エンドポイントの標準パターン
+ */
+router.get('/endpoint', async (req, res) => {
+  try {
+    // バリデーション
+    const validatedData = validateInput(req.body)
+    
+    // サービス呼び出し
+    const result = await service.method(validatedData)
+    
+    // レスポンス
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date()
+    })
+  } catch (error) {
+    logger.error('API Error:', error)
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date()
+    })
+  }
+})
+```
+
+### React コンポーネント
+```typescript
+/**
+ * React コンポーネントの標準パターン
+ */
+interface Props {
+  readonly session: Session
+  readonly onSelect: (id: string) => void
+}
+
+export const Component: React.FC<Props> = ({ session, onSelect }) => {
+  // React Query利用推奨
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['sessions', session.id],
+    queryFn: () => apiClient.getSession(session.id)
+  })
+  
+  // エラー・ローディング状態の適切な処理
+  if (error) return <ErrorComponent error={error} />
+  if (isLoading) return <LoadingComponent />
+  
+  return (
+    <div 
+      className="card-hover cursor-pointer"
+      onClick={() => onSelect(session.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect(session.id)}
+    >
+      <h3 className="font-semibold text-gray-900">{session.title}</h3>
+      <p className="text-sm text-gray-500">{session.metadata.description}</p>
+    </div>
+  )
+}
+```
+
+## ⚡ パフォーマンス最適化
+
+### SQLite統合ルール
+```typescript
+/**
+ * SQLite最適化パターン
+ */
+class SqliteIndexService {
+  // バッチ処理: 50-100件ずつ
+  private readonly BATCH_SIZE = 100
+  
+  // プリペアドステートメント使用
+  private insertStatement = this.db.prepare(`
+    INSERT INTO sessions (id, title, content, timestamp)
+    VALUES (?, ?, ?, ?)
+  `)
+  
+  // FTS5全文検索活用
+  async searchSessions(keyword: string): Promise<Session[]> {
+    return this.db.prepare(`
+      SELECT * FROM sessions_fts 
+      WHERE content MATCH ? 
+      ORDER BY rank LIMIT ?
+    `).all(keyword, 100)
+  }
+}
+```
+
+### 増分同期ルール
+```typescript
+/**
+ * 増分同期パターン
+ */
+class IncrementalIndexService {
+  // チェックサムベースの変更検出
+  private async detectChanges(files: string[]): Promise<string[]> {
+    const changed = []
+    for (const file of files) {
+      const currentChecksum = await this.calculateChecksum(file)
+      const storedChecksum = await this.getStoredChecksum(file)
+      
+      if (currentChecksum !== storedChecksum) {
+        changed.push(file)
+      }
+    }
+    return changed
+  }
+  
+  // キューベースの非同期更新
+  private async processQueue(): Promise<void> {
+    while (this.updateQueue.length > 0) {
+      const batch = this.updateQueue.splice(0, this.BATCH_SIZE)
+      await this.processBatch(batch)
+    }
+  }
+}
+```
+
+## 📊 品質基準
+
+### パフォーマンス指標
+- API応答時間: < 200ms
+- SQLite検索: < 100ms（10-100倍高速化）
+- 増分同期: < 30秒（90%高速化）
+- メモリ使用量: < 500MB
+- フロントエンド初期ロード: < 3秒
+
+### エラー処理
+```typescript
+/**
+ * エラーハンドリングパターン
+ */
+class CustomError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly statusCode: number = 500,
+    options?: ErrorOptions
+  ) {
+    super(message, options)
+    this.name = this.constructor.name
+  }
+}
+
+// 使用例
+throw new SessionNotFoundError('セッションが見つかりません', 'SESSION_NOT_FOUND', 404)
+```
+
+## 🔄 開発フロー
+
+### 開発前チェックリスト
+- [ ] Issue確認・ブランチ作成(命名規則準拠)
+- [ ] 型定義から設計開始
+- [ ] セキュリティ要件確認
+
+### 開発中チェックリスト
+- [ ] TypeScript型定義完了
+- [ ] エラーハンドリング実装  
+- [ ] JSDocコメント追加
+- [ ] パフォーマンス考慮
+
+### 開発完了チェックリスト
+- [ ] `./scripts/security-check.sh` 実行・通過 (機密情報チェック)
+- [ ] `npm run quality`通過(lint + format + build)
+- [ ] テスト実行・通過
+- [ ] ドキュメント更新
+
+## 🛠️ コマンド・スクリプト
+
+### 開発コマンド
+```bash
+npm run dev:full     # フルスタック開発環境
+npm run server       # APIサーバーのみ
+npm run web          # フロントエンドのみ
+npm run build        # TypeScriptビルド
+npm run web:build    # フロントエンドビルド
+npm run quality      # 包括的品質チェック
+```
+
+### SQLite管理
+```bash
+# SQLite統合テスト
+curl -X POST http://localhost:3001/api/integration/sqlite-migrate
+
+# 高速検索テスト
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"keyword":"cursor","options":{"page":1,"pageSize":5}}' \
+  http://localhost:3001/api/integration/sqlite-search
+
+# 統計情報確認
+curl -s http://localhost:3001/api/integration/enhanced-stats | jq .
+```
+
+### セキュリティ
+```bash
+# 機密情報チェック（コミット前必須）
+./scripts/security-check.sh
+
+# Gitクリーンアップ（緊急時）
+git reflog expire --expire=now --all && git gc --prune=now --aggressive
+```
+
+## 📈 データモデル
+
+### 統合データ型
+```typescript
+interface IntegratedLog {
+  readonly id: string
+  readonly timestamp: Date
+  readonly type: 'chat' | 'cursor' | 'sqlite'
+  readonly content: string
+  readonly metadata: {
+    project?: string
+    tags?: string[]
+    source: string
+    performance?: PerformanceMetrics
+  }
+  readonly relatedLogs?: string[]
+}
+
+interface PerformanceMetrics {
+  readonly processingTime: number
+  readonly memoryUsage: number
+  readonly searchLatency?: number
+}
+```
+
+### SQLite スキーマ
+```sql
+-- セッションテーブル
+CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  timestamp INTEGER NOT NULL,
+  metadata TEXT -- JSON形式
+);
+
+-- FTS5全文検索テーブル
+CREATE VIRTUAL TABLE sessions_fts USING fts5(
+  id, title, content,
+  content='sessions',
+  content_rowid='rowid'
+);
+```
+
+## 🚨 禁止事項
+
+- `any` 型の使用
+- console.log の本番残留
+- 未処理のPromise
+- 機密情報のコンソール出力
+- インライン スタイル
+- ハードコードされた設定値
+
+## 🔍 デバッグ・トラブルシューティング
+
+### 一般的な問題と解決法
+```typescript
+// 1. SQLite接続エラー
+// 解決: データベースファイルの権限確認
+await fs.access(dbPath, fs.constants.R_OK | fs.constants.W_OK)
+
+// 2. メモリリーク
+// 解決: 適切なリソース解放
+finally {
+  if (db) db.close()
+  if (stream) stream.destroy()
+}
+
+// 3. パフォーマンス低下
+// 解決: バッチ処理とインデックス最適化
+const batchSize = Math.min(records.length, MAX_BATCH_SIZE)
+```
+
+### ログ出力パターン
+```typescript
+// 構造化ログ
+logger.info('セッション検索実行', {
+  keyword,
+  resultCount: results.length,
+  executionTime: Date.now() - startTime,
+  method: 'sqlite'
+})
+```
+
+## 📝 ドキュメント要件
+
+### 必須ドキュメント
+1. API仕様書
+2. セキュリティガイドライン
+3. パフォーマンス最適化ガイド
+4. トラブルシューティングガイド
+
+### コードドキュメント
+- すべての公開APIにJSDoc
+- 複雑なロジックに日本語コメント
+- 実用的な@exampleの提供
+- パフォーマンス改善の記録
+
+## 📚 関連専用ルール
+
+### 🔄 プルリクエスト・レビュー作業
+- **専用ルール**: `.cursor/rules/pull-request-review.mdc`
+- **自動適用**: プルリクエスト作成・レビュー・マージ・マージ後作業時
+- **手動参照**: Git操作・セキュリティインシデント・緊急対応時
+
+---
+
+**最終更新**: 2025/06/01  
+**適用範囲**: Chat History Manager全体  
+**次回見直し**: 機能追加時または月次レビュー

@@ -1,0 +1,245 @@
+---
+description: プルリクエスト関連作業時のみ
+globs: 
+alwaysApply: false
+---
+# Pull Request Review Rules - プルリクエスト・レビュー専用ルール
+
+## 🎯 適用タイミング
+
+このルールは以下の場面で **自動的に適用** されます：
+
+### 🔄 **自動適用条件**
+- **プルリクエストが作成された時**
+- **プルリクエストをレビューする時**  
+- **マージを実行する時**
+- **マージ後の作業を行う時**
+
+### 📋 **手動参照推奨**
+- Git操作に不安がある時
+- セキュリティインシデントが発生した時
+- ロールバックが必要な時
+- 緊急対応が必要な時
+
+---
+
+## 🔄 プルリクエスト・レビューガイドライン
+
+### プルリクエスト作成前チェックリスト
+- [ ] **セキュリティチェック実行**: `./scripts/security-check.sh`
+- [ ] **品質チェック通過**: `npm run quality`
+- [ ] **機能テスト完了**: 主要機能の動作確認
+- [ ] **パフォーマンステスト**: 目標値達成確認
+- [ ] **ドキュメント更新**: README・API仕様・変更ログ
+
+### レビュー必須項目
+
+#### 🔒 セキュリティレビュー
+```bash
+# 機密情報チェック
+./scripts/security-check.sh
+
+# 検出項目:
+# - API Keys (OpenAI, GitHub, Stripe等)
+# - 個人情報 (メール、パスワード、認証情報)
+# - 環境変数ファイル
+# - プライベートデータパス
+```
+
+#### ⚡ パフォーマンスレビュー
+- API応答時間: < 200ms
+- SQLite検索: < 100ms  
+- 増分同期: < 30秒
+- メモリ使用量: < 500MB
+- バッチサイズ: 50-100件
+
+#### 🏗️ アーキテクチャレビュー
+- サービス層の責務分離確認
+- 型安全性の徹底（any型禁止）
+- エラーハンドリングの完全性
+- JSDocコメントの品質
+
+### マージ手順
+
+#### 1. 事前確認
+```bash
+# 現在のブランチ確認
+git branch
+
+# プルリクエストブランチの詳細確認
+git log origin/[PR-BRANCH] --oneline -10
+git diff main origin/[PR-BRANCH] --name-only
+```
+
+#### 2. ローカルテスト
+```bash
+# プルリクエストブランチを取得
+git fetch origin
+git checkout [PR-BRANCH]
+
+# 依存関係更新
+npm install
+
+# 包括的テスト実行
+npm run quality
+npm test
+
+# サーバー起動テスト
+npm run server &
+npm run web &
+
+# SQLite統合テスト
+curl -X POST http://localhost:3001/api/integration/sqlite-migrate
+```
+
+#### 3. パフォーマンス検証
+```bash
+# 統計情報確認
+curl -s http://localhost:3001/api/integration/enhanced-stats | jq .
+
+# 高速検索テスト
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"keyword":"cursor","options":{"page":1,"pageSize":5}}' \
+  http://localhost:3001/api/integration/sqlite-search
+```
+
+#### 4. セキュリティ最終チェック
+```bash
+# セキュリティスキャン
+./scripts/security-check.sh
+
+# 個人データ除外確認
+git log --grep="機密情報" --oneline
+git show --name-only [COMMIT-HASH]
+```
+
+#### 5. マージ実行
+```bash
+# mainブランチに切り替え
+git checkout main
+git pull origin main
+
+# マージ実行（Fast-Forward推奨）
+git merge origin/[PR-BRANCH] --ff-only
+
+# マージ確認
+git log --oneline -3
+
+# リモートにプッシュ
+git push origin main
+```
+
+### マージ後処理
+
+#### 1. ブランチクリーンアップ
+```bash
+# ローカルブランチ削除
+git branch -d [PR-BRANCH]
+
+# リモートブランチ削除（必要に応じて）
+git push origin --delete [PR-BRANCH]
+```
+
+#### 2. デプロイメント確認
+```bash
+# 本番環境でのヘルスチェック
+curl -s http://[PRODUCTION-URL]/api/health | jq .
+
+# パフォーマンス監視
+curl -s http://[PRODUCTION-URL]/api/integration/enhanced-stats | jq .
+```
+
+#### 3. ドキュメント更新
+- [ ] CHANGELOG.md更新
+- [ ] README.md のバージョン情報更新
+- [ ] パフォーマンス指標の更新
+- [ ] 新機能のドキュメント追加
+
+### 緊急時対応
+
+#### ロールバック手順
+```bash
+# 前のコミットに戻す
+git reset --hard HEAD~1
+git push origin main --force-with-lease
+
+# 特定コミットに戻す
+git reset --hard [SAFE-COMMIT-HASH]
+git push origin main --force-with-lease
+```
+
+#### セキュリティインシデント対応
+```bash
+# 機密情報が混入した場合
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+git push origin main --force-with-lease
+
+# 影響範囲の調査
+git log --grep="[SENSITIVE-PATTERN]" --all
+```
+
+### プルリクエストテンプレート
+
+```markdown
+## 📋 変更概要
+- [ ] 新機能: [機能名]
+- [ ] バグ修正: [修正内容]  
+- [ ] パフォーマンス改善: [改善内容]
+- [ ] セキュリティ強化: [強化内容]
+
+## 🧪 テスト内容
+- [ ] ユニットテスト: [テスト範囲]
+- [ ] 統合テスト: [統合内容]
+- [ ] パフォーマンステスト: [測定結果]
+- [ ] セキュリティテスト: [チェック項目]
+
+## 📊 パフォーマンス影響
+- API応答時間: [変更前] → [変更後]
+- メモリ使用量: [変更前] → [変更後]
+- 処理時間: [変更前] → [変更後]
+
+## 🔒 セキュリティチェック
+- [ ] `./scripts/security-check.sh` 実行済み
+- [ ] 機密情報の除外確認済み
+- [ ] 個人データのgitignore確認済み
+
+## 📚 関連ドキュメント
+- [ ] README.md更新
+- [ ] API仕様書更新  
+- [ ] 変更ログ追加
+```
+
+---
+
+## 🎯 **適用シナリオ別ガイド**
+
+### 📥 **プルリクエスト作成時**
+1. **作成前チェックリスト**を全て完了
+2. **プルリクエストテンプレート**を使用してPR作成
+3. **セキュリティチェック**を最終実行
+
+### 👀 **レビュー実行時** 
+1. **レビュー必須項目**を順次確認
+2. **ローカルテスト**を実行して動作確認
+3. **パフォーマンス検証**で目標値達成確認
+
+### 🔄 **マージ実行時**
+1. **マージ手順**の1-5を順次実行
+2. **セキュリティ最終チェック**を必ず実行
+3. **マージ後処理**を完了
+
+### 🚨 **緊急時・トラブル発生時**
+1. **緊急時対応**セクションを即座参照
+2. **ロールバック手順**または**セキュリティインシデント対応**を実行
+3. 問題解決後に**ドキュメント更新**
+
+---
+
+**プルリクエスト管理**: 品質とセキュリティを最優先  
+**マージ基準**: 全チェック項目クリア必須  
+**緊急時**: ロールバック手順即座実行
+
+**最終更新**: 2025/06/01  
+**適用対象**: プルリクエスト・マージ・レビュー作業全般  
+**次回見直し**: プルリクエストプロセス変更時

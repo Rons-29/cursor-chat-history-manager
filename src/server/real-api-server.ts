@@ -5,6 +5,7 @@ import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { IntegrationService } from '../services/IntegrationService.js'
 import { CursorLogService } from '../services/CursorLogService.js'
 import { ConfigService } from '../services/ConfigService.js'
+import { Logger } from './utils/Logger.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -18,6 +19,7 @@ let chatHistoryService: ChatHistoryService
 let integrationService: IntegrationService
 let cursorLogService: CursorLogService
 let configService: ConfigService
+const logger = new Logger({ logPath: './logs', level: 'info' })
 
 async function initializeServices() {
   try {
@@ -66,12 +68,26 @@ async function initializeServices() {
       cursor: {
         enabled: true,
         watchPath: path.join(process.env.HOME || '', 'Library/Application Support/Cursor/User/workspaceStorage'),
+        logDir: path.join(process.cwd(), 'data', 'cursor-logs'),
         autoImport: true,
-        scanInterval: 300
+        syncInterval: 300,
+        batchSize: 100,
+        retryAttempts: 3
       },
       chatHistory: {
         storagePath: path.join(process.cwd(), 'data', 'chat-history'),
-        maxSessions: 10000
+        maxSessions: 10000,
+        maxMessagesPerSession: 500,
+        autoCleanup: true,
+        cleanupDays: 30,
+        enableSearch: true,
+        enableBackup: false,
+        backupInterval: 24
+      },
+      sync: {
+        interval: 300,
+        batchSize: 100,
+        retryAttempts: 3
       }
     }, logger)
     await integrationService.initialize()

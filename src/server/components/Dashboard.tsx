@@ -19,10 +19,7 @@ import { AlertNotifier } from '../utils/AlertNotifier.js'
 import type { Report, ReportPeriod, Metric } from '../types/monitoring.js'
 
 interface DashboardProps {
-  monitor: {
-    getMetrics: () => Metric[]
-    generateReport: (period?: ReportPeriod) => Report
-  }
+  monitor: Monitor
   refreshInterval: number
 }
 
@@ -30,7 +27,7 @@ interface MetricData {
   name: string
   value: number
   timestamp: Date
-  labels: Record<string, string>
+  type: 'counter' | 'gauge' | 'histogram'
 }
 
 interface ChartData {
@@ -52,11 +49,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     timestamp: Date
   }>>([])
   const [error, setError] = useState<string | null>(null)
-  const [report, setReport] = useState<Report>({ metrics: {} })
-  const [period, setPeriod] = useState<ReportPeriod>({
-    startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    endTime: new Date()
-  })
+  const [report, setReport] = useState<Report | null>(null)
+  const [period, setPeriod] = useState<ReportPeriod>('daily')
 
   useEffect(() => {
     const updateData = () => {
@@ -87,11 +81,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [monitor])
 
   const formatChartData = (metricName: string): ChartData[] => {
-    return metrics.map(m => ({
-      timestamp: m.timestamp.toLocaleTimeString(),
-      [m.name]: m.value,
-      ...m.labels,
-    }))
+    return metrics
+      .filter(m => m.name === metricName)
+      .map(m => ({
+        timestamp: m.timestamp.toLocaleTimeString(),
+        [m.name]: m.value,
+        type: m.type,
+      }))
   }
 
   const renderMetricCard = (metric: Metric) => {
@@ -238,87 +234,67 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex space-x-2 mb-4">
           <button
             className={`px-4 py-2 rounded ${
-              period.startTime.getTime() === new Date(Date.now() - 60 * 60 * 1000).getTime()
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
+              period === 'hourly' ? 'bg-blue-500 text-white' : 'bg-gray-200'
             }`}
-            onClick={() => handlePeriodChange({
-              startTime: new Date(Date.now() - 60 * 60 * 1000),
-              endTime: new Date()
-            })}
+            onClick={() => handlePeriodChange('hourly')}
           >
             1時間
           </button>
           <button
             className={`px-4 py-2 rounded ${
-              period.startTime.getTime() === new Date(Date.now() - 24 * 60 * 60 * 1000).getTime()
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
+              period === 'daily' ? 'bg-blue-500 text-white' : 'bg-gray-200'
             }`}
-            onClick={() => handlePeriodChange({
-              startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-              endTime: new Date()
-            })}
+            onClick={() => handlePeriodChange('daily')}
           >
             24時間
           </button>
           <button
             className={`px-4 py-2 rounded ${
-              period.startTime.getTime() === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).getTime()
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
+              period === 'weekly' ? 'bg-blue-500 text-white' : 'bg-gray-200'
             }`}
-            onClick={() => handlePeriodChange({
-              startTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-              endTime: new Date()
-            })}
+            onClick={() => handlePeriodChange('weekly')}
           >
             7日間
           </button>
           <button
             className={`px-4 py-2 rounded ${
-              period.startTime.getTime() === new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getTime()
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
+              period === 'monthly' ? 'bg-blue-500 text-white' : 'bg-gray-200'
             }`}
-            onClick={() => handlePeriodChange({
-              startTime: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-              endTime: new Date()
-            })}
+            onClick={() => handlePeriodChange('monthly')}
           >
             30日間
           </button>
         </div>
       </div>
 
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold mb-2">レポート</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(report.metrics).map(([metricName, data]) => (
-            <div key={metricName} className="bg-white p-4 rounded shadow">
-              <h3 className="font-medium mb-2">{metricName}</h3>
+      {report && (
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold mb-2">レポート</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded shadow">
+              <h3 className="font-medium mb-2">サマリー</h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>現在値:</span>
-                  <span>{data.current.toFixed(2)}</span>
+                  <span>総イベント数:</span>
+                  <span>{report.summary.totalEvents}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>平均値:</span>
-                  <span>{data.average.toFixed(2)}</span>
+                  <span>{report.summary.averageValue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>最大値:</span>
-                  <span>{data.max.toFixed(2)}</span>
+                  <span>{report.summary.maxValue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>最小値:</span>
-                  <span>{data.min.toFixed(2)}</span>
+                  <span>{report.summary.minValue.toFixed(2)}</span>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {metrics.map(renderMetricCard)}
@@ -342,14 +318,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.keys(report.metrics).map(metricName => (
-          <div key={metricName} className="bg-white p-4 rounded-lg shadow">
-            <h2 className="text-lg font-semibold mb-2">{metricName} - 分布</h2>
-            {renderPieChart(metricName)}
-          </div>
-        ))}
-      </div>
+      {report && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {report.metrics.map(metric => (
+            <div key={metric.id} className="bg-white p-4 rounded-lg shadow">
+              <h2 className="text-lg font-semibold mb-2">{metric.name} - 分布</h2>
+              {renderPieChart(metric.name)}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 } 

@@ -1,5 +1,5 @@
-# Chat History Manager 💬
-
+# Chat History Manager［改修中］ 💬
+※今動かない可能性あり
 Cursorエディタのチャット履歴を管理・検索・分析するための包括的なツール
 
 ## ⚠️ **重要なセキュリティ注意事項**
@@ -404,4 +404,4 @@ npm run claude-dev:analyze
 2. **開発履歴管理**: 詳細な作業プロセスの記録
 3. **ナレッジベース**: チーム内でのベストプラクティス共有
 
-詳細は [Claude Dev拡張機能ガイド](docs/CHAT_HISTORY_MANAGER_GUIDE.md) をご覧ください。 
+詳細は [Claude Dev拡張機能ガイド](docs/CHAT_HISTORY_MANAGER_GUIDE.md) をご覧ください。

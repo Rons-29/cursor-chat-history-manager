@@ -24,8 +24,9 @@
     "paths": {
       "*": ["node_modules/*"]
     },
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "typeRoots": ["node_modules/@types", "src/types"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/types/lru-cache.d.ts"],
   "exclude": ["node_modules", "dist", "web"]
 } 

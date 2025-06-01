@@ -166,6 +166,28 @@ export class IntegrationService extends EventEmitter {
     return this.cursorWatcherService.getStatus()
   }
 
+  /**
+   * Cursorサービスのステータスを取得
+   */
+  async getCursorStatus() {
+    if (!this.isInitialized) {
+      throw this.createError('NOT_INITIALIZED', 'Service not initialized')
+    }
+
+    try {
+      return {
+        isWatching: this.cursorWatcherService.getStatus().isActive,
+        lastScan: this.cursorWatcherService.getStatus().lastScan,
+        processedCount: this.cursorWatcherService.getStatus().processedCount,
+        errorCount: this.cursorWatcherService.getStatus().errorCount,
+        watchPath: this.config.cursor.watchPath,
+        isEnabled: this.config.cursor.enabled
+      }
+    } catch (error) {
+      throw this.createError('STATUS_ERROR', 'Failed to get cursor status', error)
+    }
+  }
+
   async search(options: IntegrationSearchOptions): Promise<IntegratedLog[]> {
     if (!this.isInitialized) {
       throw this.createError('NOT_INITIALIZED', 'Service not initialized')
@@ -299,7 +321,15 @@ export class IntegrationService extends EventEmitter {
         totalLogs: cursorLogs + chatLogs,
         cursorLogs,
         chatLogs,
-        storageSize: totalSize + Number(chatStats.totalSize || 0)
+        storageSize: totalSize + Number(chatStats.totalSize || 0),
+        lastUpdate: new Date(),
+        syncStatus: {
+          isActive: this.syncInterval !== null,
+          lastSync: new Date(),
+          processedCount: cursorLogs + chatLogs,
+          errorCount: 0,
+          syncSpeed: 0
+        }
       }
     } catch (error) {
       throw this.createError('STATS_ERROR', 'Failed to get stats', error)
@@ -393,11 +423,13 @@ export class IntegrationService extends EventEmitter {
   }
 
   private createError(code: string, message: string, originalError?: any): IntegrationError {
-    const error = new Error(message) as IntegrationError
-    error.code = code
-    error.details = originalError
-    error.timestamp = new Date()
-    return error
+    return {
+      code,
+      message,
+      timestamp: new Date(),
+      details: originalError,
+      context: {}
+    }
   }
 
   async getAnalytics(options: IntegrationAnalyticsRequest): Promise<IntegrationAnalyticsResponse> {
@@ -484,16 +516,31 @@ export class IntegrationService extends EventEmitter {
       const topKeywords = this.analyzeKeywords(logs)
 
       return {
+        timeRange: {
+          start: startDate,
+          end: endDate
+        },
+        granularity: options.granularity,
         summary,
         logsByType,
         logsByProject,
         logsByTag,
         activityTimeline: timeline.map(item => ({
-          ...item,
-          date: item.date.toISOString()
+          timestamp: item.date,
+          count: item.totalCount,
+          type: undefined
         })),
         hourlyDistribution,
-        topKeywords
+        topKeywords: topKeywords.map(item => ({
+          keyword: item.keyword,
+          frequency: item.count,
+          trend: 'stable' as const
+        })),
+        metrics: {
+          messageCount: timeline.map(item => item.chatCount),
+          sessionCount: timeline.map(item => item.totalCount),
+          timestamps: timeline.map(item => item.date.toISOString())
+        }
       }
     } catch (error) {
       throw this.createError('ANALYTICS_ERROR', 'Failed to get analytics', error)

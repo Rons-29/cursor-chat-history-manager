@@ -109,16 +109,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={formatChartData(metricName)}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="timestamp" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Line
-          type="monotone"
-          dataKey={metricName}
-          stroke={COLORS[0]}
-          activeDot={{ r: 8 }}
-        />
+        {(XAxis as any)({ dataKey: "timestamp" })}
+        {(YAxis as any)({})}
+        {(Tooltip as any)({})}
+        {(Legend as any)({})}
+        {(Line as any)({
+          type: "monotone",
+          dataKey: metricName,
+          stroke: COLORS[0],
+          activeDot: { r: 8 }
+        })}
       </LineChart>
     </ResponsiveContainer>
   )
@@ -127,11 +127,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={formatChartData(metricName)}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="timestamp" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey={metricName} fill={COLORS[1]} />
+        {(XAxis as any)({ dataKey: "timestamp" })}
+        {(YAxis as any)({})}
+        {(Tooltip as any)({})}
+        {(Legend as any)({})}
+        {(Bar as any)({ dataKey: metricName, fill: COLORS[1] })}
       </BarChart>
     </ResponsiveContainer>
   )
@@ -151,21 +151,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return (
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
-          <Pie
-            data={pieData}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            label
-          >
-            {pieData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend />
+          {(Pie as any)({
+            data: pieData,
+            dataKey: "value",
+            nameKey: "name",
+            cx: "50%",
+            cy: "50%",
+            outerRadius: 100,
+            label: true,
+            children: pieData.map((_, index) => (
+              (Cell as any)({ key: `cell-${index}`, fill: COLORS[index % COLORS.length] })
+            ))
+          })}
+          {(Tooltip as any)({})}
+          {(Legend as any)({})}
         </PieChart>
       </ResponsiveContainer>
     )
@@ -320,7 +319,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {report && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {report.metrics.map(metric => (
+          {report.metrics.map((metric: Metric) => (
             <div key={metric.id} className="bg-white p-4 rounded-lg shadow">
               <h2 className="text-lg font-semibold mb-2">{metric.name} - 分布</h2>
               {renderPieChart(metric.name)}

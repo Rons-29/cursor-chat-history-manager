@@ -25,6 +25,7 @@ export interface ChatSession {
     project?: string
     source?: string
     summary?: string
+    description?: string
     status?: 'active' | 'archived' | 'deleted'
     tags?: string[]
     totalMessages?: number
@@ -147,6 +148,7 @@ export interface SessionMetadata {
   project?: string
   source?: string
   summary?: string
+  description?: string
   status?: 'active' | 'archived' | 'deleted'
   tags?: string[]
   totalMessages?: number

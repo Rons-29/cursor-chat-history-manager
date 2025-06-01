@@ -146,7 +146,7 @@ export class ExportService {
         markdown += `- **終了時刻**: ${format(session.endTime, 'yyyy年MM月dd日 HH:mm:ss')}\n`
       }
 
-      if (session.metadata?.tags && session.metadata.tags.length > 0) {
+      if (session.metadata?.tags?.length) {
         markdown += `- **タグ**: ${session.metadata.tags.join(', ')}\n`
       }
 
@@ -313,7 +313,7 @@ export class ExportService {
       markdown += `## Metadata\n\n`
       markdown += `- Created: ${new Date(session.createdAt).toLocaleString()}\n`
       markdown += `- Updated: ${new Date(session.updatedAt).toLocaleString()}\n`
-      if (session.metadata.tags?.length) {
+      if (session.metadata?.tags?.length) {
         markdown += `- Tags: ${session.metadata.tags.join(', ')}\n`
       }
       markdown += '\n'
@@ -335,7 +335,7 @@ export class ExportService {
     if (this.config.includeMetadata) {
       text += `Created: ${new Date(session.createdAt).toLocaleString()}\n`
       text += `Updated: ${new Date(session.updatedAt).toLocaleString()}\n`
-      if (session.metadata.tags?.length) {
+      if (session.metadata?.tags?.length) {
         text += `Tags: ${session.metadata.tags.join(', ')}\n`
       }
       text += '\n'

@@ -11,7 +11,16 @@ import { Logger } from '../utils/Logger.js'
 
 const router = Router()
 const logger = new Logger({ logPath: './logs', level: 'info' })
-const chatHistoryService = new ChatHistoryService()
+const chatHistoryService = new ChatHistoryService({
+  storagePath: './data/chat-history',
+  maxSessions: 1000,
+  maxMessagesPerSession: 1000,
+  autoCleanup: true,
+  cleanupDays: 30,
+  enableSearch: true,
+  enableBackup: true,
+  backupInterval: 24 * 60 * 60 * 1000 // 24時間
+})
 
 // ヘルスチェック
 router.get('/health', (req: Request, res: Response) => {
@@ -114,7 +123,15 @@ interface SearchRequestBody {
 router.post('/search', async (req: Request<{}, {}, SearchRequestBody>, res: Response) => {
   try {
     const { query, filters } = req.body
-    const results = await chatHistoryService.search(query, filters)
+    const searchFilter = {
+      keyword: query,
+      page: 1,
+      pageSize: 50,
+      ...filters,
+      startDate: filters?.startDate ? new Date(filters.startDate) : undefined,
+      endDate: filters?.endDate ? new Date(filters.endDate) : undefined
+    }
+    const results = await chatHistoryService.searchSessions(searchFilter)
     res.json(results)
   } catch (error) {
     logger.error('Search error:', error)

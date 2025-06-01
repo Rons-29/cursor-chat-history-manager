@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
+import type { RequestHandler } from 'express'
 import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { IntegrationService } from '../services/IntegrationService.js'
 import { CursorLogService } from '../services/CursorLogService.js'
@@ -143,7 +144,7 @@ app.get('/api/sessions', async (req, res) => {
       metadata: {
         totalMessages: session.messages.length,
         tags: session.tags || [],
-        description: session.metadata?.description || '',
+        description: session.metadata?.summary || '',
         source: session.metadata?.source || 'chat'
       },
       messages: session.messages.map(msg => ({
@@ -173,17 +174,17 @@ app.get('/api/sessions', async (req, res) => {
     })
   }
 })
-
 // 特定セッション取得
-app.get('/api/sessions/:id', async (req, res) => {
+const getSessionById: RequestHandler = async (req, res) => {
   try {
     const session = await chatHistoryService.getSession(req.params.id)
     
     if (!session) {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'Not Found',
         message: 'セッションが見つかりません'
       })
+      return
     }
 
     const response = {
@@ -194,7 +195,7 @@ app.get('/api/sessions/:id', async (req, res) => {
       metadata: {
         totalMessages: session.messages.length,
         tags: session.tags || [],
-        description: session.metadata?.description || '',
+        description: session.metadata?.summary || '',
         source: session.metadata?.source || 'chat'
       },
       messages: session.messages.map(msg => ({
@@ -214,18 +215,20 @@ app.get('/api/sessions/:id', async (req, res) => {
       message: error instanceof Error ? error.message : '不明なエラー'
     })
   }
-})
+}
 
+app.get('/api/sessions/:id', getSessionById)
 // 検索機能
-app.post('/api/search', async (req, res) => {
+const searchSessions: RequestHandler = async (req, res) => {
   try {
     const { keyword, filters = {} } = req.body
 
     if (!keyword) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Bad Request',
         message: 'キーワードが必要です'
       })
+      return
     }
 
     const searchResult = await chatHistoryService.searchSessions({
@@ -243,7 +246,7 @@ app.post('/api/search', async (req, res) => {
       metadata: {
         totalMessages: session.messages.length,
         tags: session.tags || [],
-        description: session.metadata?.description || '',
+        description: session.metadata?.summary || '',
         source: session.metadata?.source || 'chat'
       },
       messages: session.messages.map(msg => ({
@@ -267,7 +270,9 @@ app.post('/api/search', async (req, res) => {
       message: error instanceof Error ? error.message : '不明なエラー'
     })
   }
-})
+}
+
+app.post('/api/search', searchSessions)
 
 // 統計情報取得
 app.get('/api/stats', async (req, res) => {

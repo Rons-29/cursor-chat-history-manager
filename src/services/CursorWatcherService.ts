@@ -18,9 +18,12 @@ import type { CursorChatData, CursorConfig } from '../types/cursor.js'
 
 export interface CursorWatcherStatus {
   isWatching: boolean
+  isActive: boolean
   cursorPath?: string
   lastScan?: Date
   sessionsFound: number
+  processedCount: number
+  errorCount: number
   error?: string
 }
 
@@ -426,7 +429,11 @@ export class CursorWatcherService extends EventEmitter {
   private async createNewSession(chatData: CursorChatData): Promise<void> {
     try {
       const session = await this.chatHistoryService.createSession({
+        id: chatData.id,
         title: chatData.title,
+        messages: [],
+        startTime: new Date(chatData.createdAt),
+        tags: ['cursor-import'],
         metadata: {
           source: 'cursor',
           cursorId: chatData.id,
@@ -462,9 +469,12 @@ export class CursorWatcherService extends EventEmitter {
   getStatus(): CursorWatcherStatus {
     return {
       isWatching: this.isWatching,
+      isActive: this.isWatching,
       cursorPath: this.config.watchPath,
       lastScan: this.lastScanTime || undefined,
       sessionsFound: this.sessionsFound,
+      processedCount: this.sessionsFound,
+      errorCount: 0,
       error: undefined
     }
   }

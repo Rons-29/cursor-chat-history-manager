@@ -121,7 +121,7 @@ export interface IntegrationStats {
   totalLogs: number
   cursorLogs: number
   chatLogs: number
-  storageSize: string
+  storageSize: number
   lastUpdate: Date
   syncStatus: SyncStatus
 }
@@ -142,14 +142,57 @@ export interface IntegrationSearchOptions {
 
 // 分析リクエスト（IntegrationServiceで使用）
 export interface IntegrationAnalyticsRequest {
+  startDate?: Date
+  endDate?: Date
   timeRange: {
     start: Date
     end: Date
   }
   granularity: 'hourly' | 'daily' | 'weekly' | 'monthly'
+  groupBy?: 'day' | 'week' | 'month'
   metrics: string[]
+  types?: Array<'chat' | 'cursor'>
   project?: string
+  projectId?: string
   tags?: string[]
+}
+
+// 分析レスポンス型（IntegrationServiceで使用）
+export interface IntegrationAnalyticsResponse {
+  timeRange: {
+    start: Date
+    end: Date
+  }
+  granularity: 'hourly' | 'daily' | 'weekly' | 'monthly'
+  summary: {
+    totalLogs: number
+    totalChats: number
+    totalCursorLogs: number
+    uniqueProjects: number
+    uniqueTags: number
+  }
+  logsByType: {
+    chat: number
+    cursor: number
+  }
+  logsByProject: Record<string, number>
+  logsByTag: Record<string, number>
+  activityTimeline: Array<{
+    timestamp: Date
+    count: number
+    type?: 'chat' | 'cursor'
+  }>
+  hourlyDistribution: Record<number, number>
+  topKeywords: Array<{
+    keyword: string
+    frequency: number
+    trend: 'up' | 'down' | 'stable'
+  }>
+  metrics: {
+    messageCount: number[]
+    sessionCount: number[]
+    timestamps: string[]
+  }
 }
 
 // エラー型（IntegrationServiceで使用）
@@ -157,6 +200,7 @@ export interface IntegrationError {
   code: string
   message: string
   timestamp: Date
+  details?: any
   context?: Record<string, any>
 }
 

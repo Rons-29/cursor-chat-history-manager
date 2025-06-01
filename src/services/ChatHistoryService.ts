@@ -61,7 +61,7 @@ class ChatHistoryService {
       max: 1000,
       maxAge: 3600000, // 1時間
       updateAgeOnGet: true
-    })
+    }, this.logger)
     this.indexManager = new IndexManager(
       path.join(this.config.storagePath, 'index.json'),
       this.logger
@@ -542,7 +542,7 @@ class ChatHistoryService {
         try {
           if (validateData && !this.validateSessionData(sessionData)) {
             result.errors.push(
-              `無効なセッションデータ: ${sessionData.id || 'ID不明'}`
+              `無効なセッションデータ: ${(sessionData as any).id || 'ID不明'}`
             )
             continue
           }

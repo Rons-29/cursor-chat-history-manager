@@ -1,5 +1,8 @@
 export class ChatHistoryError extends Error {
-  constructor(message: string, public cause?: Error) {
+  constructor(
+    message: string,
+    public cause?: Error
+  ) {
     super(message)
     this.name = 'ChatHistoryError'
   }
@@ -34,8 +37,11 @@ export class BackupError extends ChatHistoryError {
 }
 
 export class ImportError extends ChatHistoryError {
-  constructor(message: string, public details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    public details?: Record<string, unknown>
+  ) {
     super(`インポートエラー: ${message}`)
     this.name = 'ImportError'
   }
-} 
+}

@@ -19,11 +19,14 @@ export class BatchProcessor<T> {
 
   async add(item: T): Promise<void> {
     this.items.push(item)
-    
+
     if (this.items.length >= this.config.maxSize) {
       await this.processBatch()
     } else if (!this.timer) {
-      this.timer = setTimeout(() => this.processBatch(), this.config.maxWaitTime)
+      this.timer = setTimeout(
+        () => this.processBatch(),
+        this.config.maxWaitTime
+      )
     }
   }
 
@@ -44,4 +47,4 @@ export class BatchProcessor<T> {
       await this.logger.error('バッチ処理エラー', { error })
     }
   }
-} 
+}

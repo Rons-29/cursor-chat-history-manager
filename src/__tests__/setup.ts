@@ -28,7 +28,7 @@ global.console = {
   warn: jest.fn(),
   log: jest.fn(),
   info: jest.fn(),
-  debug: jest.fn()
+  debug: jest.fn(),
 }
 
 // グローバル変数の設定
@@ -58,4 +58,4 @@ class ResizeObserver {
   disconnect() {}
 }
 
-global.ResizeObserver = ResizeObserver 
+global.ResizeObserver = ResizeObserver

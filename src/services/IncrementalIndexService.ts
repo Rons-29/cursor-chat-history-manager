@@ -16,7 +16,7 @@ export class IncrementalIndexService {
   private processingQueue: Set<string> = new Set()
   private batchQueue: string[] = []
   private processingBatch = false
-  
+
   private readonly BATCH_SIZE = 50
   private readonly BATCH_INTERVAL = 2000 // 2秒
 
@@ -30,13 +30,13 @@ export class IncrementalIndexService {
   async initialize(): Promise<void> {
     await fs.ensureFile(this.indexPath)
     await fs.ensureFile(this.checksumPath)
-    
+
     // 既存インデックスが空の場合のみ初期化
     const indexContent = await this.getIndexContent()
     if (Object.keys(indexContent).length === 0) {
       await this.writeIndex({})
     }
-    
+
     // バッチ処理の開始
     this.startBatchProcessor()
   }
@@ -64,24 +64,24 @@ export class IncrementalIndexService {
     const result = {
       added: [] as string[],
       modified: [] as string[],
-      deleted: [] as string[]
+      deleted: [] as string[],
     }
 
     try {
       // 現在のチェックサム情報を読み込み
       const checksums = await this.getChecksums()
       const newChecksums: Record<string, string> = {}
-      
+
       // 現在のファイル一覧を取得
       const currentFiles = await fs.readdir(this.sessionDir)
       const jsonFiles = currentFiles.filter(file => file.endsWith('.json'))
-      
+
       // 各ファイルのチェックサムを計算
       for (const file of jsonFiles) {
         const filePath = path.join(this.sessionDir, file)
         const checksum = await this.calculateChecksum(filePath)
         newChecksums[file] = checksum
-        
+
         if (!(file in checksums)) {
           // 新規ファイル
           result.added.push(file)
@@ -90,17 +90,17 @@ export class IncrementalIndexService {
           result.modified.push(file)
         }
       }
-      
+
       // 削除されたファイルを検出
       for (const file in checksums) {
         if (!(file in newChecksums)) {
           result.deleted.push(file)
         }
       }
-      
+
       // チェックサム情報を更新
       await this.writeChecksums(newChecksums)
-      
+
       return result
     } catch (error) {
       this.logger.error('ファイル変更検出エラー:', error)
@@ -123,13 +123,13 @@ export class IncrementalIndexService {
       added: 0,
       modified: 0,
       deleted: 0,
-      errors: [] as string[]
+      errors: [] as string[],
     }
 
     try {
       const changes = await this.detectChangedFiles()
       const index = await this.getIndexContent()
-      
+
       // 削除されたファイルの処理
       for (const file of changes.deleted) {
         const sessionId = path.basename(file, '.json')
@@ -137,27 +137,27 @@ export class IncrementalIndexService {
         result.deleted++
         result.processed++
       }
-      
+
       // 追加・変更されたファイルの処理
       const filesToProcess = [...changes.added, ...changes.modified]
-      
+
       for (const file of filesToProcess) {
         try {
           const sessionId = path.basename(file, '.json')
           const filePath = path.join(this.sessionDir, file)
-          
+
           if (!(await fs.pathExists(filePath))) {
             continue
           }
-          
+
           const sessionData = await fs.readJson(filePath)
-          
+
           // 基本的なバリデーション
           if (!sessionData.id || !sessionData.messages) {
             result.errors.push(`無効なセッションデータ: ${sessionId}`)
             continue
           }
-          
+
           // インデックスエントリを作成
           index[sessionId] = {
             id: sessionId,
@@ -165,32 +165,31 @@ export class IncrementalIndexService {
             tags: sessionData.tags || [],
             createdAt: new Date(sessionData.createdAt).toISOString(),
             updatedAt: new Date(sessionData.updatedAt).toISOString(),
-            messageCount: sessionData.messages?.length || 0
+            messageCount: sessionData.messages?.length || 0,
           }
-          
+
           if (changes.added.includes(file)) {
             result.added++
           } else {
             result.modified++
           }
           result.processed++
-          
         } catch (error) {
           result.errors.push(`セッション ${file} の処理エラー: ${error}`)
         }
       }
-      
+
       // インデックスを保存
       await this.writeIndex(index)
-      
+
       this.logger.info('増分同期完了', {
         processed: result.processed,
         added: result.added,
         modified: result.modified,
         deleted: result.deleted,
-        errors: result.errors.length
+        errors: result.errors.length,
       })
-      
+
       return result
     } catch (error) {
       this.logger.error('増分同期エラー:', error)
@@ -204,14 +203,14 @@ export class IncrementalIndexService {
    */
   async queueFileForProcessing(filePath: string): Promise<void> {
     const fileName = path.basename(filePath)
-    
+
     if (this.processingQueue.has(fileName)) {
       return // 既に処理中
     }
-    
+
     this.processingQueue.add(fileName)
     this.batchQueue.push(fileName)
-    
+
     // バッチサイズに達した場合は即座に処理
     if (this.batchQueue.length >= this.BATCH_SIZE) {
       await this.processBatch()
@@ -236,19 +235,19 @@ export class IncrementalIndexService {
     if (this.processingBatch || this.batchQueue.length === 0) {
       return
     }
-    
+
     this.processingBatch = true
     const batch = this.batchQueue.splice(0, this.BATCH_SIZE)
-    
+
     try {
       const index = await this.getIndexContent()
       let updated = false
-      
+
       for (const fileName of batch) {
         try {
           const sessionId = path.basename(fileName, '.json')
           const filePath = path.join(this.sessionDir, fileName)
-          
+
           if (!(await fs.pathExists(filePath))) {
             // ファイルが削除された
             if (index[sessionId]) {
@@ -258,7 +257,7 @@ export class IncrementalIndexService {
           } else {
             // ファイルを処理
             const sessionData = await fs.readJson(filePath)
-            
+
             if (sessionData.id && sessionData.messages) {
               index[sessionId] = {
                 id: sessionId,
@@ -266,23 +265,22 @@ export class IncrementalIndexService {
                 tags: sessionData.tags || [],
                 createdAt: new Date(sessionData.createdAt).toISOString(),
                 updatedAt: new Date(sessionData.updatedAt).toISOString(),
-                messageCount: sessionData.messages?.length || 0
+                messageCount: sessionData.messages?.length || 0,
               }
               updated = true
             }
           }
-          
+
           this.processingQueue.delete(fileName)
         } catch (error) {
           this.logger.error(`バッチ処理エラー - ファイル: ${fileName}`, error)
           this.processingQueue.delete(fileName)
         }
       }
-      
+
       if (updated) {
         await this.writeIndex(index)
       }
-      
     } finally {
       this.processingBatch = false
     }
@@ -332,7 +330,9 @@ export class IncrementalIndexService {
   /**
    * チェックサム情報を書き込み
    */
-  private async writeChecksums(checksums: Record<string, string>): Promise<void> {
+  private async writeChecksums(
+    checksums: Record<string, string>
+  ): Promise<void> {
     try {
       await fs.writeJson(this.checksumPath, checksums, { spaces: 2 })
     } catch (error) {
@@ -349,11 +349,11 @@ export class IncrementalIndexService {
     processing: boolean
   }> {
     const index = await this.getIndexContent()
-    
+
     return {
       totalSessions: Object.keys(index).length,
       queueSize: this.batchQueue.length,
-      processing: this.processingBatch
+      processing: this.processingBatch,
     }
   }
 
@@ -368,4 +368,4 @@ export class IncrementalIndexService {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
   }
-} 
+}

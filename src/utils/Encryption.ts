@@ -16,7 +16,11 @@ export class Encryption {
   private config: EncryptionConfig
   private key: Buffer
 
-  constructor(logger: Logger, masterKey: string, config: Partial<EncryptionConfig> = {}) {
+  constructor(
+    logger: Logger,
+    masterKey: string,
+    config: Partial<EncryptionConfig> = {}
+  ) {
     this.logger = logger
     this.config = {
       algorithm: config.algorithm ?? 'aes-256-gcm',
@@ -44,21 +48,13 @@ export class Encryption {
 
       // データの暗号化
       const cipher = crypto.createCipheriv(this.config.algorithm, this.key, iv)
-      const encrypted = Buffer.concat([
-        cipher.update(data),
-        cipher.final(),
-      ])
+      const encrypted = Buffer.concat([cipher.update(data), cipher.final()])
 
       // 認証タグの取得
       const authTag = (cipher as any).getAuthTag()
 
       // 暗号化データの結合
-      const result = Buffer.concat([
-        salt,
-        iv,
-        authTag,
-        encrypted,
-      ])
+      const result = Buffer.concat([salt, iv, authTag, encrypted])
 
       return result.toString('base64')
     } catch (error) {
@@ -81,10 +77,16 @@ export class Encryption {
         this.config.saltLength + this.config.ivLength,
         this.config.saltLength + this.config.ivLength + 16
       )
-      const encrypted = data.slice(this.config.saltLength + this.config.ivLength + 16)
+      const encrypted = data.slice(
+        this.config.saltLength + this.config.ivLength + 16
+      )
 
       // 復号化
-      const decipher = crypto.createDecipheriv(this.config.algorithm, this.key, iv)
+      const decipher = crypto.createDecipheriv(
+        this.config.algorithm,
+        this.key,
+        iv
+      )
       ;(decipher as any).setAuthTag(authTag)
 
       const decrypted = Buffer.concat([
@@ -168,4 +170,4 @@ export class Encryption {
       )
     })
   }
-} 
+}

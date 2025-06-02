@@ -109,7 +109,9 @@ export class PerformanceTest {
         report.push(`  エラー: ${result.error.message}`)
       } else {
         report.push(`  実行時間: ${result.totalTime.toFixed(2)}ms`)
-        report.push(`  メモリ使用量: ${(result.totalTime / 1024 / 1024).toFixed(2)}MB`)
+        report.push(
+          `  メモリ使用量: ${(result.totalTime / 1024 / 1024).toFixed(2)}MB`
+        )
         report.push(`  1秒あたりの操作数: ${result.averageTime.toFixed(2)}`)
       }
       report.push('')
@@ -117,4 +119,4 @@ export class PerformanceTest {
 
     return report.join('\n')
   }
-} 
+}

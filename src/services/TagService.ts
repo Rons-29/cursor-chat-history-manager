@@ -1,4 +1,8 @@
-import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
+import type {
+  ChatHistoryConfig,
+  ChatSession,
+  ChatMessage,
+} from '../types/index.js'
 import { Logger } from '../server/utils/Logger.js'
 import { ConfigService } from './ConfigService.js'
 import { ChatHistoryService } from './ChatHistoryService.js'
@@ -59,7 +63,7 @@ export class TagService {
               tag,
               count: 0,
               sessions: [],
-              lastUsed: session.updatedAt
+              lastUsed: session.updatedAt,
             }
 
             stats.count++
@@ -127,8 +131,8 @@ export class TagService {
         await this.chatHistoryService.updateSession(sessionId, {
           metadata: {
             ...session.metadata,
-            tags
-          }
+            tags,
+          },
         })
       }
     } catch (error) {
@@ -155,8 +159,8 @@ export class TagService {
         await this.chatHistoryService.updateSession(sessionId, {
           metadata: {
             ...session.metadata,
-            tags
-          }
+            tags,
+          },
         })
       }
     } catch (error) {
@@ -172,8 +176,8 @@ export class TagService {
 
     try {
       const sessions = await this.chatHistoryService.searchSessions({})
-      return sessions.sessions.filter(
-        session => session.metadata?.tags?.includes(tag)
+      return sessions.sessions.filter(session =>
+        session.metadata?.tags?.includes(tag)
       )
     } catch (error) {
       this.logger.error('タグによるセッション取得に失敗しました:', error)
@@ -188,12 +192,10 @@ export class TagService {
 
     try {
       const tags = await this.getTags()
-      return tags
-        .sort((a, b) => b.count - a.count)
-        .slice(0, limit)
+      return tags.sort((a, b) => b.count - a.count).slice(0, limit)
     } catch (error) {
       this.logger.error('人気タグの取得に失敗しました:', error)
       throw error
     }
   }
-} 
+}

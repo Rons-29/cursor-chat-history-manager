@@ -9,20 +9,17 @@ import { useProgressTracking } from './useProgressTracking'
 import { useState } from 'react'
 import * as integrationClient from '../api/integration'
 
-// 型定義
+// 型定義（integration.tsと統一）
 export interface IntegrationStats {
-  totalLogs: number
-  cursorLogs: number
-  chatLogs: number
-  storageSize: number
-  lastUpdate: string
-  syncStatus: {
-    isActive: boolean
-    lastSync: string
-    processedCount: number
-    errorCount: number
-    syncSpeed: number
-  }
+  totalSessions: number
+  totalMessages: number
+  cursorSessions: number
+  cursorMessages: number
+  regularSessions: number
+  regularMessages: number
+  lastSync?: string
+  isWatching: boolean
+  error?: string
 }
 
 export interface CursorStatus {
@@ -68,13 +65,7 @@ export const useIntegrationStats = () => {
     staleTime: 30000, // 30秒間はキャッシュを使用
     refetchInterval: 60000, // 1分ごとに自動更新
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    onSuccess: (data) => {
-      console.log('🎯 useIntegrationStats: React Query成功', data)
-    },
-    onError: (error) => {
-      console.error('🎯 useIntegrationStats: React Queryエラー', error)
-    }
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   })
 }
 
@@ -93,23 +84,33 @@ export const useEnhancedStats = () => {
 }
 
 /**
- * Cursorステータスを取得するフック（模擬データ）
+ * Cursorステータスを取得するフック
  */
 export const useCursorStatus = () => {
   return useQuery<CursorStatus, Error>({
     queryKey: INTEGRATION_QUERY_KEYS.cursorStatus,
     queryFn: async (): Promise<CursorStatus> => {
-      // 実際のAPIが実装されるまでの模擬データ
-      return {
-        isWatching: false,
-        cursorPath: '/Users/shirokki22/Library/Application Support/Cursor/User/workspaceStorage',
-        sessionsFound: 42,
-        lastScan: new Date().toISOString()
+      console.log('🎯 useCursorStatus: ステータス取得開始')
+      try {
+        const result = await integrationClient.getCursorStatus()
+        console.log('🎯 useCursorStatus: 取得成功', result)
+        
+        // APIレスポンスを期待される形式に変換
+        return {
+          isWatching: result.isWatching || false,
+          cursorPath: result.cursorPath || null,
+          sessionsFound: result.sessionsFound || 0,
+          lastScan: result.lastScan || null
+        }
+      } catch (error) {
+        console.error('🎯 useCursorStatus: 取得失敗', error)
+        throw error
       }
     },
-    staleTime: 30000,
-    refetchInterval: 60000,
-    retry: 3
+    staleTime: 10000, // 10秒間はキャッシュを使用（監視状態は頻繁に変わる可能性）
+    refetchInterval: 30000, // 30秒ごとに自動更新
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   })
 }
 
@@ -119,7 +120,31 @@ export const useCursorStatus = () => {
 export const useIntegrationLogs = (limit: number = 100) => {
   return useQuery({
     queryKey: queryKeys.integrationLogs({ limit }),
-    queryFn: () => apiClient.getIntegrationLogs({ limit }),
+    queryFn: async () => {
+      console.log('🎣 useIntegrationLogs: クエリ関数実行開始', { limit })
+      
+      // 直接fetch APIでテスト
+      console.log('🎣 直接fetch APIテスト開始')
+      try {
+        const directResponse = await fetch(`http://localhost:3001/api/integration/logs?limit=${limit}`)
+        const directJson = await directResponse.json()
+        console.log('🎣 直接fetch結果:', directJson)
+        console.log('🎣 直接fetch - logs配列:', directJson.logs)
+      } catch (directError) {
+        console.error('🎣 直接fetchエラー:', directError)
+      }
+      
+      try {
+        const result = await apiClient.getIntegrationLogs({ limit })
+        console.log('🎣 useIntegrationLogs: API結果:', result)
+        console.log('🎣 useIntegrationLogs: 結果は配列:', Array.isArray(result))
+        console.log('🎣 useIntegrationLogs: 結果の長さ:', result?.length)
+        return result
+      } catch (error) {
+        console.error('🎣 useIntegrationLogs: エラー:', error)
+        throw error
+      }
+    },
     staleTime: 30000,
     retry: 3
   })
@@ -131,7 +156,7 @@ export const useIntegrationLogs = (limit: number = 100) => {
 export const useIntegrationSettings = () => {
   return useQuery({
     queryKey: queryKeys.integrationSettings(),
-    queryFn: () => apiClient.getIntegrationSettings(),
+    queryFn: () => integrationClient.getIntegrationSettings(),
     staleTime: 5 * 60 * 1000, // 5分
     retry: 2
   })
@@ -144,7 +169,7 @@ export const useSaveIntegrationSettings = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (settings: any) => apiClient.saveIntegrationSettings(settings),
+    mutationFn: (settings: any) => integrationClient.saveIntegrationSettings(settings),
     onSuccess: () => {
       // 設定保存後、設定データを再取得
       queryClient.invalidateQueries({ queryKey: queryKeys.integrationSettings() })
@@ -218,10 +243,10 @@ export const useIntegration = () => {
       setScanError(null)
 
       const steps = [
-        { id: 'config_validate', label: '設定検証', status: 'pending' },
-        { id: 'db_setup', label: 'データベース初期化', status: 'pending' },
-        { id: 'cursor_connect', label: 'Cursor連携設定', status: 'pending' },
-        { id: 'service_start', label: 'サービス開始', status: 'pending' }
+        { id: 'config_validate', label: '設定検証', status: 'pending' as const },
+        { id: 'db_setup', label: 'データベース初期化', status: 'pending' as const },
+        { id: 'cursor_connect', label: 'Cursor連携設定', status: 'pending' as const },
+        { id: 'service_start', label: 'サービス開始', status: 'pending' as const }
       ]
 
       progressActions.start(steps)
@@ -287,12 +312,12 @@ export const useIntegration = () => {
       console.log('✅ APIサーバー接続確認完了')
 
       const steps = [
-        { id: 'api_check', label: 'APIサーバー接続確認', status: 'completed' },
-        { id: 'cursor_detect', label: 'Cursorディレクトリ検出', status: 'pending' },
-        { id: 'session_scan', label: 'セッションファイルスキャン', status: 'pending' },
-        { id: 'data_parsing', label: 'データ解析', status: 'pending' },
-        { id: 'db_import', label: 'データベース統合', status: 'pending' },
-        { id: 'index_update', label: 'インデックス更新', status: 'pending' }
+        { id: 'api_check', label: 'APIサーバー接続確認', status: 'completed' as const },
+        { id: 'cursor_detect', label: 'Cursorディレクトリ検出', status: 'pending' as const },
+        { id: 'session_scan', label: 'セッションファイルスキャン', status: 'pending' as const },
+        { id: 'data_parsing', label: 'データ解析', status: 'pending' as const },
+        { id: 'db_import', label: 'データベース統合', status: 'pending' as const },
+        { id: 'index_update', label: 'インデックス更新', status: 'pending' as const }
       ]
 
       progressActions.start(steps)

@@ -346,7 +346,12 @@ throw new SessionNotFoundError('セッションが見つかりません', 'SESSI
 - [ ] `./scripts/security-check.sh` 実行・通過 (機密情報チェック)
 - [ ] `npm run quality`通過(lint + format + build)
 - [ ] テスト実行・通過
-- [ ] ドキュメント更新
+- [ ] **ドキュメント更新（統合原則準拠）**:
+  - [ ] 統合API変更時: API_SPEC.md + USAGE.md 更新
+  - [ ] 新機能追加時: 該当ドキュメント即座更新
+  - [ ] 統合コマンド変更時: USAGE.md + README.md 更新
+  - [ ] セキュリティ変更時: SECURITY.md 更新
+  - [ ] 関連ドキュメント間の整合性確認
 
 ## 🛠️ コマンド・スクリプト
 
@@ -467,11 +472,11 @@ logger.info('セッション検索実行', {
 })
 ```
 
-## 📝 ドキュメント要件
+## 📝 ドキュメント要件・更新ルール
 
 ### 必須ドキュメント
-1. API仕様書
-2. セキュリティガイドライン
+1. API仕様書（統合APIルート反映）
+2. セキュリティガイドライン（統合後対応）
 3. パフォーマンス最適化ガイド
 4. トラブルシューティングガイド
 
@@ -480,6 +485,145 @@ logger.info('セッション検索実行', {
 - 複雑なロジックに日本語コメント
 - 実用的な@exampleの提供
 - パフォーマンス改善の記録
+
+### 📚 ドキュメント更新ルール（統合原則対応）
+
+#### 🔄 即座更新が必要な場合
+```bash
+# 以下の変更時は該当ドキュメント即座更新必須
+1. 統合APIエンドポイント変更 → API_SPEC.md + USAGE.md
+2. 統合コマンド変更 → USAGE.md + README.md
+3. セキュリティ仕様変更 → SECURITY.md
+4. 統合原則変更 → 全統合関連ドキュメント
+```
+
+#### 📂 ドキュメント配置・移動基準
+```typescript
+// docsフォルダ保持基準
+interface DocsRetentionCriteria {
+  継続的価値: boolean    // 今後も参照される
+  最新性: boolean        // 統合後状況と整合
+  実用性: boolean        // 実際の開発・運用で使用
+  包括性: boolean        // 統合アーキテクチャ全体をカバー
+}
+
+// notesフォルダ移動基準  
+interface NotesMoveCriteria {
+  バグ修正記録: boolean     // 過去の問題対応記録
+  実装ステータス: boolean   // 特定時点の実装状況
+  テスト結果: boolean       // 特定時点のテスト結果
+  一時的修正: boolean       // 暫定対応・修正記録
+}
+
+// archived移動基準
+interface ArchivedMoveCriteria {
+  古い計画書: boolean       // 統合前の計画・提案書
+  旧分析レポート: boolean   // 統合前の分析結果
+  重複ガイド: boolean       // 同内容の新ドキュメント存在
+  時期限定: boolean         // 特定時期のみ有効
+}
+```
+
+#### 🔍 ドキュメント品質チェック
+```bash
+# 月次レビュー時の必須チェック項目
+docs_quality_check() {
+  # 1. 統合原則整合性
+  grep -r "chat-history-manager search" docs/ && echo "❌ 旧CLI残存"
+  grep -r "localhost:3000" docs/ && echo "❌ 旧ポート残存"
+  
+  # 2. リンク整合性  
+  find docs/ -name "*.md" -exec grep -l "](.*\.md)" {} \; | while read f; do
+    echo "リンクチェック: $f"
+  done
+  
+  # 3. 最新性確認
+  find docs/ -name "*.md" -exec grep -l "2024" {} \; && echo "⚠️ 古い日付発見"
+  
+  # 4. 統合API整合性
+  grep -r "/api/chat" docs/ && echo "❌ 旧API残存"
+}
+```
+
+#### 📋 定期メンテナンスフロー
+```bash
+# 月次ドキュメント整備（npm run monthly:review に組み込み）
+monthly_docs_review() {
+  echo "📚 ドキュメント整合性確認中..."
+  
+  # 1. 古い情報検出
+  docs_quality_check
+  
+  # 2. 統合状況反映確認
+  curl -s http://localhost:3001/api/health | jq '.services' > /tmp/current_services.json
+  echo "現在のサービス構成とドキュメント記載の整合性確認推奨"
+  
+  # 3. パフォーマンス指標更新
+  echo "📊 最新パフォーマンス指標をドキュメントに反映してください"
+}
+```
+
+#### 🎯 ドキュメント作成時のチェックリスト
+```markdown
+## 新規ドキュメント作成時の必須確認
+- [ ] 統合原則準拠（source分岐・unified-api使用等）
+- [ ] 最新コマンド体系使用（npm run scripts）
+- [ ] 統合後のファイル構造反映
+- [ ] 実際のテスト実行による動作確認
+- [ ] セキュリティ観点の考慮
+- [ ] パフォーマンス影響の記載
+- [ ] 関連ドキュメントとの整合性確認
+```
+
+#### 🔗 ドキュメント間連携ルール
+```typescript
+// 相互参照必須パターン
+const DOC_REFERENCES = {
+  'API_SPEC.md': ['USAGE.md', 'SECURITY.md'],
+  'USAGE.md': ['API_SPEC.md', 'INTEGRATION_*.md'],
+  'SECURITY.md': ['API_SPEC.md', 'USAGE.md'],
+  '新機能ドキュメント': ['既存統合ドキュメント群']
+}
+
+// 更新時の連鎖更新チェック
+const update_related_docs = (changedDoc: string) => {
+  const relatedDocs = DOC_REFERENCES[changedDoc] || []
+  console.log(`${changedDoc} 更新時、以下の確認推奨:`, relatedDocs)
+}
+```
+
+## 🔗 **Claude DEV統合専用ルール (冗長化予防)**
+
+### 統合設計の強制原則
+- **データベース一元化**: 全サービスで`data/chat-history.db`使用必須
+- **サービス階層遵守**: 独立サービス作成禁止、アダプターパターン必須
+- **API統一**: `/api/sessions?source=X`形式、専用エンドポイント作成禁止
+- **設定統合**: 分散設定ファイル禁止、統一設定構造必須
+
+### 新機能開発時の必須チェック
+```bash
+# 開発前に必ず確認
+1. 既存サービスで実現可能か？ (99%は拡張で対応)
+2. データベーススキーマ拡張で対応可能か？
+3. 新APIエンドポイントが本当に必要か？ (フィルターで対応推奨)
+4. 設定ファイルの重複は発生しないか？
+```
+
+### 禁止パターン (即座にエラー)
+```typescript
+// ❌ 絶対禁止
+const claudeDevDb = 'data/claude-dev.db'        // 分散DB
+export class ClaudeDevService extends Service   // 独立サービス
+GET /api/claude-dev/sessions                    // 専用API
+const claudeDevConfig = { ... }                 // 個別設定
+```
+
+### 自動チェック実装
+- **ESLintルール**: 重複API・DB分散の自動検出
+- **プリコミットフック**: ファイル重複・命名規則チェック
+- **CI/CD**: 統合違反の自動検出とビルド停止
+
+---
 
 ## 📚 関連専用ルール
 
@@ -490,6 +634,6 @@ logger.info('セッション検索実行', {
 
 ---
 
-**最終更新**: 2025/06/01  
+**最終更新**: 2025/06/02（ドキュメント更新ルール追加）  
 **適用範囲**: Chat History Manager全体  
 **次回見直し**: 機能追加時または月次レビュー

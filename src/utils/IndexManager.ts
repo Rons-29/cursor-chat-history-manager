@@ -34,11 +34,7 @@ export class IndexManager {
   private saveTimeout: NodeJS.Timeout | null
   private options: Required<IndexOptions>
 
-  constructor(
-    indexPath: string,
-    logger: Logger,
-    options: IndexOptions = {}
-  ) {
+  constructor(indexPath: string, logger: Logger, options: IndexOptions = {}) {
     this.indexPath = indexPath
     this.logger = logger
     this.isDirty = false
@@ -52,7 +48,7 @@ export class IndexManager {
     this.indexData = {
       sessions: [],
       lastUpdated: new Date(),
-      version: this.VERSION
+      version: this.VERSION,
     }
   }
 
@@ -63,7 +59,7 @@ export class IndexManager {
 
     try {
       await fs.ensureDir(path.dirname(this.indexPath))
-      
+
       if (await fs.pathExists(this.indexPath)) {
         const data = await fs.readJson(this.indexPath)
         if (this.validateIndexData(data)) {
@@ -73,11 +69,13 @@ export class IndexManager {
             sessions: data.sessions.map((session: any) => ({
               ...session,
               createdAt: new Date(session.createdAt),
-              updatedAt: new Date(session.updatedAt)
-            }))
+              updatedAt: new Date(session.updatedAt),
+            })),
           }
         } else {
-          await this.logger.warn('インデックスデータが無効なため、新規作成します')
+          await this.logger.warn(
+            'インデックスデータが無効なため、新規作成します'
+          )
           await this.createNewIndex()
         }
       } else {
@@ -87,7 +85,7 @@ export class IndexManager {
       this.isInitialized = true
       await this.logger.info('IndexManagerを初期化しました', {
         indexPath: this.indexPath,
-        sessionCount: this.indexData.sessions.length
+        sessionCount: this.indexData.sessions.length,
       })
     } catch (error) {
       await this.logger.error('IndexManagerの初期化に失敗しました', { error })
@@ -99,7 +97,7 @@ export class IndexManager {
     this.indexData = {
       sessions: [],
       lastUpdated: new Date(),
-      version: this.VERSION
+      version: this.VERSION,
     }
     // 初期化中なので直接ファイルに書き込み
     await fs.writeJson(this.indexPath, this.indexData, { spaces: 2 })
@@ -149,13 +147,15 @@ export class IndexManager {
     }
 
     try {
-      const existingIndex = this.indexData.sessions.findIndex(s => s.id === sessionId)
+      const existingIndex = this.indexData.sessions.findIndex(
+        s => s.id === sessionId
+      )
       const sessionIndex: SessionIndex = {
         id: sessionId,
         tags: metadata.tags,
         createdAt: metadata.createdAt,
         updatedAt: metadata.updatedAt,
-        size: metadata.size
+        size: metadata.size,
       }
 
       if (existingIndex >= 0) {
@@ -169,13 +169,13 @@ export class IndexManager {
 
       await this.logger.debug('セッションをインデックスに追加しました', {
         sessionId,
-        metadata
+        metadata,
       })
     } catch (error) {
       await this.logger.error('セッションのインデックス追加に失敗しました', {
         error,
         sessionId,
-        metadata
+        metadata,
       })
       throw new Error('セッションのインデックス追加に失敗しました')
     }
@@ -194,13 +194,13 @@ export class IndexManager {
         await this.saveIndex()
 
         await this.logger.debug('セッションをインデックスから削除しました', {
-          sessionId
+          sessionId,
         })
       }
     } catch (error) {
       await this.logger.error('セッションのインデックス削除に失敗しました', {
         error,
-        sessionId
+        sessionId,
       })
       throw new Error('セッションのインデックス削除に失敗しました')
     }
@@ -249,11 +249,7 @@ export class IndexManager {
     }
 
     return this.indexData.sessions
-      .filter(
-        s =>
-          s.createdAt >= startDate &&
-          s.createdAt <= endDate
-      )
+      .filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
       .map(s => s.id)
   }
 
@@ -278,7 +274,7 @@ export class IndexManager {
       await this.saveIndex()
 
       await this.logger.info('インデックスを最適化しました', {
-        sessionCount: this.indexData.sessions.length
+        sessionCount: this.indexData.sessions.length,
       })
     } catch (error) {
       await this.logger.error('インデックスの最適化に失敗しました', { error })
@@ -305,7 +301,7 @@ export class IndexManager {
       totalSessions: this.indexData.sessions.length,
       totalSize: this.indexData.sessions.reduce((sum, s) => sum + s.size, 0),
       lastUpdated: this.indexData.lastUpdated,
-      tagCount: tags.size
+      tagCount: tags.size,
     }
   }
-} 
+}

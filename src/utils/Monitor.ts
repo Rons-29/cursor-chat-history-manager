@@ -1,5 +1,11 @@
 import { EventEmitter } from 'events'
-import type { MetricConfig, MetricValue, Report, ReportPeriod, GroupedAlert } from '../types/monitoring.js'
+import type {
+  MetricConfig,
+  MetricValue,
+  Report,
+  ReportPeriod,
+  GroupedAlert,
+} from '../types/monitoring.js'
 import { Logger } from '../server/utils/Logger.js'
 import { AlertNotifier } from './AlertNotifier.js'
 import type { ChatSession } from '../types/index.js'
@@ -80,11 +86,11 @@ export class Monitor extends EventEmitter {
       refreshInterval: 1000,
       metrics: [],
       alerts: [],
-      retentionPeriod: 24 * 60 * 60 * 1000
+      retentionPeriod: 24 * 60 * 60 * 1000,
     }
     this.alertNotifier = new AlertNotifier({
       cooldownPeriod: config?.alertCooldown,
-      grouping: config?.alertGrouping
+      grouping: config?.alertGrouping,
     })
 
     this.initializeMetrics()
@@ -122,7 +128,7 @@ export class Monitor extends EventEmitter {
       name,
       config: { name, type },
       alerts: [],
-      values: []
+      values: [],
     }
 
     this.metrics.set(name, metric)
@@ -135,7 +141,11 @@ export class Monitor extends EventEmitter {
    * @param value メトリクス値
    * @param labels ラベル
    */
-  async recordMetric(name: string, value: number, labels: Record<string, string> = {}): Promise<void> {
+  async recordMetric(
+    name: string,
+    value: number,
+    labels: Record<string, string> = {}
+  ): Promise<void> {
     const metric = this.metrics.get(name)
     if (!metric) {
       throw new Error(`メトリクス ${name} は登録されていません`)
@@ -169,9 +179,11 @@ export class Monitor extends EventEmitter {
       threshold: config.threshold,
       message: config.message,
       enabled: true,
-      severity: config.severity
+      severity: config.severity,
     })
-    this.logger.info(`アラートを設定: ${name} ${config.condition} ${config.threshold}`)
+    this.logger.info(
+      `アラートを設定: ${name} ${config.condition} ${config.threshold}`
+    )
   }
 
   /**
@@ -210,12 +222,14 @@ export class Monitor extends EventEmitter {
           condition: alert.condition,
           threshold: alert.threshold,
           message: alert.message,
-          severity: alert.severity
+          severity: alert.severity,
         },
         timestamp: new Date(),
-        severity: alert.severity
+        severity: alert.severity,
       })
-      this.logger.warn(`アラート: ${name} が ${alert.condition} ${alert.threshold} を超えました (現在値: ${value})`)
+      this.logger.warn(
+        `アラート: ${name} が ${alert.condition} ${alert.threshold} を超えました (現在値: ${value})`
+      )
     }
   }
 
@@ -237,7 +251,12 @@ export class Monitor extends EventEmitter {
    * @param period レポート期間
    * @returns レポート
    */
-  generateReport(period: ReportPeriod = { startTime: new Date(Date.now() - 24 * 60 * 60 * 1000), endTime: new Date() }): Report {
+  generateReport(
+    period: ReportPeriod = {
+      startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      endTime: new Date(),
+    }
+  ): Report {
     const now = new Date()
     const startTime = period.startTime
     let endTime = period.endTime
@@ -247,11 +266,13 @@ export class Monitor extends EventEmitter {
     }
 
     const report: Report = {
-      metrics: {}
+      metrics: {},
     }
 
     for (const [name, metric] of this.metrics.entries()) {
-      const periodValues = metric.values.filter((v: MetricValue) => v.timestamp >= startTime && v.timestamp <= endTime)
+      const periodValues = metric.values.filter(
+        (v: MetricValue) => v.timestamp >= startTime && v.timestamp <= endTime
+      )
       if (periodValues.length === 0) continue
 
       const values = periodValues.map((v: MetricValue) => v.value)
@@ -259,7 +280,7 @@ export class Monitor extends EventEmitter {
         current: values[values.length - 1] || 0,
         average: values.reduce((a, b) => a + b, 0) / values.length,
         max: Math.max(...values),
-        min: Math.min(...values)
+        min: Math.min(...values),
       }
     }
 
@@ -293,7 +314,10 @@ export class Monitor extends EventEmitter {
    * @param sessionId セッションID
    * @param session セッション情報
    */
-  async startSessionMonitoring(sessionId: string, session?: ChatSession): Promise<void> {
+  async startSessionMonitoring(
+    sessionId: string,
+    session?: ChatSession
+  ): Promise<void> {
     if (!sessionId || sessionId.trim() === '') {
       throw new Error('無効なセッションIDです')
     }
@@ -304,7 +328,7 @@ export class Monitor extends EventEmitter {
 
     await this.registerMetric(`session_${sessionId}_messages`, 'counter')
     await this.registerMetric(`session_${sessionId}_duration`, 'gauge')
-    
+
     this.logger.info(`セッション監視を開始: ${sessionId}`)
   }
 
@@ -319,7 +343,7 @@ export class Monitor extends EventEmitter {
 
     this.metrics.delete(`session_${sessionId}_messages`)
     this.metrics.delete(`session_${sessionId}_duration`)
-    
+
     this.logger.info(`セッション監視を停止: ${sessionId}`)
   }
 
@@ -337,19 +361,24 @@ export class Monitor extends EventEmitter {
     }
 
     await this.registerMetric('memory_usage', 'gauge')
-    
+
     this.memoryMonitoringInterval = setInterval(async () => {
       const memoryUsage = process.memoryUsage()
       const usageInMB = memoryUsage.heapUsed / 1024 / 1024
-      
+
       await this.recordMetric('memory_usage', usageInMB)
-      
+
       if (usageInMB > options.threshold) {
-        this.emit('memoryThresholdExceeded', { usage: usageInMB, threshold: options.threshold })
+        this.emit('memoryThresholdExceeded', {
+          usage: usageInMB,
+          threshold: options.threshold,
+        })
       }
     }, options.interval)
 
-    this.logger.info(`メモリ使用量監視を開始: 閾値=${options.threshold}MB, 間隔=${options.interval}ms`)
+    this.logger.info(
+      `メモリ使用量監視を開始: 閾値=${options.threshold}MB, 間隔=${options.interval}ms`
+    )
   }
 
   /**
@@ -369,7 +398,11 @@ export class Monitor extends EventEmitter {
    * @param error エラーオブジェクト
    * @param level ログレベル
    */
-  async logError(message: string, error?: Error, level: ErrorLevel = 'error'): Promise<void> {
+  async logError(
+    message: string,
+    error?: Error,
+    level: ErrorLevel = 'error'
+  ): Promise<void> {
     if (!error) {
       throw new Error('エラーオブジェクトは必須です')
     }
@@ -395,4 +428,4 @@ export class Monitor extends EventEmitter {
 
     await this.recordMetric('error_count', 1)
   }
-} 
+}

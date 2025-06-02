@@ -1,7 +1,11 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { format } from 'date-fns'
-import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
+import type {
+  ChatHistoryConfig,
+  ChatSession,
+  ChatMessage,
+} from '../types/index.js'
 import { Logger } from '../server/utils/Logger.js'
 import { ConfigService } from './ConfigService.js'
 import { ChatHistoryService } from './ChatHistoryService.js'
@@ -51,7 +55,7 @@ export class ExportService {
       outputDir: config.outputDir,
       format: config.format || 'json',
       includeMetadata: config.includeMetadata ?? true,
-      compression: config.compression ?? false
+      compression: config.compression ?? false,
     }
     this.logger = logger
     this.chatHistoryService = chatHistoryService
@@ -67,7 +71,8 @@ export class ExportService {
       this.isInitialized = true
       this.logger.info('ExportServiceを初期化しました')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      const errorMessage =
+        error instanceof Error ? error.message : '不明なエラー'
       this.logger.error('初期化エラー', { error: errorMessage })
       throw new Error(`Failed to initialize ExportService: ${errorMessage}`)
     }
@@ -244,7 +249,7 @@ export class ExportService {
       if (!session) {
         return {
           success: false,
-          error: 'Session not found'
+          error: 'Session not found',
         }
       }
 
@@ -257,15 +262,19 @@ export class ExportService {
         stats: {
           sessionsExported: 1,
           messagesExported: session.messages.length,
-          fileSize: (await fs.stat(filePath)).size
-        }
+          fileSize: (await fs.stat(filePath)).size,
+        },
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
-      this.logger.error('エクスポートエラー', { sessionId, error: errorMessage })
+      const errorMessage =
+        error instanceof Error ? error.message : '不明なエラー'
+      this.logger.error('エクスポートエラー', {
+        sessionId,
+        error: errorMessage,
+      })
       return {
         success: false,
-        error: errorMessage
+        error: errorMessage,
       }
     }
   }
@@ -290,8 +299,8 @@ export class ExportService {
       messages: session.messages.map(msg => ({
         role: msg.role,
         content: msg.content,
-        timestamp: msg.timestamp
-      }))
+        timestamp: msg.timestamp,
+      })),
     }
 
     if (this.config.includeMetadata) {
@@ -299,7 +308,7 @@ export class ExportService {
         ...exportData,
         metadata: session.metadata,
         createdAt: session.createdAt,
-        updatedAt: session.updatedAt
+        updatedAt: session.updatedAt,
       }
     }
 
@@ -308,7 +317,7 @@ export class ExportService {
 
   private prepareMarkdownExport(session: ChatSession): string {
     let markdown = `# ${session.title}\n\n`
-    
+
     if (this.config.includeMetadata) {
       markdown += `## Metadata\n\n`
       markdown += `- Created: ${new Date(session.createdAt).toLocaleString()}\n`
@@ -331,7 +340,7 @@ export class ExportService {
 
   private prepareTextExport(session: ChatSession): string {
     let text = `${session.title}\n\n`
-    
+
     if (this.config.includeMetadata) {
       text += `Created: ${new Date(session.createdAt).toLocaleString()}\n`
       text += `Updated: ${new Date(session.updatedAt).toLocaleString()}\n`
@@ -350,7 +359,10 @@ export class ExportService {
     return text
   }
 
-  private async writeExportFile(sessionId: string, data: unknown): Promise<string> {
+  private async writeExportFile(
+    sessionId: string,
+    data: unknown
+  ): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const extension = this.config.format === 'json' ? 'json' : 'md'
     const fileName = `session_${sessionId}_${timestamp}.${extension}`
@@ -403,10 +415,11 @@ export class ExportService {
         totalExports,
         totalSessions,
         totalMessages,
-        storageSize: totalSize
+        storageSize: totalSize,
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      const errorMessage =
+        error instanceof Error ? error.message : '不明なエラー'
       this.logger.error('統計取得エラー', { error: errorMessage })
       throw new Error(`Failed to get stats: ${errorMessage}`)
     }

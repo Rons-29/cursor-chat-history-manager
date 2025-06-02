@@ -12,7 +12,9 @@ import {
   getStatsHandler,
   searchHandler,
 } from './middleware/real-data-middleware.js'
-import integrationRoutes, { setupIntegrationRoutes } from './routes/integration.js'
+import integrationRoutes, {
+  setupIntegrationRoutes,
+} from './routes/integration.js'
 import { Logger } from './utils/Logger.js'
 import { IntegrationService } from './services/IntegrationService.js'
 
@@ -106,7 +108,7 @@ if (process.env.NODE_ENV !== 'test') {
 
     // 実データサービス初期化（非ブロッキング）
     await initializeRealDataMiddleware()
-    
+
     // 統合機能のセットアップ
     await setupIntegrationService()
   })
@@ -115,13 +117,15 @@ if (process.env.NODE_ENV !== 'test') {
 // 統合機能のセットアップ関数
 async function setupIntegrationService() {
   try {
-    const { getApiDataService } = await import('./middleware/real-data-middleware.js')
+    const { getApiDataService } = await import(
+      './middleware/real-data-middleware.js'
+    )
     const apiDataService = getApiDataService()
-    
+
     if (apiDataService) {
       const integrationService = apiDataService.getIntegrationService()
       const logger = new Logger()
-      
+
       if (integrationService instanceof IntegrationService) {
         setupIntegrationRoutes(integrationService, logger)
         console.log('✅ 統合機能のセットアップが完了しました')

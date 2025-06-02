@@ -1,6 +1,10 @@
 import { ChatHistoryService } from './ChatHistoryService.js'
 import { ConfigService } from './ConfigService.js'
-import type { ChatHistoryConfig, ChatSession, ChatMessage } from '../types/index.js'
+import type {
+  ChatHistoryConfig,
+  ChatSession,
+  ChatMessage,
+} from '../types/index.js'
 import { EventEmitter } from 'events'
 import { Logger } from '../server/utils/Logger.js'
 import { CursorIntegrationService } from './CursorIntegrationService.js'
@@ -124,8 +128,8 @@ export class AutoSaveService extends EventEmitter {
       tags: ['auto-save'],
       startTime: new Date(),
       metadata: {
-        source: 'auto-save'
-      }
+        source: 'auto-save',
+      },
     })
 
     this.sessionStartTime = new Date()
@@ -289,7 +293,7 @@ export class AutoSaveService extends EventEmitter {
    */
   async updateConfig(newConfig: Partial<AutoSaveConfig>): Promise<void> {
     const currentUserConfig = await this.configService.loadConfig()
-    
+
     // 必要なデフォルト値を設定
     const updatedConfig = {
       ...currentUserConfig,
@@ -301,10 +305,10 @@ export class AutoSaveService extends EventEmitter {
         watchDirectories: [],
         filePatterns: [],
         ...currentUserConfig.autoSave,
-        ...newConfig
-      }
+        ...newConfig,
+      },
     }
-    
+
     await this.configService.saveUserConfig(updatedConfig)
   }
 

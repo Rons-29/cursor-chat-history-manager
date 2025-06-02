@@ -54,17 +54,20 @@ export class ApiDataService {
           autoImport: config.cursor?.autoImport ?? true,
           syncInterval: config.cursor?.syncInterval ?? 300,
           batchSize: config.cursor?.batchSize ?? 100,
-          retryAttempts: config.cursor?.retryAttempts ?? 3
+          retryAttempts: config.cursor?.retryAttempts ?? 3,
         },
         chatHistory: config,
         sync: {
           interval: 300,
           batchSize: 100,
-          retryAttempts: 3
-        }
+          retryAttempts: 3,
+        },
       }
 
-      this.integrationService = new IntegrationService(integrationConfig, this.logger)
+      this.integrationService = new IntegrationService(
+        integrationConfig,
+        this.logger
+      )
       await this.integrationService.initialize()
 
       this.initialized = true
@@ -383,7 +386,7 @@ export class ApiDataService {
     if (!this.initialized || !this.chatHistoryService) {
       throw new Error('サービスが初期化されていません')
     }
-    
+
     // 必要に応じてデータ再読み込み処理を実装
     console.log('データ更新処理')
   }

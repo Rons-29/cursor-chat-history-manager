@@ -209,66 +209,73 @@ export const IntegrationSearchRequestSchema = {
   parse: (data: any): IntegrationSearchOptions => {
     // 簡単なバリデーション
     const validated: IntegrationSearchOptions = {}
-    
+
     if (data.q && typeof data.q === 'string') {
       validated.query = data.q
     }
-    
+
     if (data.types && typeof data.types === 'string') {
       validated.types = data.types.split(',') as Array<'chat' | 'cursor'>
     }
-    
+
     if (data.startDate && data.endDate) {
       validated.timeRange = {
         start: new Date(data.startDate),
-        end: new Date(data.endDate)
+        end: new Date(data.endDate),
       }
     }
-    
+
     if (data.project && typeof data.project === 'string') {
       validated.project = data.project
     }
-    
+
     if (data.tags && typeof data.tags === 'string') {
       validated.tags = data.tags.split(',')
     }
-    
+
     if (data.limit && typeof data.limit === 'number') {
       validated.pageSize = Math.min(Math.max(data.limit, 1), 1000)
     }
-    
+
     if (data.offset && typeof data.offset === 'number') {
       validated.offset = Math.max(data.offset, 0)
     }
-    
+
     return validated
-  }
+  },
 }
 
 export const IntegrationAnalyticsRequestSchema = {
   parse: (data: any): IntegrationAnalyticsRequest => {
     // デフォルト値
     const timeRange = {
-      start: data.startDate ? new Date(data.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      end: data.endDate ? new Date(data.endDate) : new Date()
+      start: data.startDate
+        ? new Date(data.startDate)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      end: data.endDate ? new Date(data.endDate) : new Date(),
     }
-    
+
     const validated: IntegrationAnalyticsRequest = {
       timeRange,
-      granularity: ['hourly', 'daily', 'weekly', 'monthly'].includes(data.granularity) 
-        ? data.granularity : 'daily',
-      metrics: data.metrics && typeof data.metrics === 'string' 
-        ? data.metrics.split(',') : ['messageCount', 'sessionCount']
+      granularity: ['hourly', 'daily', 'weekly', 'monthly'].includes(
+        data.granularity
+      )
+        ? data.granularity
+        : 'daily',
+      metrics:
+        data.metrics && typeof data.metrics === 'string'
+          ? data.metrics.split(',')
+          : ['messageCount', 'sessionCount'],
     }
-    
+
     if (data.project && typeof data.project === 'string') {
       validated.project = data.project
     }
-    
+
     if (data.tags && typeof data.tags === 'string') {
       validated.tags = data.tags.split(',')
     }
-    
+
     return validated
-  }
-} 
+  },
+}

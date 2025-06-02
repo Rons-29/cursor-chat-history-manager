@@ -27,18 +27,20 @@ export class SqliteIndexService {
     try {
       // データベースディレクトリを作成
       await fs.ensureDir(path.dirname(this.dbPath))
-      
+
       // SQLiteデータベースを開く
       this.db = new Database(this.dbPath)
-      
+
       // テーブル作成
       this.createTables()
-      
+
       // インデックス作成
       this.createIndexes()
-      
+
       this.initialized = true
-      this.logger.info('SQLiteインデックスサービスが初期化されました', { dbPath: this.dbPath })
+      this.logger.info('SQLiteインデックスサービスが初期化されました', {
+        dbPath: this.dbPath,
+      })
     } catch (error) {
       this.logger.error('SQLiteインデックス初期化エラー:', error)
       throw error
@@ -121,7 +123,10 @@ export class SqliteIndexService {
   /**
    * セッションを追加/更新
    */
-  async upsertSession(sessionData: ChatSession, fileStats?: { checksum: string, modifiedAt: Date }): Promise<void> {
+  async upsertSession(
+    sessionData: ChatSession,
+    fileStats?: { checksum: string; modifiedAt: Date }
+  ): Promise<void> {
     if (!this.db) throw new Error('Database not initialized')
 
     const transaction = this.db.transaction(() => {
@@ -132,7 +137,7 @@ export class SqliteIndexService {
           file_checksum, file_modified_at, metadata
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `)
-      
+
       stmt.run(
         sessionData.id,
         sessionData.title,
@@ -145,14 +150,20 @@ export class SqliteIndexService {
       )
 
       // 既存のタグを削除
-      this.db!.prepare('DELETE FROM session_tags WHERE session_id = ?').run(sessionData.id)
-      
+      this.db!.prepare('DELETE FROM session_tags WHERE session_id = ?').run(
+        sessionData.id
+      )
+
       // タグを処理
       if (sessionData.tags && sessionData.tags.length > 0) {
-        const insertTag = this.db!.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)')
+        const insertTag = this.db!.prepare(
+          'INSERT OR IGNORE INTO tags (name) VALUES (?)'
+        )
         const getTagId = this.db!.prepare('SELECT id FROM tags WHERE name = ?')
-        const insertSessionTag = this.db!.prepare('INSERT INTO session_tags (session_id, tag_id) VALUES (?, ?)')
-        
+        const insertSessionTag = this.db!.prepare(
+          'INSERT INTO session_tags (session_id, tag_id) VALUES (?, ?)'
+        )
+
         for (const tagName of sessionData.tags) {
           insertTag.run(tagName)
           const tagResult = getTagId.get(tagName) as { id: number }
@@ -161,14 +172,16 @@ export class SqliteIndexService {
       }
 
       // メッセージを削除して再挿入
-      this.db!.prepare('DELETE FROM messages WHERE session_id = ?').run(sessionData.id)
-      
+      this.db!.prepare('DELETE FROM messages WHERE session_id = ?').run(
+        sessionData.id
+      )
+
       if (sessionData.messages.length > 0) {
         const insertMessage = this.db!.prepare(`
           INSERT INTO messages (id, session_id, role, content, timestamp)
           VALUES (?, ?, ?, ?, ?)
         `)
-        
+
         for (const message of sessionData.messages) {
           insertMessage.run(
             message.id,
@@ -192,21 +205,23 @@ export class SqliteIndexService {
 
     const stmt = this.db.prepare('DELETE FROM sessions WHERE id = ?')
     const result = stmt.run(sessionId)
-    
+
     return result.changes > 0
   }
 
   /**
    * セッション一覧を取得（ページネーション対応）
    */
-  async getSessions(options: {
-    page?: number
-    pageSize?: number
-    keyword?: string
-    tags?: string[]
-    startDate?: Date
-    endDate?: Date
-  } = {}): Promise<{
+  async getSessions(
+    options: {
+      page?: number
+      pageSize?: number
+      keyword?: string
+      tags?: string[]
+      startDate?: Date
+      endDate?: Date
+    } = {}
+  ): Promise<{
     sessions: Array<{
       id: string
       title: string
@@ -226,32 +241,32 @@ export class SqliteIndexService {
       keyword,
       tags,
       startDate,
-      endDate
+      endDate,
     } = options
 
     const offset = (page - 1) * pageSize
-    
+
     // 条件構築
     let whereClause = '1=1'
     const params: any[] = []
-    
+
     if (keyword) {
       whereClause += ` AND (s.title LIKE ? OR s.id IN (
         SELECT session_id FROM messages_fts WHERE content MATCH ?
       ))`
       params.push(`%${keyword}%`, keyword)
     }
-    
+
     if (startDate) {
       whereClause += ' AND s.created_at >= ?'
       params.push(startDate.getTime())
     }
-    
+
     if (endDate) {
       whereClause += ' AND s.created_at <= ?'
       params.push(endDate.getTime())
     }
-    
+
     if (tags && tags.length > 0) {
       const tagPlaceholders = tags.map(() => '?').join(',')
       whereClause += ` AND s.id IN (
@@ -283,8 +298,12 @@ export class SqliteIndexService {
       ORDER BY s.updated_at DESC
       LIMIT ? OFFSET ?
     `)
-    
-    const sessionResults = sessionStmt.all(...params, pageSize, offset) as Array<{
+
+    const sessionResults = sessionStmt.all(
+      ...params,
+      pageSize,
+      offset
+    ) as Array<{
       id: string
       title: string
       created_at: number
@@ -299,13 +318,13 @@ export class SqliteIndexService {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       messageCount: row.message_count,
-      tags: row.tag_names ? row.tag_names.split(',') : []
+      tags: row.tag_names ? row.tag_names.split(',') : [],
     }))
 
     return {
       sessions,
       total,
-      hasMore: offset + pageSize < total
+      hasMore: offset + pageSize < total,
     }
   }
 
@@ -335,15 +354,15 @@ export class SqliteIndexService {
     if (!this.db) throw new Error('Database not initialized')
 
     const { limit = 50, offset = 0, sessionId, role } = options
-    
+
     let whereClause = 'messages_fts MATCH ?'
     const params: any[] = [query]
-    
+
     if (sessionId) {
       whereClause += ' AND m.session_id = ?'
       params.push(sessionId)
     }
-    
+
     if (role) {
       whereClause += ' AND m.role = ?'
       params.push(role)
@@ -368,7 +387,7 @@ export class SqliteIndexService {
       ORDER BY m.timestamp DESC
       LIMIT ? OFFSET ?
     `)
-    
+
     const messageResults = messageStmt.all(...params, limit, offset) as Array<{
       id: string
       session_id: string
@@ -384,13 +403,13 @@ export class SqliteIndexService {
       role: row.role,
       content: row.content,
       timestamp: new Date(row.timestamp),
-      sessionTitle: row.session_title
+      sessionTitle: row.session_title,
     }))
 
     return {
       messages,
       total,
-      hasMore: offset + limit < total
+      hasMore: offset + limit < total,
     }
   }
 
@@ -406,24 +425,34 @@ export class SqliteIndexService {
     if (!this.db) throw new Error('Database not initialized')
 
     // 総セッション数
-    const { totalSessions } = this.db.prepare('SELECT COUNT(*) as totalSessions FROM sessions').get() as { totalSessions: number }
-    
+    const { totalSessions } = this.db
+      .prepare('SELECT COUNT(*) as totalSessions FROM sessions')
+      .get() as { totalSessions: number }
+
     // 総メッセージ数
-    const { totalMessages } = this.db.prepare('SELECT COUNT(*) as totalMessages FROM messages').get() as { totalMessages: number }
-    
+    const { totalMessages } = this.db
+      .prepare('SELECT COUNT(*) as totalMessages FROM messages')
+      .get() as { totalMessages: number }
+
     // トップタグ
-    const topTagsResults = this.db.prepare(`
+    const topTagsResults = this.db
+      .prepare(
+        `
       SELECT t.name, COUNT(*) as count
       FROM tags t
       JOIN session_tags st ON t.id = st.tag_id
       GROUP BY t.id, t.name
       ORDER BY count DESC
       LIMIT 10
-    `).all() as Array<{ name: string; count: number }>
+    `
+      )
+      .all() as Array<{ name: string; count: number }>
 
     // 最近のアクティビティ（過去7日間）
-    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
-    const recentActivityResults = this.db.prepare(`
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const recentActivityResults = this.db
+      .prepare(
+        `
       SELECT 
         DATE(created_at / 1000, 'unixepoch') as date,
         COUNT(*) as sessionCount
@@ -431,13 +460,15 @@ export class SqliteIndexService {
       WHERE created_at >= ?
       GROUP BY DATE(created_at / 1000, 'unixepoch')
       ORDER BY date DESC
-    `).all(sevenDaysAgo) as Array<{ date: string; sessionCount: number }>
+    `
+      )
+      .all(sevenDaysAgo) as Array<{ date: string; sessionCount: number }>
 
     return {
       totalSessions,
       totalMessages,
       topTags: topTagsResults,
-      recentActivity: recentActivityResults
+      recentActivity: recentActivityResults,
     }
   }
 
@@ -450,7 +481,7 @@ export class SqliteIndexService {
     this.db.exec('VACUUM')
     this.db.exec('ANALYZE')
     this.db.exec('INSERT INTO messages_fts(messages_fts) VALUES("optimize")')
-    
+
     this.logger.info('SQLiteインデックスが最適化されました')
   }
 
@@ -464,4 +495,4 @@ export class SqliteIndexService {
       this.initialized = false
     }
   }
-} 
+}

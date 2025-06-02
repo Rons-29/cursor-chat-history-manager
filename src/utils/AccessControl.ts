@@ -36,7 +36,8 @@ export class AccessControl extends EventEmitter {
   private logger: Logger
   private users: Map<string, User> = new Map()
   private sessions: Map<string, { userId: string; expires: Date }> = new Map()
-  private loginAttempts: Map<string, { count: number; lastAttempt: Date }> = new Map()
+  private loginAttempts: Map<string, { count: number; lastAttempt: Date }> =
+    new Map()
   private accessLogs: AccessLog[] = []
   private config: AccessControlConfig
 
@@ -57,7 +58,11 @@ export class AccessControl extends EventEmitter {
     }
   }
 
-  async createUser(username: string, password: string, roles: string[] = []): Promise<User> {
+  async createUser(
+    username: string,
+    password: string,
+    roles: string[] = []
+  ): Promise<User> {
     if (this.users.has(username)) {
       throw new Error('ユーザーは既に存在します')
     }
@@ -83,7 +88,8 @@ export class AccessControl extends EventEmitter {
   async login(username: string, password: string): Promise<string> {
     const attempts = this.loginAttempts.get(username)
     if (attempts && attempts.count >= this.config.maxLoginAttempts) {
-      const lockoutTime = attempts.lastAttempt.getTime() + this.config.lockoutDuration
+      const lockoutTime =
+        attempts.lastAttempt.getTime() + this.config.lockoutDuration
       if (Date.now() < lockoutTime) {
         throw new Error('アカウントがロックされています')
       }
@@ -97,7 +103,7 @@ export class AccessControl extends EventEmitter {
     }
 
     const hashedPassword = await this.hashPassword(password)
-    if (!await this.verifyPassword(password, hashedPassword)) {
+    if (!(await this.verifyPassword(password, hashedPassword))) {
       this.recordLoginAttempt(username, false)
       throw new Error('パスワードが正しくありません')
     }
@@ -118,22 +124,34 @@ export class AccessControl extends EventEmitter {
     this.sessions.delete(sessionId)
   }
 
-  async checkAccess(sessionId: string, action: string, resource: string): Promise<boolean> {
+  async checkAccess(
+    sessionId: string,
+    action: string,
+    resource: string
+  ): Promise<boolean> {
     const session = this.sessions.get(sessionId)
     if (!session) {
-      this.logAccess(sessionId, action, resource, false, { reason: 'セッションが無効' })
+      this.logAccess(sessionId, action, resource, false, {
+        reason: 'セッションが無効',
+      })
       return false
     }
 
     if (session.expires < new Date()) {
       this.sessions.delete(sessionId)
-      this.logAccess(sessionId, action, resource, false, { reason: 'セッションが期限切れ' })
+      this.logAccess(sessionId, action, resource, false, {
+        reason: 'セッションが期限切れ',
+      })
       return false
     }
 
-    const user = Array.from(this.users.values()).find(u => u.id === session.userId)
+    const user = Array.from(this.users.values()).find(
+      u => u.id === session.userId
+    )
     if (!user) {
-      this.logAccess(sessionId, action, resource, false, { reason: 'ユーザーが見つからない' })
+      this.logAccess(sessionId, action, resource, false, {
+        reason: 'ユーザーが見つからない',
+      })
       return false
     }
 
@@ -144,13 +162,20 @@ export class AccessControl extends EventEmitter {
   }
 
   private validatePassword(password: string): boolean {
-    const { minLength, requireUppercase, requireLowercase, requireNumbers, requireSpecialChars } = this.config.passwordPolicy
+    const {
+      minLength,
+      requireUppercase,
+      requireLowercase,
+      requireNumbers,
+      requireSpecialChars,
+    } = this.config.passwordPolicy
 
     if (password.length < minLength) return false
     if (requireUppercase && !/[A-Z]/.test(password)) return false
     if (requireLowercase && !/[a-z]/.test(password)) return false
     if (requireNumbers && !/\d/.test(password)) return false
-    if (requireSpecialChars && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) return false
+    if (requireSpecialChars && !/[!@#$%^&*(),.?":{}|<>]/.test(password))
+      return false
 
     return true
   }
@@ -165,7 +190,10 @@ export class AccessControl extends EventEmitter {
     })
   }
 
-  private async verifyPassword(password: string, hash: string): Promise<boolean> {
+  private async verifyPassword(
+    password: string,
+    hash: string
+  ): Promise<boolean> {
     const [salt, key] = hash.split(':')
     return new Promise((resolve, reject) => {
       crypto.pbkdf2(password, salt, 100000, 64, 'sha512', (err, derivedKey) => {
@@ -194,7 +222,11 @@ export class AccessControl extends EventEmitter {
     return Array.from(permissions)
   }
 
-  private checkPermission(user: User, action: string, resource: string): boolean {
+  private checkPermission(
+    user: User,
+    action: string,
+    resource: string
+  ): boolean {
     if (user.permissions.includes('*')) return true
 
     const permission = `${action}:${resource}`
@@ -206,7 +238,10 @@ export class AccessControl extends EventEmitter {
   }
 
   private recordLoginAttempt(username: string, success: boolean): void {
-    const attempts = this.loginAttempts.get(username) || { count: 0, lastAttempt: new Date() }
+    const attempts = this.loginAttempts.get(username) || {
+      count: 0,
+      lastAttempt: new Date(),
+    }
     attempts.count = success ? 0 : attempts.count + 1
     attempts.lastAttempt = new Date()
     this.loginAttempts.set(username, attempts)
@@ -232,22 +267,25 @@ export class AccessControl extends EventEmitter {
     this.emit('access', log)
   }
 
-  getAccessLogs(options: {
-    userId?: string
-    action?: string
-    resource?: string
-    startDate?: Date
-    endDate?: Date
-    success?: boolean
-  } = {}): AccessLog[] {
+  getAccessLogs(
+    options: {
+      userId?: string
+      action?: string
+      resource?: string
+      startDate?: Date
+      endDate?: Date
+      success?: boolean
+    } = {}
+  ): AccessLog[] {
     return this.accessLogs.filter(log => {
       if (options.userId && log.userId !== options.userId) return false
       if (options.action && log.action !== options.action) return false
       if (options.resource && log.resource !== options.resource) return false
       if (options.startDate && log.timestamp < options.startDate) return false
       if (options.endDate && log.timestamp > options.endDate) return false
-      if (options.success !== undefined && log.success !== options.success) return false
+      if (options.success !== undefined && log.success !== options.success)
+        return false
       return true
     })
   }
-} 
+}

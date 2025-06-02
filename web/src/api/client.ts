@@ -54,6 +54,31 @@ export interface ApiSearchResponse {
   total: number
 }
 
+// 設定関連の型定義
+export interface CursorSettings {
+  enabled: boolean
+  monitorPath: string
+  scanInterval: number
+  maxSessions: number
+  autoImport: boolean
+  includeMetadata: boolean
+}
+
+export interface SettingsApiResponse<T = any> {
+  success: boolean
+  data?: T
+  message?: string
+  error?: string
+  details?: string
+  timestamp: string
+}
+
+export interface BackupInfo {
+  name: string
+  date: string
+  size: number
+}
+
 // HTTPクライアント
 class ApiClient {
   private baseUrl: string
@@ -98,6 +123,7 @@ class ApiClient {
       keyword?: string
       startDate?: string
       endDate?: string
+      source?: string // 統合APIルートでソース指定をサポート
     } = {}
   ): Promise<ApiSessionsResponse> {
     const searchParams = new URLSearchParams()
@@ -157,6 +183,127 @@ class ApiClient {
       '/health'
     )
   }
+
+  // 設定関連API
+  
+  // Cursor設定取得
+  async getCursorSettings(): Promise<CursorSettings> {
+    const response = await this.request<SettingsApiResponse<CursorSettings>>('/settings/cursor')
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Cursor設定の取得に失敗しました')
+    }
+    return response.data
+  }
+
+  // Cursor設定保存
+  async saveCursorSettings(settings: CursorSettings): Promise<CursorSettings> {
+    const response = await this.request<SettingsApiResponse<CursorSettings>>('/settings/cursor', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    })
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Cursor設定の保存に失敗しました')
+    }
+    return response.data
+  }
+
+  // Cursor設定リセット
+  async resetCursorSettings(): Promise<CursorSettings> {
+    const response = await this.request<SettingsApiResponse<CursorSettings>>('/settings/cursor/reset', {
+      method: 'POST',
+    })
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Cursor設定のリセットに失敗しました')
+    }
+    return response.data
+  }
+
+  // 設定エクスポート
+  async exportSettings(): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/settings/export`)
+    if (!response.ok) {
+      throw new Error('設定のエクスポートに失敗しました')
+    }
+    return response.blob()
+  }
+
+  // 設定インポート
+  async importSettings(settingsData: any): Promise<void> {
+    const response = await this.request<SettingsApiResponse>('/settings/import', {
+      method: 'POST',
+      body: JSON.stringify(settingsData),
+    })
+    if (!response.success) {
+      throw new Error(response.error || '設定のインポートに失敗しました')
+    }
+  }
+
+  // バックアップ一覧取得
+  async getBackupList(): Promise<BackupInfo[]> {
+    const response = await this.request<SettingsApiResponse<BackupInfo[]>>('/settings/backups')
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'バックアップ一覧の取得に失敗しました')
+    }
+    return response.data
+  }
+
+  // 設定サービスヘルスチェック
+  async settingsHealthCheck(): Promise<{ status: string; message: string }> {
+    const response = await this.request<SettingsApiResponse<{ status: string; message: string }>>('/settings/health')
+    if (!response.success) {
+      throw new Error(response.error || '設定サービスのヘルスチェックに失敗しました')
+    }
+    return response.data || { status: 'unknown', message: 'データなし' }
+  }
+
+  // 統合ログ取得
+  async getIntegrationLogs(params: { limit?: number } = {}): Promise<any[]> {
+    try {
+      const searchParams = new URLSearchParams()
+      if (params.limit) {
+        searchParams.append('limit', params.limit.toString())
+      }
+      
+      const endpoint = `/integration/logs${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+      console.log('🔍 統合ログ取得API呼び出し:', this.baseUrl + endpoint)
+      
+      const response = await this.request<{ logs: any[]; total: number; hasMore: boolean }>(endpoint)
+      
+      console.log('🔍 統合ログAPIレスポンス:', response)
+      console.log('🔍 レスポンス型:', typeof response)
+      console.log('🔍 レスポンスがオブジェクト:', response && typeof response === 'object')
+      console.log('🔍 logsプロパティ存在:', response && 'logs' in response)
+      
+      // レスポンスがオブジェクトで、logsプロパティがある場合
+      if (response && typeof response === 'object' && 'logs' in response) {
+        const logs = response.logs
+        console.log('🔍 logs プロパティ:', logs)
+        console.log('🔍 logs が配列:', Array.isArray(logs))
+        
+        if (Array.isArray(logs)) {
+          console.log('✅ レスポンスはオブジェクト形式:', logs.length + '件のログ')
+          return logs
+        } else {
+          console.warn('⚠️ logs プロパティが配列ではありません:', logs)
+          return []
+        }
+      }
+      
+      // レスポンスが配列の場合はそのまま返す
+      if (Array.isArray(response)) {
+        console.log('✅ レスポンスは配列形式:', (response as any[]).length + '件')
+        return response as any[]
+      }
+      
+      // その他の場合は空配列を返す
+      console.warn('⚠️ 予期しないレスポンス形式:', response)
+      return []
+    } catch (error) {
+      console.error('❌ 統合ログ取得エラー:', error)
+      // エラー時は空配列を返してUIが壊れないようにする
+      return []
+    }
+  }
 }
 
 // シングルトンインスタンス
@@ -174,4 +321,8 @@ export const queryKeys = {
   integrationLogs: (params?: any) => ['integration', 'logs', params] as const,
   integrationSettings: () => ['integration', 'settings'] as const,
   cursorStatus: () => ['integration', 'cursor', 'status'] as const,
+  // 設定関連のクエリキー
+  cursorSettings: () => ['settings', 'cursor'] as const,
+  settingsBackups: () => ['settings', 'backups'] as const,
+  settingsHealth: () => ['settings', 'health'] as const,
 }

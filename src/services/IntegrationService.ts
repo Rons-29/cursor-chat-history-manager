@@ -13,9 +13,13 @@ import type {
   IntegrationSearchOptions,
   IntegrationError,
   IntegrationAnalyticsRequest,
-  IntegrationAnalyticsResponse
+  IntegrationAnalyticsResponse,
 } from '../types/integration.js'
-import type { ChatHistoryFilter, ChatHistorySearchResult, ChatHistoryStats } from '../types/index.js'
+import type {
+  ChatHistoryFilter,
+  ChatHistorySearchResult,
+  ChatHistoryStats,
+} from '../types/index.js'
 import { Logger } from '../server/utils/Logger.js'
 
 export class IntegrationService extends EventEmitter {
@@ -35,25 +39,28 @@ export class IntegrationService extends EventEmitter {
         ...config.cursor,
         enabled: config.cursor.enabled ?? true,
         watchPath: config.cursor.watchPath ?? '~/.cursor/logs',
-        autoImport: config.cursor.autoImport ?? true
+        autoImport: config.cursor.autoImport ?? true,
       },
       chatHistory: {
         ...config.chatHistory,
         storagePath: config.chatHistory.storagePath ?? '~/.chat-history',
-        maxSessions: config.chatHistory.maxSessions ?? 1000
+        maxSessions: config.chatHistory.maxSessions ?? 1000,
       },
       sync: {
         ...config.sync,
         interval: config.sync.interval ?? 300,
         batchSize: config.sync.batchSize ?? 100,
-        retryAttempts: config.sync.retryAttempts ?? 3
-      }
+        retryAttempts: config.sync.retryAttempts ?? 3,
+      },
     }
 
     this.logger = logger
     this.configService = new ConfigService()
     this.chatHistoryService = new ChatHistoryService(this.config.chatHistory)
-    this.cursorLogService = new CursorLogService(this.config.cursor, this.logger)
+    this.cursorLogService = new CursorLogService(
+      this.config.cursor,
+      this.logger
+    )
     this.cursorWatcherService = new CursorWatcherService(
       this.chatHistoryService,
       this.configService,
@@ -69,17 +76,17 @@ export class IntegrationService extends EventEmitter {
    * CursorWatcherServiceのイベントリスナーを設定
    */
   private setupCursorWatcherEvents(): void {
-    this.cursorWatcherService.on('sessionImported', (data) => {
+    this.cursorWatcherService.on('sessionImported', data => {
       this.logger.info('Cursorセッションがインポートされました', data)
       this.emit('sessionImported', data)
     })
 
-    this.cursorWatcherService.on('scanCompleted', (data) => {
+    this.cursorWatcherService.on('scanCompleted', data => {
       this.logger.info('Cursorスキャンが完了しました', data)
       this.emit('scanCompleted', data)
     })
 
-    this.cursorWatcherService.on('error', (error) => {
+    this.cursorWatcherService.on('error', error => {
       this.logger.error('CursorWatcherServiceエラー', error)
       this.emit('error', error)
     })
@@ -101,11 +108,15 @@ export class IntegrationService extends EventEmitter {
       await this.chatHistoryService.initialize()
       await this.cursorLogService.initialize()
       await this.cursorWatcherService.initialize()
-      
+
       this.isInitialized = true
       this.logger.info('IntegrationServiceを初期化しました')
     } catch (error) {
-      throw this.createError('INIT_ERROR', 'Failed to initialize IntegrationService', error)
+      throw this.createError(
+        'INIT_ERROR',
+        'Failed to initialize IntegrationService',
+        error
+      )
     }
   }
 
@@ -123,7 +134,7 @@ export class IntegrationService extends EventEmitter {
 
       // 従来のCursorLogServiceも並行して動作
       await this.cursorLogService.startWatching()
-      
+
       this.startSyncInterval()
       this.logger.info('統合同期を開始しました')
     } catch (error) {
@@ -151,7 +162,8 @@ export class IntegrationService extends EventEmitter {
     }
 
     try {
-      const importCount = await this.cursorWatcherService.scanAndImport(customPath)
+      const importCount =
+        await this.cursorWatcherService.scanAndImport(customPath)
       this.logger.info(`Cursorログスキャン完了: ${importCount}件インポート`)
       return importCount
     } catch (error) {
@@ -181,10 +193,14 @@ export class IntegrationService extends EventEmitter {
         processedCount: this.cursorWatcherService.getStatus().processedCount,
         errorCount: this.cursorWatcherService.getStatus().errorCount,
         watchPath: this.config.cursor.watchPath,
-        isEnabled: this.config.cursor.enabled
+        isEnabled: this.config.cursor.enabled,
       }
     } catch (error) {
-      throw this.createError('STATUS_ERROR', 'Failed to get cursor status', error)
+      throw this.createError(
+        'STATUS_ERROR',
+        'Failed to get cursor status',
+        error
+      )
     }
   }
 
@@ -195,7 +211,10 @@ export class IntegrationService extends EventEmitter {
 
     try {
       const results: IntegratedLog[] = []
-      const processedLogsDir = path.join(this.config.cursor.watchPath, 'processed')
+      const processedLogsDir = path.join(
+        this.config.cursor.watchPath,
+        'processed'
+      )
 
       // 処理済みログの検索
       if (await fs.pathExists(processedLogsDir)) {
@@ -215,7 +234,7 @@ export class IntegrationService extends EventEmitter {
         startDate: options.timeRange?.start,
         endDate: options.timeRange?.end,
         page: 1,
-        pageSize: 10
+        pageSize: 10,
       })
 
       // チャットログを統合ログ形式に変換
@@ -228,8 +247,8 @@ export class IntegrationService extends EventEmitter {
           project: chat.metadata?.project,
           tags: chat.tags || [],
           source: 'chat',
-          ...chat.metadata
-        }
+          ...chat.metadata,
+        },
       }))
 
       results.push(...integratedChatLogs)
@@ -241,7 +260,10 @@ export class IntegrationService extends EventEmitter {
     }
   }
 
-  private filterLogs(logs: IntegratedLog[], options: IntegrationSearchOptions): IntegratedLog[] {
+  private filterLogs(
+    logs: IntegratedLog[],
+    options: IntegrationSearchOptions
+  ): IntegratedLog[] {
     return logs.filter(log => {
       // タイプフィルター
       if (options.types && !options.types.includes(log.type)) {
@@ -249,20 +271,29 @@ export class IntegrationService extends EventEmitter {
       }
 
       // プロジェクトフィルター
-      if (options.project && log.metadata.project && log.metadata.project !== options.project) {
+      if (
+        options.project &&
+        log.metadata.project &&
+        log.metadata.project !== options.project
+      ) {
         return false
       }
 
       // タグフィルター
-      if (options.tags && !options.tags.some(tag => log.metadata.tags?.includes(tag))) {
+      if (
+        options.tags &&
+        !options.tags.some(tag => log.metadata.tags?.includes(tag))
+      ) {
         return false
       }
 
       // 時間範囲フィルター
       if (options.timeRange) {
         const logTime = log.timestamp.getTime()
-        if (logTime < options.timeRange.start.getTime() || 
-            logTime > options.timeRange.end.getTime()) {
+        if (
+          logTime < options.timeRange.start.getTime() ||
+          logTime > options.timeRange.end.getTime()
+        ) {
           return false
         }
       }
@@ -270,16 +301,24 @@ export class IntegrationService extends EventEmitter {
       // クエリフィルター
       if (options.query) {
         const searchText = options.query.toLowerCase()
-        return log.content.toLowerCase().includes(searchText) ||
-               (log.metadata.project?.toLowerCase() || '').includes(searchText) ||
-               log.metadata.tags?.some(tag => tag.toLowerCase().includes(searchText)) || false
+        return (
+          log.content.toLowerCase().includes(searchText) ||
+          (log.metadata.project?.toLowerCase() || '').includes(searchText) ||
+          log.metadata.tags?.some(tag =>
+            tag.toLowerCase().includes(searchText)
+          ) ||
+          false
+        )
       }
 
       return true
     })
   }
 
-  private sortAndFilterResults(results: IntegratedLog[], options: IntegrationSearchOptions): IntegratedLog[] {
+  private sortAndFilterResults(
+    results: IntegratedLog[],
+    options: IntegrationSearchOptions
+  ): IntegratedLog[] {
     // タイムスタンプでソート
     results.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 
@@ -294,7 +333,10 @@ export class IntegrationService extends EventEmitter {
     }
 
     try {
-      const processedLogsDir = path.join(this.config.cursor.watchPath, 'processed')
+      const processedLogsDir = path.join(
+        this.config.cursor.watchPath,
+        'processed'
+      )
       let cursorLogs = 0
       let totalSize = 0
 
@@ -328,8 +370,8 @@ export class IntegrationService extends EventEmitter {
           lastSync: new Date(),
           processedCount: cursorLogs + chatLogs,
           errorCount: 0,
-          syncSpeed: 0
-        }
+          syncSpeed: 0,
+        },
       }
     } catch (error) {
       throw this.createError('STATS_ERROR', 'Failed to get stats', error)
@@ -342,14 +384,18 @@ export class IntegrationService extends EventEmitter {
       const chatLogs = await this.chatHistoryService.searchSessions({
         keyword: log.metadata.project,
         startDate: new Date(log.timestamp.getTime() - 5 * 60 * 1000),
-        endDate: new Date(log.timestamp.getTime() + 5 * 60 * 1000)
+        endDate: new Date(log.timestamp.getTime() + 5 * 60 * 1000),
       })
 
       if (chatLogs.sessions.length > 0) {
         // 最も近い時間のセッションを選択
         const closestSession = chatLogs.sessions.reduce((closest, current) => {
-          const closestTime = Math.abs(closest.createdAt.getTime() - log.timestamp.getTime())
-          const currentTime = Math.abs(current.createdAt.getTime() - log.timestamp.getTime())
+          const closestTime = Math.abs(
+            closest.createdAt.getTime() - log.timestamp.getTime()
+          )
+          const currentTime = Math.abs(
+            current.createdAt.getTime() - log.timestamp.getTime()
+          )
           return currentTime < closestTime ? current : closest
         })
 
@@ -360,23 +406,31 @@ export class IntegrationService extends EventEmitter {
             source: 'chat',
             project: closestSession.metadata?.project,
             summary: closestSession.metadata?.summary,
-            status: closestSession.metadata?.status
-          }
+            status: closestSession.metadata?.status,
+          },
         })
 
         // ログにセッションIDを追加
-        const processedPath = path.join(this.config.cursor.watchPath, 'processed', `${log.id}.json`)
-        await fs.writeJson(processedPath, {
-          ...log,
-          metadata: {
-            ...log.metadata,
-            sessionId: closestSession.id
-          }
-        }, { spaces: 2 })
+        const processedPath = path.join(
+          this.config.cursor.watchPath,
+          'processed',
+          `${log.id}.json`
+        )
+        await fs.writeJson(
+          processedPath,
+          {
+            ...log,
+            metadata: {
+              ...log.metadata,
+              sessionId: closestSession.id,
+            },
+          },
+          { spaces: 2 }
+        )
 
         this.emit('logsLinked', {
           logId: log.id,
-          sessionId: closestSession.id
+          sessionId: closestSession.id,
         })
       }
     } catch (error) {
@@ -391,7 +445,10 @@ export class IntegrationService extends EventEmitter {
 
     this.syncInterval = setInterval(async () => {
       try {
-        const processedLogsDir = path.join(this.config.cursor.watchPath, 'processed')
+        const processedLogsDir = path.join(
+          this.config.cursor.watchPath,
+          'processed'
+        )
         if (await fs.pathExists(processedLogsDir)) {
           const logFiles = await fs.readdir(processedLogsDir)
           for (const file of logFiles) {
@@ -417,28 +474,40 @@ export class IntegrationService extends EventEmitter {
   }
 
   private handleError(error: any): void {
-    const integrationError = this.createError('SYNC_ERROR', 'Error during sync', error)
+    const integrationError = this.createError(
+      'SYNC_ERROR',
+      'Error during sync',
+      error
+    )
     console.error(integrationError)
     this.emit('error', integrationError)
   }
 
-  private createError(code: string, message: string, originalError?: any): IntegrationError {
+  private createError(
+    code: string,
+    message: string,
+    originalError?: any
+  ): IntegrationError {
     return {
       code,
       message,
       timestamp: new Date(),
       details: originalError,
-      context: {}
+      context: {},
     }
   }
 
-  async getAnalytics(options: IntegrationAnalyticsRequest): Promise<IntegrationAnalyticsResponse> {
+  async getAnalytics(
+    options: IntegrationAnalyticsRequest
+  ): Promise<IntegrationAnalyticsResponse> {
     if (!this.isInitialized) {
       throw this.createError('NOT_INITIALIZED', 'Service not initialized')
     }
 
     try {
-      const startDate = options.startDate ? new Date(options.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const startDate = options.startDate
+        ? new Date(options.startDate)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       const endDate = options.endDate ? new Date(options.endDate) : new Date()
 
       // ログの集計
@@ -446,7 +515,7 @@ export class IntegrationService extends EventEmitter {
         query: '',
         timeRange: { start: startDate, end: endDate },
         types: options.types,
-        project: options.projectId
+        project: options.projectId,
       })
 
       // 集計処理
@@ -455,29 +524,40 @@ export class IntegrationService extends EventEmitter {
         totalChats: logs.filter(log => log.type === 'chat').length,
         totalCursorLogs: logs.filter(log => log.type === 'cursor').length,
         uniqueProjects: new Set(logs.map(log => log.metadata.project)).size,
-        uniqueTags: new Set(logs.flatMap(log => log.metadata.tags || [])).size
+        uniqueTags: new Set(logs.flatMap(log => log.metadata.tags || [])).size,
       }
 
       const logsByType = {
         chat: logs.filter(log => log.type === 'chat').length,
-        cursor: logs.filter(log => log.type === 'cursor').length
+        cursor: logs.filter(log => log.type === 'cursor').length,
       }
 
-      const logsByProject = logs.reduce((acc, log) => {
-        const project = log.metadata.project || 'unknown'
-        acc[project] = (acc[project] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
+      const logsByProject = logs.reduce(
+        (acc, log) => {
+          const project = log.metadata.project || 'unknown'
+          acc[project] = (acc[project] || 0) + 1
+          return acc
+        },
+        {} as Record<string, number>
+      )
 
-      const logsByTag = logs.reduce((acc, log) => {
-        (log.metadata.tags || []).forEach(tag => {
-          acc[tag] = (acc[tag] || 0) + 1
-        })
-        return acc
-      }, {} as Record<string, number>)
+      const logsByTag = logs.reduce(
+        (acc, log) => {
+          ;(log.metadata.tags || []).forEach(tag => {
+            acc[tag] = (acc[tag] || 0) + 1
+          })
+          return acc
+        },
+        {} as Record<string, number>
+      )
 
       // タイムライン生成
-      const timeline: Array<{ date: Date; chatCount: number; cursorCount: number; totalCount: number }> = []
+      const timeline: Array<{
+        date: Date
+        chatCount: number
+        cursorCount: number
+        totalCount: number
+      }> = []
       const current = new Date(startDate)
 
       while (current <= endDate) {
@@ -503,7 +583,7 @@ export class IntegrationService extends EventEmitter {
           date: new Date(current),
           chatCount: periodLogs.filter(log => log.type === 'chat').length,
           cursorCount: periodLogs.filter(log => log.type === 'cursor').length,
-          totalCount: periodLogs.length
+          totalCount: periodLogs.length,
         })
 
         current.setTime(next.getTime())
@@ -518,7 +598,7 @@ export class IntegrationService extends EventEmitter {
       return {
         timeRange: {
           start: startDate,
-          end: endDate
+          end: endDate,
         },
         granularity: options.granularity,
         summary,
@@ -528,26 +608,32 @@ export class IntegrationService extends EventEmitter {
         activityTimeline: timeline.map(item => ({
           timestamp: item.date,
           count: item.totalCount,
-          type: undefined
+          type: undefined,
         })),
         hourlyDistribution,
         topKeywords: topKeywords.map(item => ({
           keyword: item.keyword,
           frequency: item.count,
-          trend: 'stable' as const
+          trend: 'stable' as const,
         })),
         metrics: {
           messageCount: timeline.map(item => item.chatCount),
           sessionCount: timeline.map(item => item.totalCount),
-          timestamps: timeline.map(item => item.date.toISOString())
-        }
+          timestamps: timeline.map(item => item.date.toISOString()),
+        },
       }
     } catch (error) {
-      throw this.createError('ANALYTICS_ERROR', 'Failed to get analytics', error)
+      throw this.createError(
+        'ANALYTICS_ERROR',
+        'Failed to get analytics',
+        error
+      )
     }
   }
 
-  private generateHourlyDistribution(logs: IntegratedLog[]): Record<string, number> {
+  private generateHourlyDistribution(
+    logs: IntegratedLog[]
+  ): Record<string, number> {
     const distribution: Record<string, number> = {}
     for (let hour = 0; hour < 24; hour++) {
       distribution[hour.toString()] = logs.filter(log => {
@@ -558,9 +644,24 @@ export class IntegrationService extends EventEmitter {
     return distribution
   }
 
-  private analyzeKeywords(logs: IntegratedLog[]): Array<{ keyword: string; count: number }> {
+  private analyzeKeywords(
+    logs: IntegratedLog[]
+  ): Array<{ keyword: string; count: number }> {
     const keywordCounts: Record<string, number> = {}
-    const commonWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'])
+    const commonWords = new Set([
+      'the',
+      'and',
+      'or',
+      'but',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'with',
+      'by',
+    ])
 
     logs.forEach(log => {
       const words = log.content.toLowerCase().split(/\W+/)
@@ -587,12 +688,14 @@ export class IntegrationService extends EventEmitter {
 
     try {
       this.logger.info('Cursor監視を開始します')
-      
+
       // 監視開始を非同期で実行し、即座にレスポンスを返す
-      const startWatchingPromise = Promise.all([
-        this.cursorWatcherService?.startWatching(),
-        this.cursorLogService?.startWatching()
-      ].filter(Boolean))
+      const startWatchingPromise = Promise.all(
+        [
+          this.cursorWatcherService?.startWatching(),
+          this.cursorLogService?.startWatching(),
+        ].filter(Boolean)
+      )
 
       // バックグラウンドで実行
       startWatchingPromise
@@ -600,16 +703,27 @@ export class IntegrationService extends EventEmitter {
           this.logger.info('Cursor監視が開始されました')
           this.emit('watchingStarted')
         })
-        .catch((error) => {
+        .catch(error => {
           this.logger.error('Cursor監視開始エラー:', error)
-          this.emit('error', this.createError('WATCHING_START_ERROR', 'Failed to start watching', error))
+          this.emit(
+            'error',
+            this.createError(
+              'WATCHING_START_ERROR',
+              'Failed to start watching',
+              error
+            )
+          )
         })
 
       // 即座に完了として返す
       this.logger.info('Cursor監視開始リクエストを受け付けました')
     } catch (error) {
       this.logger.error('Cursor監視開始エラー:', error)
-      throw this.createError('WATCHING_START_ERROR', 'Failed to start watching', error)
+      throw this.createError(
+        'WATCHING_START_ERROR',
+        'Failed to start watching',
+        error
+      )
     }
   }
 
@@ -623,12 +737,14 @@ export class IntegrationService extends EventEmitter {
 
     try {
       this.logger.info('Cursor監視を停止します')
-      
+
       // 監視停止を非同期で実行し、即座にレスポンスを返す
-      const stopWatchingPromise = Promise.all([
-        this.cursorWatcherService?.stopWatching(),
-        this.cursorLogService?.stopWatching()
-      ].filter(Boolean))
+      const stopWatchingPromise = Promise.all(
+        [
+          this.cursorWatcherService?.stopWatching(),
+          this.cursorLogService?.stopWatching(),
+        ].filter(Boolean)
+      )
 
       // バックグラウンドで実行
       stopWatchingPromise
@@ -636,16 +752,27 @@ export class IntegrationService extends EventEmitter {
           this.logger.info('Cursor監視が停止されました')
           this.emit('watchingStopped')
         })
-        .catch((error) => {
+        .catch(error => {
           this.logger.error('Cursor監視停止エラー:', error)
-          this.emit('error', this.createError('WATCHING_STOP_ERROR', 'Failed to stop watching', error))
+          this.emit(
+            'error',
+            this.createError(
+              'WATCHING_STOP_ERROR',
+              'Failed to stop watching',
+              error
+            )
+          )
         })
 
       // 即座に完了として返す
       this.logger.info('Cursor監視停止リクエストを受け付けました')
     } catch (error) {
       this.logger.error('Cursor監視停止エラー:', error)
-      throw this.createError('WATCHING_STOP_ERROR', 'Failed to stop watching', error)
+      throw this.createError(
+        'WATCHING_STOP_ERROR',
+        'Failed to stop watching',
+        error
+      )
     }
   }
 
@@ -660,7 +787,7 @@ export class IntegrationService extends EventEmitter {
     const cursorWatcherStatus = this.cursorWatcherService?.getStatus()
     return {
       isWatching: cursorWatcherStatus?.isActive || false,
-      lastScan: cursorWatcherStatus?.lastScan
+      lastScan: cursorWatcherStatus?.lastScan,
     }
   }
-} 
+}

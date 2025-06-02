@@ -69,7 +69,9 @@ export class LoadTest extends EventEmitter {
     }
   }
 
-  private async executeLoadTest(): Promise<Omit<LoadTestResult, 'maxMemoryUsage' | 'averageMemoryUsage'>> {
+  private async executeLoadTest(): Promise<
+    Omit<LoadTestResult, 'maxMemoryUsage' | 'averageMemoryUsage'>
+  > {
     const results = {
       totalRequests: 0,
       successfulRequests: 0,
@@ -78,8 +80,9 @@ export class LoadTest extends EventEmitter {
       errors: new Map<string, { count: number; messages: string[] }>(),
     }
 
-    const userPromises = Array.from({ length: this.config.concurrentUsers }, (_, i) =>
-      this.simulateUser(i)
+    const userPromises = Array.from(
+      { length: this.config.concurrentUsers },
+      (_, i) => this.simulateUser(i)
     )
 
     await Promise.all(userPromises)
@@ -91,11 +94,13 @@ export class LoadTest extends EventEmitter {
       averageResponseTime: this.calculateAverage(results.responseTimes),
       p95ResponseTime: this.calculatePercentile(results.responseTimes, 95),
       p99ResponseTime: this.calculatePercentile(results.responseTimes, 99),
-      errors: Array.from(results.errors.entries()).map(([type, { count, messages }]) => ({
-        type,
-        count,
-        messages,
-      })),
+      errors: Array.from(results.errors.entries()).map(
+        ([type, { count, messages }]) => ({
+          type,
+          count,
+          messages,
+        })
+      ),
     }
   }
 
@@ -145,12 +150,15 @@ export class LoadTest extends EventEmitter {
       title: `Test Session ${Date.now()}`,
       messages: [],
       tags: ['test', 'load-test'],
-      startTime: new Date()
+      startTime: new Date(),
     })
   }
 
   private async addMessage(): Promise<void> {
-    const result = await this.service.searchSessions({ page: 1, pageSize: 1000 })
+    const result = await this.service.searchSessions({
+      page: 1,
+      pageSize: 1000,
+    })
     const sessions = result.sessions
     if (sessions.length === 0) return
 
@@ -170,7 +178,10 @@ export class LoadTest extends EventEmitter {
   }
 
   private async getSession(): Promise<void> {
-    const result = await this.service.searchSessions({ page: 1, pageSize: 1000 })
+    const result = await this.service.searchSessions({
+      page: 1,
+      pageSize: 1000,
+    })
     const sessions = result.sessions
     if (sessions.length === 0) return
 
@@ -215,4 +226,4 @@ export class LoadTest extends EventEmitter {
     const index = Math.ceil((percentile / 100) * sorted.length) - 1
     return sorted[index]
   }
-} 
+}

@@ -3,7 +3,11 @@ import { IntegrationService } from '../server/services/IntegrationService.js'
 import { ChatHistoryService } from '../services/ChatHistoryService.js'
 import { CursorLogService } from '../services/CursorLogService.js'
 import { Logger } from '../server/utils/Logger.js'
-import type { IntegrationConfig, IntegratedLog, CursorLogConfig } from '../server/types/integration.js'
+import type {
+  IntegrationConfig,
+  IntegratedLog,
+  CursorLogConfig,
+} from '../server/types/integration.js'
 import type { ChatHistoryConfig } from '../types/index.js'
 import fs from 'fs-extra'
 import path from 'path'
@@ -28,7 +32,7 @@ describe('IntegrationService', () => {
       cleanupDays: 30,
       enableSearch: true,
       enableBackup: true,
-      backupInterval: 24
+      backupInterval: 24,
     }
 
     const cursorConfig: CursorLogConfig = {
@@ -38,7 +42,7 @@ describe('IntegrationService', () => {
       autoImport: true,
       syncInterval: 300,
       batchSize: 100,
-      retryAttempts: 3
+      retryAttempts: 3,
     }
 
     const config: IntegrationConfig = {
@@ -47,8 +51,8 @@ describe('IntegrationService', () => {
       sync: {
         interval: 5,
         batchSize: 100,
-        retryAttempts: 3
-      }
+        retryAttempts: 3,
+      },
     }
 
     chatHistoryService = new ChatHistoryService(chatHistoryConfig)
@@ -79,8 +83,8 @@ describe('IntegrationService', () => {
         timestamp: new Date(),
         metadata: {
           project: 'project1',
-          source: 'chat'
-        }
+          source: 'chat',
+        },
       },
       {
         id: 'chat2',
@@ -89,9 +93,9 @@ describe('IntegrationService', () => {
         timestamp: new Date(),
         metadata: {
           project: 'project2',
-          source: 'chat'
-        }
-      }
+          source: 'chat',
+        },
+      },
     ]
 
     const cursorLogs = [
@@ -102,8 +106,8 @@ describe('IntegrationService', () => {
         timestamp: new Date(),
         metadata: {
           project: 'project1',
-          source: 'cursor'
-        }
+          source: 'cursor',
+        },
       },
       {
         id: 'cursor2',
@@ -112,9 +116,9 @@ describe('IntegrationService', () => {
         timestamp: new Date(),
         metadata: {
           project: 'project2',
-          source: 'cursor'
-        }
-      }
+          source: 'cursor',
+        },
+      },
     ]
 
     beforeEach(async () => {
@@ -123,18 +127,20 @@ describe('IntegrationService', () => {
         await chatHistoryService.createSession({
           id: log.id,
           title: log.content,
-          messages: [{
-            id: `${log.id}-msg`,
-            role: 'user',
-            content: log.content,
-            timestamp: log.timestamp
-          }],
+          messages: [
+            {
+              id: `${log.id}-msg`,
+              role: 'user',
+              content: log.content,
+              timestamp: log.timestamp,
+            },
+          ],
           tags: ['test'],
           startTime: log.timestamp,
           metadata: {
             project: log.metadata.project,
-            source: log.metadata.source
-          }
+            source: log.metadata.source,
+          },
         })
       }
 
@@ -145,15 +151,15 @@ describe('IntegrationService', () => {
           content: log.content,
           metadata: {
             project: log.metadata.project,
-            source: log.metadata.source
-          }
+            source: log.metadata.source,
+          },
         })
       }
     })
 
     it('キーワードで検索できること', async () => {
       const results = await service.search({
-        query: 'メッセージ1'
+        query: 'メッセージ1',
       })
 
       expect(results).toHaveLength(1)
@@ -162,7 +168,7 @@ describe('IntegrationService', () => {
 
     it('プロジェクトで検索できること', async () => {
       const results = await service.search({
-        project: 'project1'
+        project: 'project1',
       })
 
       expect(results).toHaveLength(2)
@@ -172,7 +178,7 @@ describe('IntegrationService', () => {
 
     it('タイプで検索できること', async () => {
       const results = await service.search({
-        types: ['chat']
+        types: ['chat'],
       })
 
       expect(results).toHaveLength(2)
@@ -187,18 +193,20 @@ describe('IntegrationService', () => {
       await chatHistoryService.createSession({
         id: 'chat1',
         title: 'チャット1',
-        messages: [{
-          id: 'msg1',
-          role: 'user',
-          content: 'メッセージ1',
-          timestamp: new Date()
-        }],
+        messages: [
+          {
+            id: 'msg1',
+            role: 'user',
+            content: 'メッセージ1',
+            timestamp: new Date(),
+          },
+        ],
         tags: ['test'],
         startTime: new Date(),
         metadata: {
           project: 'project1',
-          source: 'chat'
-        }
+          source: 'chat',
+        },
       })
 
       // カーソルログの追加
@@ -207,8 +215,8 @@ describe('IntegrationService', () => {
         content: 'カーソルログ1',
         metadata: {
           project: 'project1',
-          source: 'cursor'
-        }
+          source: 'cursor',
+        },
       })
     })
 
@@ -226,10 +234,10 @@ describe('IntegrationService', () => {
       const analytics = await service.getAnalytics({
         timeRange: {
           start: new Date(),
-          end: new Date()
+          end: new Date(),
         },
         granularity: 'daily',
-        metrics: ['messageCount', 'sessionCount']
+        metrics: ['messageCount', 'sessionCount'],
       })
 
       expect(analytics).toBeDefined()
@@ -242,4 +250,4 @@ describe('IntegrationService', () => {
       expect(analytics.topKeywords).toBeDefined()
     })
   })
-}) 
+})

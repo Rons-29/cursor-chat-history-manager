@@ -57,11 +57,14 @@ class ChatHistoryService {
 
     this.sessionsPath = path.join(this.config.storagePath, 'sessions')
     this.logger = Logger.getInstance(path.join(this.config.storagePath, 'logs'))
-    this.sessionCache = new CacheManager<ChatSession>({
-      max: 1000,
-      maxAge: 3600000, // 1時間
-      updateAgeOnGet: true
-    }, this.logger)
+    this.sessionCache = new CacheManager<ChatSession>(
+      {
+        max: 1000,
+        maxAge: 3600000, // 1時間
+        updateAgeOnGet: true,
+      },
+      this.logger
+    )
     this.indexManager = new IndexManager(
       path.join(this.config.storagePath, 'index.json'),
       this.logger
@@ -70,7 +73,7 @@ class ChatHistoryService {
       {
         maxSize: 50,
         maxWaitTime: 1000,
-        onBatch: async (items) => {
+        onBatch: async items => {
           for (const { sessionId, message } of items) {
             await this.addMessageInternal(sessionId, message)
           }
@@ -93,7 +96,10 @@ class ChatHistoryService {
         storagePath: this.config.storagePath,
       })
     } catch (error) {
-      await this.logger.error('初期化に失敗しました', error instanceof Error ? error : undefined)
+      await this.logger.error(
+        '初期化に失敗しました',
+        error instanceof Error ? error : undefined
+      )
       throw new StorageError('初期化', error as Error)
     }
   }
@@ -164,14 +170,14 @@ class ChatHistoryService {
         updatedAt: new Date(data.updatedAt),
         messages: data.messages.map(msg => ({
           ...msg,
-          timestamp: new Date(msg.timestamp)
-        }))
+          timestamp: new Date(msg.timestamp),
+        })),
       }
 
       await this.sessionCache.set(sessionId, normalizedData)
       return normalizedData
     } catch (error) {
-      await this.logger.error('セッションの取得に失敗しました', { 
+      await this.logger.error('セッションの取得に失敗しました', {
         error: error instanceof Error ? error.message : String(error),
         sessionId,
       })
@@ -192,7 +198,7 @@ class ChatHistoryService {
         tags: session.tags,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
-        size: session.messages.length
+        size: session.messages.length,
       })
     } catch (error) {
       await this.logger.error('セッションの保存に失敗しました', {
@@ -222,7 +228,7 @@ class ChatHistoryService {
           const keyword = filter.keyword.toLowerCase()
           if (
             !session.title.toLowerCase().includes(keyword) &&
-            !session.messages.some((msg) =>
+            !session.messages.some(msg =>
               msg.content.toLowerCase().includes(keyword)
             )
           ) {
@@ -231,7 +237,7 @@ class ChatHistoryService {
         }
 
         if (filter.tags && filter.tags.length > 0) {
-          if (!filter.tags.some((tag) => session.tags?.includes(tag))) {
+          if (!filter.tags.some(tag => session.tags?.includes(tag))) {
             continue
           }
         }
@@ -253,8 +259,14 @@ class ChatHistoryService {
 
       // 安全な日付ソート処理
       results.sort((a, b) => {
-        const aTime = a.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a.updatedAt).getTime()
-        const bTime = b.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b.updatedAt).getTime()
+        const aTime =
+          a.updatedAt instanceof Date
+            ? a.updatedAt.getTime()
+            : new Date(a.updatedAt).getTime()
+        const bTime =
+          b.updatedAt instanceof Date
+            ? b.updatedAt.getTime()
+            : new Date(b.updatedAt).getTime()
         return bTime - aTime
       })
 
@@ -279,7 +291,7 @@ class ChatHistoryService {
         currentPage: page,
         pageSize,
         totalPages,
-        hasMore: page < totalPages
+        hasMore: page < totalPages,
       }
     } catch (error) {
       await this.logger.error('セッションの検索に失敗しました', {
@@ -298,7 +310,7 @@ class ChatHistoryService {
     try {
       const sessionCount = await this.indexManager.getSessionCount()
       const sessions = await Promise.all(
-        (await this.indexManager.getAllSessions()).map((id) =>
+        (await this.indexManager.getAllSessions()).map(id =>
           this.getSession(id)
         )
       )
@@ -310,9 +322,9 @@ class ChatHistoryService {
       const totalSize = await this.calculateDirectorySize(this.sessionsPath)
 
       const tags = new Map<string, number>()
-      sessions.forEach((session) => {
+      sessions.forEach(session => {
         if (session) {
-          session.tags?.forEach((tag) => {
+          session.tags?.forEach(tag => {
             tags.set(tag, (tags.get(tag) || 0) + 1)
           })
         }
@@ -331,9 +343,16 @@ class ChatHistoryService {
           sessionCount > 0 ? totalMessages / sessionCount : 0,
         tagDistribution,
         lastUpdated: new Date(),
-        lastActivity: sessions.length > 0 ? (sessions[sessions.length - 1]?.updatedAt || null) : null,
-        oldestSession: sessions.length > 0 ? (sessions[0]?.createdAt || null) : null,
-        newestSession: sessions.length > 0 ? (sessions[sessions.length - 1]?.createdAt || null) : null,
+        lastActivity:
+          sessions.length > 0
+            ? sessions[sessions.length - 1]?.updatedAt || null
+            : null,
+        oldestSession:
+          sessions.length > 0 ? sessions[0]?.createdAt || null : null,
+        newestSession:
+          sessions.length > 0
+            ? sessions[sessions.length - 1]?.createdAt || null
+            : null,
       }
 
       await this.logger.debug('統計情報を取得しました', { ...stats })
@@ -591,7 +610,7 @@ class ChatHistoryService {
               tags: session.tags,
               createdAt: session.createdAt,
               updatedAt: session.updatedAt,
-              size: session.messages.length
+              size: session.messages.length,
             })
             existingIds.add(session.id)
           }
@@ -611,7 +630,7 @@ class ChatHistoryService {
             tags: session.tags,
             createdAt: session.createdAt,
             updatedAt: session.updatedAt,
-            size: session.messages.length
+            size: session.messages.length,
           })
         }
       }
@@ -626,24 +645,26 @@ class ChatHistoryService {
   private validateSessionData(data: unknown): data is ChatSession {
     if (!data || typeof data !== 'object') return false
     const session = data as ChatSession
-    
+
     // 基本的なプロパティチェック（緩和）
     if (!session.id || typeof session.id !== 'string') return false
-    
+
     // titleは空でも許可（自動生成される）
-    if (session.title !== undefined && typeof session.title !== 'string') return false
-    
+    if (session.title !== undefined && typeof session.title !== 'string')
+      return false
+
     // createdAtは自動補完される
     // messagesは空配列でも許可
     if (session.messages && !Array.isArray(session.messages)) return false
-    
+
     // メッセージが存在する場合のバリデーション
     if (session.messages) {
       for (const msg of session.messages) {
         if (!msg.id || typeof msg.id !== 'string') return false
         if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role))
           return false
-        if (msg.content !== undefined && typeof msg.content !== 'string') return false
+        if (msg.content !== undefined && typeof msg.content !== 'string')
+          return false
         // timestampは自動補完される
       }
     }
@@ -738,7 +759,10 @@ class ChatHistoryService {
           version: '1.0.0',
           createdAt: new Date().toISOString(),
           sessionCount: sessions.length,
-          totalMessages: sessions.reduce((sum, s) => sum + s.messages.length, 0),
+          totalMessages: sessions.reduce(
+            (sum, s) => sum + s.messages.length,
+            0
+          ),
         },
         sessions,
       }
@@ -825,7 +849,7 @@ class ChatHistoryService {
             return {
               name: file,
               path: filePath,
-              stat
+              stat,
             }
           })
       )
@@ -841,7 +865,9 @@ class ChatHistoryService {
         }
       }
     } catch (error) {
-      await this.logger.error('バックアップのクリーンアップに失敗しました', { error })
+      await this.logger.error('バックアップのクリーンアップに失敗しました', {
+        error,
+      })
     }
   }
 
@@ -900,7 +926,10 @@ class ChatHistoryService {
     }
   }
 
-  async getMessage(sessionId: string, messageId: string): Promise<ChatMessage | null> {
+  async getMessage(
+    sessionId: string,
+    messageId: string
+  ): Promise<ChatMessage | null> {
     if (!this.isInitialized) {
       throw new Error('Service not initialized')
     }
@@ -938,7 +967,9 @@ class ChatHistoryService {
         return null
       }
 
-      const messageIndex = session.messages.findIndex(msg => msg.id === messageId)
+      const messageIndex = session.messages.findIndex(
+        msg => msg.id === messageId
+      )
       if (messageIndex === -1) {
         return null
       }
@@ -979,7 +1010,9 @@ class ChatHistoryService {
         return false
       }
 
-      const messageIndex = session.messages.findIndex(msg => msg.id === messageId)
+      const messageIndex = session.messages.findIndex(
+        msg => msg.id === messageId
+      )
       if (messageIndex === -1) {
         return false
       }
@@ -1123,7 +1156,10 @@ class ChatHistoryService {
       const limit = options.limit || total
 
       const messages = results
-        .sort((a, b) => b.message.timestamp.getTime() - a.message.timestamp.getTime())
+        .sort(
+          (a, b) =>
+            b.message.timestamp.getTime() - a.message.timestamp.getTime()
+        )
         .slice(offset, offset + limit)
 
       return {
@@ -1185,7 +1221,9 @@ class ChatHistoryService {
         }
       }
 
-      return sessions.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      return sessions.sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+      )
     } catch (error) {
       await this.logger.error('タグによるセッション取得に失敗しました', {
         error,
@@ -1201,10 +1239,12 @@ class ChatHistoryService {
       endDate?: Date
       limit?: number
     } = {}
-  ): Promise<Array<{
-    date: string
-    sessions: ChatSession[]
-  }>> {
+  ): Promise<
+    Array<{
+      date: string
+      sessions: ChatSession[]
+    }>
+  > {
     if (!this.isInitialized) {
       throw new Error('Service not initialized')
     }
@@ -1238,7 +1278,9 @@ class ChatHistoryService {
       return Array.from(timeline.entries())
         .map(([date, sessions]) => ({
           date,
-          sessions: sessions.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+          sessions: sessions.sort(
+            (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+          ),
         }))
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, options.limit)
@@ -1251,7 +1293,9 @@ class ChatHistoryService {
     }
   }
 
-  async createSession(session: Omit<ChatSession, 'createdAt' | 'updatedAt'>): Promise<ChatSession> {
+  async createSession(
+    session: Omit<ChatSession, 'createdAt' | 'updatedAt'>
+  ): Promise<ChatSession> {
     if (!this.isInitialized) {
       throw new Error('Service not initialized')
     }
@@ -1269,7 +1313,7 @@ class ChatHistoryService {
         tags: newSession.tags,
         createdAt: newSession.createdAt,
         updatedAt: newSession.updatedAt,
-        size: newSession.messages.length
+        size: newSession.messages.length,
       })
 
       return newSession
@@ -1292,38 +1336,38 @@ class ChatHistoryService {
 
     const result = {
       rebuilt: 0,
-      errors: [] as string[]
+      errors: [] as string[],
     }
 
     try {
       await this.logger.info('インデックス再構築を開始します')
-      
+
       // インデックスをクリア
       await this.indexManager.initialize()
-      
+
       // セッションディレクトリの全ファイルをスキャン
       const sessionFiles = await fs.readdir(this.sessionsPath)
       const jsonFiles = sessionFiles.filter(file => file.endsWith('.json'))
-      
+
       for (const file of jsonFiles) {
         try {
           const sessionId = path.basename(file, '.json')
           const filePath = path.join(this.sessionsPath, file)
-          
+
           // ファイルが存在するか確認
           if (!(await fs.pathExists(filePath))) {
             continue
           }
-          
+
           // セッションデータを読み込み
           const sessionData = await fs.readJson(filePath)
-          
+
           // バリデーション
           if (!this.validateSessionData(sessionData)) {
             result.errors.push(`無効なセッションデータ: ${sessionId}`)
             continue
           }
-          
+
           // 日付オブジェクトに変換
           const session: ChatSession = {
             ...sessionData,
@@ -1331,34 +1375,38 @@ class ChatHistoryService {
             updatedAt: new Date(sessionData.updatedAt),
             messages: sessionData.messages.map(msg => ({
               ...msg,
-              timestamp: new Date(msg.timestamp)
-            }))
+              timestamp: new Date(msg.timestamp),
+            })),
           }
-          
+
           // インデックスに追加
           await this.indexManager.addSession(sessionId, {
             tags: session.tags,
             createdAt: session.createdAt,
             updatedAt: session.updatedAt,
-            size: session.messages.length
+            size: session.messages.length,
           })
-          
+
           result.rebuilt++
-          
+
           if (result.rebuilt % 1000 === 0) {
-            await this.logger.info(`インデックス再構築進行中: ${result.rebuilt}件処理完了`)
+            await this.logger.info(
+              `インデックス再構築進行中: ${result.rebuilt}件処理完了`
+            )
           }
-          
         } catch (error) {
           result.errors.push(`セッション ${file} の処理エラー: ${error}`)
         }
       }
-      
-      await this.logger.info(`インデックス再構築完了: ${result.rebuilt}件再構築`, {
-        rebuilt: result.rebuilt,
-        errors: result.errors.length
-      })
-      
+
+      await this.logger.info(
+        `インデックス再構築完了: ${result.rebuilt}件再構築`,
+        {
+          rebuilt: result.rebuilt,
+          errors: result.errors.length,
+        }
+      )
+
       return result
     } catch (error) {
       await this.logger.error('インデックス再構築に失敗しました', { error })
@@ -1367,5 +1415,4 @@ class ChatHistoryService {
   }
 }
 
-export { ChatHistoryService };
-
+export { ChatHistoryService }

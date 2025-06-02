@@ -1,8 +1,8 @@
-# セキュリティガイドライン（更新版）
+# セキュリティガイドライン（統合完了版）
 
 ## 🚨 重要な注意事項
 
-このツールはCursorエディタのチャット履歴を管理しますが、**機密情報を含む可能性があります**。以下のガイドラインに従って安全に使用してください。
+このツールはCursorエディタのチャット履歴を管理しますが、**機密情報を含む可能性があります**。統合アーキテクチャ完了後の最新のガイドラインに従って安全に使用してください。
 
 ## 🔒 データの機密性について
 
@@ -14,246 +14,233 @@
 - **個人情報**: 名前、メールアドレス、その他の個人データ
 - **企業秘密**: 戦略、計画、未公開の技術情報
 
-### データ保存場所（現在の実装）
-- **アプリケーションデータ**: `./data/`（プロジェクトディレクトリ内）
-- **SQLiteデータベース**: `./data/sessions.db`
+### データ保存場所（統合完了後）
+- **統一データベース**: `./data/chat-history.db`（SQLite統合）
+- **バックアップ**: `./data/backup-*`（統合前の古いデータ）
 - **エクスポートファイル**: `./exports/`
 - **ログファイル**: `./logs/`
-- **個人設定**: プロジェクト内設定ファイル
 
 ## 🛡️ セキュリティ対策
 
-### 1. 機密情報検索（推奨手順）
+### 1. 統合APIによる安全な検索
 
-#### ✅ **現在利用可能なCLIコマンド**
+#### ✅ **統合API経由の検索（推奨）**
 ```bash
-# 機密情報を含む可能性のあるセッションを検索
-chat-history-manager search --keyword "password"
-chat-history-manager search --keyword "api_key" 
-chat-history-manager search --keyword "secret"
-chat-history-manager search --keyword "token"
-chat-history-manager search --keyword "confidential"
+# 統合APIサーバー起動
+npm run server
 
-# 特定のプロジェクトに関連するセッションを確認
-chat-history-manager search --keyword "プロジェクト名" --limit 20
+# 統合検索（全ソース横断）
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"keyword":"API_KEY","limit":10}' \
+  http://localhost:3001/api/search
 
-# 日付範囲を指定した検索
-chat-history-manager search --keyword "sensitive" --start 2024-01-01 --end 2024-06-01
+# ソース限定検索
+curl -X GET "http://localhost:3001/api/sessions?source=chat&keyword=password"
+curl -X GET "http://localhost:3001/api/sessions?source=cursor&keyword=secret"
+curl -X GET "http://localhost:3001/api/sessions?source=claude-dev&keyword=token"
 ```
 
-#### 🔍 **セッション詳細の確認**
+#### 🖥️ **WebUI活用による視覚的確認**
 ```bash
-# 特定のセッション内容を詳細確認
-chat-history-manager show-session SESSION_ID
-
-# 複数セッションの一覧表示
-chat-history-manager search --tags "重要" --limit 10
+# 統合WebUI起動
+npm run dev:full    # APIサーバー + WebUI
+# ブラウザで http://localhost:5173 にアクセス
 ```
 
-### 2. WebUI活用による安全確認
-
-#### 🖥️ **WebUIダッシュボード利用**
-```bash
-# WebUIを起動して視覚的に確認
-npm run dev:real    # APIサーバー + WebUI起動
-# ブラウザで http://localhost:3000 にアクセス
-```
-
-**WebUIでの確認手順**:
-1. **検索画面**: キーワード「password」「secret」等で全体検索
-2. **フィルタリング**: 日付範囲・タグでの絞り込み
+**WebUIでの安全確認手順**:
+1. **統合検索**: 全ソース横断での機密情報検索
+2. **ソース分岐**: Chat/Cursor/Claude DEV 個別確認
 3. **セッション詳細**: 各セッションの内容を個別確認
-4. **統計画面**: 全体的なデータ傾向の把握
+4. **統計ダッシュボード**: データ分布の全体把握
 
-### 3. 安全なエクスポート方法
+### 2. 統合健全性チェック（セキュリティ含む）
 
-#### ✅ **推奨エクスポート手順**
+#### 🔒 **定期セキュリティチェック**
 ```bash
-# 1. 事前確認: 対象セッションの内容確認
-chat-history-manager show-session SESSION_ID
+# 統合セキュリティチェック実行
+npm run precommit
 
-# 2. 安全なセッションのみタグ付け（手動）
-# WebUIまたはAPIで「public」タグを追加
-
-# 3. タグ指定エクスポート（実装予定）
-# chat-history-manager export --tags "public" --format json
-
-# 4. 現在の代替手順: APIサーバー経由
-curl -X GET "http://localhost:3001/api/sessions" | jq .
+# 内容:
+# - ./scripts/security-check.sh（機密情報検出）
+# - npm run check:integration（統合健全性）
+# - npm run quality（コード品質）
 ```
 
-#### ❌ **避けるべき方法**
-- ✗ 全セッションの一括取得
-- ✗ 内容確認なしでの共有
-- ✗ 公開リポジトリへのデータファイル追加
-- ✗ 暗号化なしでのクラウド保存
-- ✗ セッション削除の安易な実行
-
-### 4. データ管理・クリーンアップ
-
-#### ⚠️ **セッション削除について**
-**重要**: `delete-session`コマンドは安全性の観点から現在無効化されています。
-
-**データ削除が必要な場合の手順**:
-1. **バックアップ作成**
-   ```bash
-   # 現在のデータをバックアップ
-   cp -r ./data ./data-backup-$(date +%Y%m%d)
-   ```
-
-2. **WebUI経由での選択的削除**（推奨）
-   - WebUIダッシュボードで対象セッションを特定
-   - 必要に応じて開発チームに削除を依頼
-
-3. **データベース直接操作**（上級者のみ）
-   ```bash
-   # SQLiteデータベースへの直接アクセス
-   sqlite3 ./data/sessions.db
-   ```
-
-#### 🧹 **定期的なクリーンアップ**
+#### 🛡️ **機密情報検出パターン**
 ```bash
-# ログファイルのローテーション
+# 検出対象パターン（security-check.sh）:
+# - OpenAI APIキー: sk-proj-*, sk-*
+# - GitHub Token: ghp_*, gho_*, ghu_*, ghs_*
+# - Stripe キー: pk_*, sk_*
+# - メールアドレス・パスワード・認証情報
+# - 環境変数ファイル: .env系
+```
+
+### 3. 安全なデータアクセス・管理
+
+#### ✅ **統合データベースアクセス**
+```bash
+# 統合SQLiteデータベース直接確認
+sqlite3 ./data/chat-history.db
+
+# 機密情報検索クエリ例
+SELECT id, title, snippet FROM sessions WHERE content LIKE '%password%' LIMIT 10;
+SELECT id, title, snippet FROM sessions WHERE content LIKE '%api_key%' LIMIT 10;
+SELECT id, title, snippet FROM sessions WHERE content LIKE '%secret%' LIMIT 10;
+```
+
+#### ⚠️ **データ管理の注意事項**
+- **統一データベース**: 全データが`chat-history.db`に統合済み
+- **バックアップデータ**: `./data/backup-*`に古い分散データが保存
+- **削除時の注意**: バックアップ含む全データの確認が必要
+
+### 4. 統合後のデータクリーンアップ
+
+#### 🧹 **定期的なセキュリティクリーンアップ**
+```bash
+# 月次セキュリティレビュー
+npm run monthly:review
+
+# ログローテーション
 find ./logs -name "*.log" -mtime +30 -delete
 
-# 古いエクスポートファイルの削除
+# 古いエクスポートファイル削除
 find ./exports -name "*.json" -mtime +7 -delete
+
+# バックアップファイルの定期確認
+ls -la ./data/backup-*/
 ```
 
-## 🏢 企業・チーム利用時の注意
+## 🏢 企業・チーム利用時の統合対応
 
-### 1. 設定管理
+### 1. 統合サーバー設定
 ```bash
-# 現在の設定確認
-cat package.json | grep -A 10 "scripts"
+# 統合開発環境
+npm run dev:full      # 統合API + WebUI（推奨）
+npm run server        # 統合APIサーバーのみ
+npm run web          # WebUIのみ
 
-# 開発環境設定
-npm run dev:real      # 本番相当のAPI + WebUI
-npm run server        # APIサーバーのみ
-npm run web:dev       # WebUIのみ
+# プロダクション環境
+npm run start:all     # 統合API + WebUI（本番）
 ```
 
-### 2. アクセス制御
-- **ポート設定**: デフォルト3001（API）、3000（WebUI）
+### 2. 統合API アクセス制御
+- **APIポート**: 3001（統合APIサーバー）
+- **WebUIポート**: 5173（開発）/ 5000（本番）
 - **CORS設定**: ローカルホストのみ許可
-- **認証**: 現在未実装（ローカル用途想定）
+- **認証**: 現在未実装（企業用途では追加実装推奨）
 
-### 3. 監査とログ
+### 3. 統合監視・ログ
 ```bash
-# アプリケーションログの確認
-tail -f ./logs/app.log
+# 統合健全性監視
+npm run integration:monitor
 
-# パフォーマンスログの確認  
-tail -f ./logs/performance.log
+# 統合ログ確認
+tail -f ./logs/integration.log
 
-# エラーログの確認
-grep "ERROR" ./logs/*.log
+# 統合統計情報
+npm run stats
 ```
 
-## 🔧 技術的セキュリティ対策
+## 🔧 技術的セキュリティ対策（統合版）
 
-### 1. データベースセキュリティ
+### 1. 統合データベースセキュリティ
 ```sql
--- SQLiteデータベースの現在のスキーマ確認
+-- 統合SQLiteデータベーススキーマ確認
 .schema sessions
 
--- FTS5全文検索インデックスの確認
+-- FTS5全文検索インデックス確認
 .schema sessions_fts
+
+-- 機密情報検索（FTS5活用）
+SELECT * FROM sessions_fts WHERE content MATCH 'password OR api_key OR secret' LIMIT 20;
 ```
 
-### 2. ファイルシステム保護
+### 2. 統合アーキテクチャ保護
 ```bash
-# データディレクトリの権限確認
-ls -la ./data/
+# 統合原則チェック
+npm run check:integration
 
-# .gitignoreの確認（機密情報除外）
-cat .gitignore | grep -E "(data|\.db|\.log)"
+# セキュリティ＋統合チェック
+npm run precommit
+
+# ファイルシステム保護確認
+ls -la ./data/
+cat .gitignore | grep -E "(data|\.db|\.log|backup)"
 ```
 
-### 3. ネットワークセキュリティ
+### 3. 統合API セキュリティ
+- **統合エンドポイント**: `/api/sessions?source=X`形式
 - **ローカル専用**: 外部ネットワーク通信なし
-- **APIアクセス**: localhost:3001のみ
-- **WebUI**: localhost:3000のみ
+- **統合ルート**: `src/server/routes/unified-api.ts`
 
-## 📋 セキュリティチェックリスト
+## 📋 統合後セキュリティチェックリスト
 
 ### 共有前チェック
-- [ ] `chat-history-manager search --keyword "password"` で機密情報検索済み
-- [ ] `chat-history-manager search --keyword "api_key"` で認証情報検索済み
-- [ ] `chat-history-manager search --keyword "secret"` で秘密情報検索済み
-- [ ] WebUIで対象セッションの内容を目視確認済み
-- [ ] 必要最小限のデータのみ選択済み
+- [ ] 統合検索で機密情報確認済み（全ソース横断）
+- [ ] WebUIで対象セッション内容を目視確認済み
+- [ ] ソース別フィルタで各データ源を個別確認済み
+- [ ] 統合データベースで重複・分散データ確認済み
 - [ ] 受信者の信頼性確認済み
 - [ ] 安全な共有方法選択済み
 
-### 定期メンテナンス
-- [ ] 古いログファイルのクリーンアップ（月次）
-- [ ] エクスポートファイルの整理（週次）
-- [ ] データベースサイズの監視
-- [ ] バックアップファイルの確認
+### 定期統合メンテナンス
+- [ ] 統合健全性チェック実行（`npm run check:integration`）
+- [ ] セキュリティスキャン実行（`npm run precommit`）
+- [ ] 月次統合レビュー実行（`npm run monthly:review`）
+- [ ] バックアップデータの安全確認
+- [ ] ログファイルの定期クリーンアップ
 
-### インシデント対応
-- [ ] 機密情報漏洩時の緊急連絡先確認済み
-- [ ] データベースバックアップ手順理解済み
-- [ ] 影響範囲特定方法把握済み
+### 統合インシデント対応準備
+- [ ] 統合データベースバックアップ手順理解済み
+- [ ] 全ソース影響範囲特定方法把握済み
+- [ ] 統合API緊急停止手順確認済み
 
-## 🆘 インシデント発生時の対応
+## 🆘 統合環境でのインシデント対応
 
 ### 1. 即座に行うこと
 ```bash
-# 1. 現在の状況確認
-chat-history-manager search --keyword "漏洩した情報"
+# 1. 統合検索で影響範囲確認
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"keyword":"漏洩した情報","limit":100}' \
+  http://localhost:3001/api/search
 
-# 2. バックアップ作成
-cp -r ./data ./emergency-backup-$(date +%Y%m%d-%H%M%S)
+# 2. 統合APIサーバー緊急停止
+pkill -f "npm run server"
+pkill -f "real-api-server"
 
-# 3. APIサーバー停止（必要に応じて）
-pkill -f "node.*real-api-server"
+# 3. 統合データベースバックアップ
+cp ./data/chat-history.db ./data/incident-backup-$(date +%Y%m%d-%H%M%S).db
 ```
 
-### 2. 調査・分析
+### 2. 影響範囲調査
 ```bash
-# 関連セッションの特定
-chat-history-manager search --keyword "機密キーワード" --start 2024-01-01
+# 統合データベース全体調査
+sqlite3 ./data/chat-history.db "SELECT source, COUNT(*) FROM sessions GROUP BY source;"
 
-# WebUIでの詳細確認
-npm run dev:real
-# ブラウザで詳細分析
+# ソース別影響確認
+curl -X GET "http://localhost:3001/api/sessions?source=chat" | jq '.sessions | length'
+curl -X GET "http://localhost:3001/api/sessions?source=cursor" | jq '.sessions | length'
+curl -X GET "http://localhost:3001/api/sessions?source=claude-dev" | jq '.sessions | length'
 ```
 
-### 3. 対応措置
-- **開発チームへの報告**
-- **影響範囲の詳細調査**
-- **データ削除の検討**（専門家と相談）
-- **再発防止策の策定**
+### 3. 復旧計画
+```bash
+# 統合健全性確認
+npm run check:integration
 
-## 💡 推奨ベストプラクティス
+# データ整合性確認
+npm run quality
 
-### 日常的な使用
-1. **定期的な機密情報チェック**（週次）
-2. **タグ活用による分類管理**
-3. **WebUIでの視覚的確認の習慣化**
-4. **バックアップの定期作成**
-
-### チーム運用
-1. **セキュリティガイドラインの共有**
-2. **定期的な教育・訓練**
-3. **インシデント対応手順の策定**
-4. **アクセス権限の適切な管理**
-
-## 📞 サポート・問い合わせ
-
-### 技術的な問題
-- **GitHub Issues**: 機能要望・バグ報告
-- **ドキュメント**: `docs/`内の各種ガイド
-
-### セキュリティ関連
-- **緊急時**: 開発チームへの直接連絡
-- **一般的な質問**: GitHubディスカッション
+# 段階的復旧
+# 1. 統合データベース確認
+# 2. APIサーバー再起動
+# 3. WebUI動作確認
+# 4. 統合チェック実行
+```
 
 ---
 
-**⚠️ 重要**: このツールを使用することで、ユーザーは自身のデータのセキュリティに責任を持つことに同意したものとみなされます。機密情報の取り扱いには十分注意してください。
-
-**更新日**: 2024年6月1日  
-**次回見直し**: 機能追加時または緊急時 
+**最終更新**: 2025年6月2日（統合完了後）  
+**適用範囲**: Chat History Manager統合アーキテクチャ  
+**次回見直し**: 新機能追加時または重大インシデント後 

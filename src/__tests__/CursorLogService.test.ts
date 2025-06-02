@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
 import { CursorLogService } from '../services/CursorLogService.js'
-import type { CursorConfig, CursorLog, CursorLogSearchOptions } from '../types/cursor.js'
+import type {
+  CursorConfig,
+  CursorLog,
+  CursorLogSearchOptions,
+} from '../types/cursor.js'
 import fs from 'fs-extra'
 import path from 'path'
 import os from 'os'
@@ -17,7 +21,7 @@ describe('CursorLogService', () => {
   beforeEach(async () => {
     await fs.ensureDir(testDir)
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cursor-log-test-'))
-    
+
     config = {
       enabled: true,
       watchPath: path.join(tempDir, 'cursor'),
@@ -29,7 +33,7 @@ describe('CursorLogService', () => {
       maxLogSize: 1024 * 1024,
       maxLogFiles: 10,
       cacheSize: 100,
-      cacheTTL: 60000
+      cacheTTL: 60000,
     }
 
     logger = Logger.getInstance(path.join(tempDir, 'logs'))
@@ -64,8 +68,8 @@ describe('CursorLogService', () => {
         content: 'テストメッセージ',
         metadata: {
           project: 'test-project',
-          tags: ['test']
-        }
+          tags: ['test'],
+        },
       }
 
       const result = await service.log(log)
@@ -80,7 +84,7 @@ describe('CursorLogService', () => {
       const log: Omit<CursorLog, 'id' | 'timestamp'> = {
         type: 'chat',
         content: 'テストメッセージ',
-        metadata: {}
+        metadata: {},
       }
 
       const result = await service.log(log)
@@ -94,7 +98,7 @@ describe('CursorLogService', () => {
       const invalidLog = {
         type: 'invalid_type' as any,
         content: 'テストメッセージ',
-        metadata: {}
+        metadata: {},
       }
 
       await expect(service.log(invalidLog)).rejects.toThrow('無効なログタイプ')
@@ -104,10 +108,12 @@ describe('CursorLogService', () => {
       const emptyLog = {
         type: 'chat',
         content: '',
-        metadata: {}
+        metadata: {},
       }
 
-      await expect(service.log(emptyLog)).rejects.toThrow('ログのコンテンツは必須です')
+      await expect(service.log(emptyLog)).rejects.toThrow(
+        'ログのコンテンツは必須です'
+      )
     })
   })
 
@@ -118,8 +124,8 @@ describe('CursorLogService', () => {
         content: 'プロジェクト1のメッセージ',
         metadata: {
           project: 'project1',
-          tags: ['test']
-        }
+          tags: ['test'],
+        },
       })
 
       await service.log({
@@ -127,14 +133,14 @@ describe('CursorLogService', () => {
         content: 'コマンド実行',
         metadata: {
           project: 'project2',
-          tags: ['command']
-        }
+          tags: ['command'],
+        },
       })
     })
 
     it('キーワードで検索できること', async () => {
       const options: CursorLogSearchOptions = {
-        query: 'メッセージ'
+        query: 'メッセージ',
       }
 
       const results = await service.search(options)
@@ -144,7 +150,7 @@ describe('CursorLogService', () => {
 
     it('プロジェクトで検索できること', async () => {
       const options: CursorLogSearchOptions = {
-        project: 'project1'
+        project: 'project1',
       }
 
       const results = await service.search(options)
@@ -154,7 +160,7 @@ describe('CursorLogService', () => {
 
     it('タグで検索できること', async () => {
       const options: CursorLogSearchOptions = {
-        tags: ['test']
+        tags: ['test'],
       }
 
       const results = await service.search(options)
@@ -166,7 +172,7 @@ describe('CursorLogService', () => {
       const options: CursorLogSearchOptions = {
         query: 'コマンド',
         project: 'project2',
-        tags: ['command']
+        tags: ['command'],
       }
 
       const results = await service.search(options)
@@ -180,13 +186,15 @@ describe('CursorLogService', () => {
 
       const options: CursorLogSearchOptions = {
         startDate,
-        endDate
+        endDate,
       }
 
       const results = await service.search(options)
       expect(results.length).toBeGreaterThan(0)
       results.forEach(log => {
-        expect(log.timestamp.getTime()).toBeGreaterThanOrEqual(startDate.getTime())
+        expect(log.timestamp.getTime()).toBeGreaterThanOrEqual(
+          startDate.getTime()
+        )
         expect(log.timestamp.getTime()).toBeLessThanOrEqual(endDate.getTime())
       })
     })
@@ -198,13 +206,13 @@ describe('CursorLogService', () => {
       await service.log({
         type: 'chat',
         content: '古いログ',
-        metadata: {}
+        metadata: {},
       })
 
       await service.log({
         type: 'chat',
         content: '新しいログ',
-        metadata: {}
+        metadata: {},
       })
 
       const beforeStats = await service.getStats()
@@ -219,8 +227,8 @@ describe('CursorLogService', () => {
         type: 'chat',
         content: 'エクスポートテスト',
         metadata: {
-          project: 'test-project'
-        }
+          project: 'test-project',
+        },
       })
 
       const exportPath = path.join(tempDir, 'export.json')
@@ -234,14 +242,16 @@ describe('CursorLogService', () => {
     })
 
     it('ログをインポートできること', async () => {
-      const importData = [{
-        type: 'chat',
-        content: 'インポートテスト',
-        metadata: {
-          project: 'test-project'
+      const importData = [
+        {
+          type: 'chat',
+          content: 'インポートテスト',
+          metadata: {
+            project: 'test-project',
+          },
+          timestamp: new Date().toISOString(),
         },
-        timestamp: new Date().toISOString()
-      }]
+      ]
 
       const importPath = path.join(tempDir, 'import.json')
       await fs.writeJson(importPath, importData)
@@ -250,10 +260,10 @@ describe('CursorLogService', () => {
         await service.log({
           type: logData.type,
           content: logData.content,
-          metadata: logData.metadata
+          metadata: logData.metadata,
         })
       }
-      
+
       const stats = await service.getStats()
       expect(stats.totalLogs).toBe(1)
     })
@@ -266,8 +276,8 @@ describe('CursorLogService', () => {
         content: 'テストメッセージ1',
         metadata: {
           project: 'project1',
-          tags: ['test']
-        }
+          tags: ['test'],
+        },
       })
 
       await service.log({
@@ -275,8 +285,8 @@ describe('CursorLogService', () => {
         content: 'テストコマンド',
         metadata: {
           project: 'project2',
-          tags: ['command']
-        }
+          tags: ['command'],
+        },
       })
     })
 
@@ -310,4 +320,4 @@ describe('CursorLogService', () => {
       expect(stats.logsByTag?.command).toBe(1)
     })
   })
-}) 
+})

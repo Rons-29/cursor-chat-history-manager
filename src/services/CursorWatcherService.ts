@@ -43,7 +43,12 @@ export class CursorWatcherService extends EventEmitter {
   private logger: Logger
   private isInitialized: boolean = false
 
-  constructor(chatHistoryService: ChatHistoryService, configService: ConfigService, config: CursorConfig, logger: Logger) {
+  constructor(
+    chatHistoryService: ChatHistoryService,
+    configService: ConfigService,
+    config: CursorConfig,
+    logger: Logger
+  ) {
     super()
     this.chatHistoryService = chatHistoryService
     this.configService = configService
@@ -55,7 +60,7 @@ export class CursorWatcherService extends EventEmitter {
       autoImport: config.autoImport ?? true,
       syncInterval: config.syncInterval ?? 300,
       batchSize: config.batchSize ?? 100,
-      retryAttempts: config.retryAttempts ?? 3
+      retryAttempts: config.retryAttempts ?? 3,
     }
     this.logger = logger
   }
@@ -69,11 +74,31 @@ export class CursorWatcherService extends EventEmitter {
 
     switch (os) {
       case 'darwin': // macOS
-        return path.join(homeDir, 'Library', 'Application Support', 'Cursor', 'User', 'workspaceStorage')
+        return path.join(
+          homeDir,
+          'Library',
+          'Application Support',
+          'Cursor',
+          'User',
+          'workspaceStorage'
+        )
       case 'win32': // Windows
-        return path.join(homeDir, 'AppData', 'Roaming', 'Cursor', 'User', 'workspaceStorage')
+        return path.join(
+          homeDir,
+          'AppData',
+          'Roaming',
+          'Cursor',
+          'User',
+          'workspaceStorage'
+        )
       case 'linux': // Linux
-        return path.join(homeDir, '.config', 'Cursor', 'User', 'workspaceStorage')
+        return path.join(
+          homeDir,
+          '.config',
+          'Cursor',
+          'User',
+          'workspaceStorage'
+        )
       default:
         return path.join(homeDir, '.cursor', 'workspaceStorage')
     }
@@ -91,26 +116,34 @@ export class CursorWatcherService extends EventEmitter {
       // workspaceStorageディレクトリ内のstate.vscdbファイルを監視
       this.watcher = watch(this.config.watchPath, {
         recursive: true,
-        persistent: true
+        persistent: true,
       })
 
-      this.watcher.on('change', async (eventType: string, filename: string | null) => {
-        if (filename && filename.endsWith('state.vscdb')) {
-          await this.handleFileChange(path.join(this.config.watchPath, filename))
+      this.watcher.on(
+        'change',
+        async (eventType: string, filename: string | null) => {
+          if (filename && filename.endsWith('state.vscdb')) {
+            await this.handleFileChange(
+              path.join(this.config.watchPath, filename)
+            )
+          }
         }
-      })
+      )
 
       this.watcher.on('error', (error: Error) => {
         this.handleWatchError(error)
       })
 
-      this.logger.info('Cursorログファイル監視を開始しました', { path: this.config.watchPath })
+      this.logger.info('Cursorログファイル監視を開始しました', {
+        path: this.config.watchPath,
+      })
       this.isWatching = true
 
       // 初回スキャンを実行
       await this.scanAndImport()
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      const errorMessage =
+        error instanceof Error ? error.message : '不明なエラー'
       this.logger.error('監視開始エラー', { error: errorMessage })
       throw new Error(`Failed to start watching: ${errorMessage}`)
     }
@@ -179,7 +212,7 @@ export class CursorWatcherService extends EventEmitter {
 
     try {
       const entries = await fs.readdir(scanPath, { withFileTypes: true })
-      
+
       // 並列処理用のワークスペースディレクトリ収集
       const workspaceDirs: string[] = []
       for (const entry of entries) {
@@ -195,9 +228,9 @@ export class CursorWatcherService extends EventEmitter {
         }
       }
 
-      this.logger.info('Cursorワークスペーススキャン開始', { 
-        totalWorkspaces: workspaceDirs.length, 
-        scanPath 
+      this.logger.info('Cursorワークスペーススキャン開始', {
+        totalWorkspaces: workspaceDirs.length,
+        scanPath,
       })
 
       // 並列処理でファイルを処理（バッチサイズ: 20）
@@ -209,11 +242,11 @@ export class CursorWatcherService extends EventEmitter {
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex]
-        
-        this.logger.info('バッチ処理中', { 
-          batchIndex: batchIndex + 1, 
-          totalBatches: batches.length, 
-          batchSize: batch.length 
+
+        this.logger.info('バッチ処理中', {
+          batchIndex: batchIndex + 1,
+          totalBatches: batches.length,
+          batchSize: batch.length,
         })
 
         // 並列処理でバッチを実行
@@ -231,42 +264,48 @@ export class CursorWatcherService extends EventEmitter {
         }
 
         // 進捗ログ（バッチごと）
-        const progressPercent = Math.round(((batchIndex + 1) / batches.length) * 100)
-        this.logger.info('進捗状況', { 
-          progress: `${progressPercent}%`, 
+        const progressPercent = Math.round(
+          ((batchIndex + 1) / batches.length) * 100
+        )
+        this.logger.info('進捗状況', {
+          progress: `${progressPercent}%`,
           processedWorkspaces: (batchIndex + 1) * BATCH_SIZE,
           totalWorkspaces: workspaceDirs.length,
-          importedSessions: importCount
+          importedSessions: importCount,
         })
       }
 
       this.lastScanTime = new Date()
       this.sessionsFound = importCount
-      
-      this.logger.info('Cursorワークスペーススキャン完了', { 
+
+      this.logger.info('Cursorワークスペーススキャン完了', {
         totalWorkspaces: workspaceDirs.length,
         importedSessions: importCount,
-        duration: `${Math.round((Date.now() - startTime) / 1000)}秒`
+        duration: `${Math.round((Date.now() - startTime) / 1000)}秒`,
       })
 
       this.emit('scanCompleted', { importCount, path: scanPath })
 
       return importCount
     } catch (error) {
-      throw new Error(`スキャンエラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `スキャンエラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
   /**
    * 最適化されたCursorデータベースファイル処理
    */
-  private async processCursorDbFileOptimized(dbFilePath: string): Promise<number> {
+  private async processCursorDbFileOptimized(
+    dbFilePath: string
+  ): Promise<number> {
     let importedCount = 0
-    
+
     try {
       const db = await open({
         filename: dbFilePath,
-        driver: sqlite3.Database
+        driver: sqlite3.Database,
       })
 
       try {
@@ -284,7 +323,10 @@ export class CursorWatcherService extends EventEmitter {
 
         for (const row of rows) {
           try {
-            const chatSessions = this.extractAllChatSessionsFromDbValueJson(row.value, row.key)
+            const chatSessions = this.extractAllChatSessionsFromDbValueJson(
+              row.value,
+              row.key
+            )
             sessionsToImport.push(...chatSessions)
           } catch (parseError) {
             // パースエラーは静かに無視（ログ削減）
@@ -296,7 +338,10 @@ export class CursorWatcherService extends EventEmitter {
           try {
             await this.importChatSession(chatData)
             importedCount++
-            this.emit('sessionImported', { sessionId: chatData.id, file: dbFilePath })
+            this.emit('sessionImported', {
+              sessionId: chatData.id,
+              file: dbFilePath,
+            })
           } catch (error) {
             // インポートエラーは静かに無視（ログ削減）
           }
@@ -314,7 +359,10 @@ export class CursorWatcherService extends EventEmitter {
   /**
    * データベースの値（JSON文字列）からチャットセッションデータを抽出
    */
-  private extractAllChatSessionsFromDbValueJson(valueJson: string, key: string): CursorChatData[] {
+  private extractAllChatSessionsFromDbValueJson(
+    valueJson: string,
+    key: string
+  ): CursorChatData[] {
     try {
       const data = JSON.parse(valueJson)
       const sessions: CursorChatData[] = []
@@ -323,13 +371,15 @@ export class CursorWatcherService extends EventEmitter {
         // チャットデータの場合
         if (Array.isArray(data)) {
           for (const item of data) {
-            const sessionData = this.parsePotentialChatSessionDataFromDbValue(item)
+            const sessionData =
+              this.parsePotentialChatSessionDataFromDbValue(item)
             if (sessionData) {
               sessions.push(sessionData)
             }
           }
         } else if (typeof data === 'object' && data !== null) {
-          const sessionData = this.parsePotentialChatSessionDataFromDbValue(data)
+          const sessionData =
+            this.parsePotentialChatSessionDataFromDbValue(data)
           if (sessionData) {
             sessions.push(sessionData)
           }
@@ -342,13 +392,15 @@ export class CursorWatcherService extends EventEmitter {
               const sessionData: CursorChatData = {
                 id: prompt.id || `prompt-${Date.now()}-${Math.random()}`,
                 title: prompt.title || 'Cursor Prompt',
-                messages: [{
-                  role: 'user',
-                  content: prompt.content || prompt.text || '',
-                  timestamp: prompt.timestamp || new Date().toISOString()
-                }],
+                messages: [
+                  {
+                    role: 'user',
+                    content: prompt.content || prompt.text || '',
+                    timestamp: prompt.timestamp || new Date().toISOString(),
+                  },
+                ],
                 createdAt: prompt.createdAt || new Date().toISOString(),
-                updatedAt: prompt.updatedAt || new Date().toISOString()
+                updatedAt: prompt.updatedAt || new Date().toISOString(),
               }
               sessions.push(sessionData)
             }
@@ -358,7 +410,9 @@ export class CursorWatcherService extends EventEmitter {
 
       return sessions
     } catch (error) {
-      this.logger.warn('JSON パースエラー', { error: error instanceof Error ? error.message : '不明なエラー' })
+      this.logger.warn('JSON パースエラー', {
+        error: error instanceof Error ? error.message : '不明なエラー',
+      })
       return []
     }
   }
@@ -366,7 +420,9 @@ export class CursorWatcherService extends EventEmitter {
   /**
    * データベースの値からチャットセッションデータをパース
    */
-  private parsePotentialChatSessionDataFromDbValue(data: any): CursorChatData | null {
+  private parsePotentialChatSessionDataFromDbValue(
+    data: any
+  ): CursorChatData | null {
     try {
       if (!data || typeof data !== 'object') {
         return null
@@ -381,7 +437,7 @@ export class CursorWatcherService extends EventEmitter {
             messages.push({
               role: msg.role || 'user',
               content: msg.content || msg.text || '',
-              timestamp: msg.timestamp || new Date().toISOString()
+              timestamp: msg.timestamp || new Date().toISOString(),
             })
           }
         }
@@ -391,7 +447,7 @@ export class CursorWatcherService extends EventEmitter {
             messages.push({
               role: msg.role || 'user',
               content: msg.content || msg.text || '',
-              timestamp: msg.timestamp || new Date().toISOString()
+              timestamp: msg.timestamp || new Date().toISOString(),
             })
           }
         }
@@ -400,7 +456,7 @@ export class CursorWatcherService extends EventEmitter {
         messages.push({
           role: data.role || 'user',
           content: data.content || data.text,
-          timestamp: data.timestamp || new Date().toISOString()
+          timestamp: data.timestamp || new Date().toISOString(),
         })
       }
 
@@ -413,10 +469,12 @@ export class CursorWatcherService extends EventEmitter {
         title: data.title || `Cursor Chat ${new Date().toLocaleDateString()}`,
         messages,
         createdAt: data.createdAt || new Date().toISOString(),
-        updatedAt: data.updatedAt || new Date().toISOString()
+        updatedAt: data.updatedAt || new Date().toISOString(),
       }
     } catch (error) {
-      this.logger.warn('チャットセッションデータパースエラー', { error: error instanceof Error ? error.message : '不明なエラー' })
+      this.logger.warn('チャットセッションデータパースエラー', {
+        error: error instanceof Error ? error.message : '不明なエラー',
+      })
       return null
     }
   }
@@ -427,8 +485,10 @@ export class CursorWatcherService extends EventEmitter {
   private async importChatSession(chatData: CursorChatData): Promise<void> {
     try {
       // 既存セッションの確認
-      const existingSession = await this.chatHistoryService.getSession(chatData.id)
-      
+      const existingSession = await this.chatHistoryService.getSession(
+        chatData.id
+      )
+
       if (existingSession) {
         // 増分更新: 新しいメッセージのみ追加
         await this.updateExistingSession(existingSession, chatData)
@@ -445,15 +505,24 @@ export class CursorWatcherService extends EventEmitter {
   /**
    * 既存セッションを更新
    */
-  private async updateExistingSession(existingSession: ChatSession, chatData: CursorChatData): Promise<void> {
+  private async updateExistingSession(
+    existingSession: ChatSession,
+    chatData: CursorChatData
+  ): Promise<void> {
     try {
-      const existingMessageIds = new Set(existingSession.messages.map(msg => msg.id))
+      const existingMessageIds = new Set(
+        existingSession.messages.map(msg => msg.id)
+      )
       const newMessages: Message[] = []
 
       for (const cursorMsg of chatData.messages) {
         // メッセージIDを生成（内容とタイムスタンプのハッシュベース）
-        const messageId = `cursor-${Buffer.from(cursorMsg.content + cursorMsg.timestamp).toString('base64').slice(0, 16)}`
-        
+        const messageId = `cursor-${Buffer.from(
+          cursorMsg.content + cursorMsg.timestamp
+        )
+          .toString('base64')
+          .slice(0, 16)}`
+
         if (!existingMessageIds.has(messageId)) {
           newMessages.push({
             id: messageId,
@@ -462,8 +531,8 @@ export class CursorWatcherService extends EventEmitter {
             timestamp: new Date(cursorMsg.timestamp),
             metadata: {
               source: 'cursor',
-              originalTimestamp: cursorMsg.timestamp
-            }
+              originalTimestamp: cursorMsg.timestamp,
+            },
           })
         }
       }
@@ -473,10 +542,13 @@ export class CursorWatcherService extends EventEmitter {
           await this.chatHistoryService.addMessage(existingSession.id, {
             role: message.role,
             content: message.content,
-            metadata: message.metadata
+            metadata: message.metadata,
           })
         }
-        this.logger.info(`既存セッションに${newMessages.length}件の新しいメッセージを追加`, { sessionId: existingSession.id })
+        this.logger.info(
+          `既存セッションに${newMessages.length}件の新しいメッセージを追加`,
+          { sessionId: existingSession.id }
+        )
       }
     } catch (error) {
       this.logger.error('既存セッション更新エラー:', error)
@@ -498,8 +570,8 @@ export class CursorWatcherService extends EventEmitter {
         metadata: {
           source: 'cursor',
           cursorId: chatData.id,
-          tags: ['cursor-import']
-        }
+          tags: ['cursor-import'],
+        },
       })
 
       for (const cursorMsg of chatData.messages) {
@@ -508,15 +580,15 @@ export class CursorWatcherService extends EventEmitter {
           content: cursorMsg.content,
           metadata: {
             source: 'cursor',
-            originalTimestamp: cursorMsg.timestamp
-          }
+            originalTimestamp: cursorMsg.timestamp,
+          },
         })
       }
 
-      this.logger.info(`新規セッションを作成`, { 
-        sessionId: session.id, 
+      this.logger.info(`新規セッションを作成`, {
+        sessionId: session.id,
         title: chatData.title,
-        messageCount: chatData.messages.length 
+        messageCount: chatData.messages.length,
       })
     } catch (error) {
       this.logger.error('新規セッション作成エラー:', error)
@@ -536,7 +608,7 @@ export class CursorWatcherService extends EventEmitter {
       sessionsFound: this.sessionsFound,
       processedCount: this.sessionsFound,
       errorCount: 0,
-      error: undefined
+      error: undefined,
     }
   }
 
@@ -580,9 +652,9 @@ export class CursorWatcherService extends EventEmitter {
     try {
       await this.logger.initialize()
       this.isInitialized = true
-      this.logger.info('CursorWatcherServiceを初期化しました', { 
+      this.logger.info('CursorWatcherServiceを初期化しました', {
         watchPath: this.config.watchPath,
-        enabled: this.config.enabled 
+        enabled: this.config.enabled,
       })
     } catch (error) {
       this.logger.error('初期化に失敗しました:', error)
@@ -616,7 +688,7 @@ export class CursorWatcherService extends EventEmitter {
     return {
       totalFiles: 0,
       totalMessages: 0,
-      storageSize: 0
+      storageSize: 0,
     }
   }
-} 
+}

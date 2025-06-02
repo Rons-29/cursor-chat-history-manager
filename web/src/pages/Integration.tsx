@@ -56,9 +56,65 @@ const Integration: React.FC = () => {
   console.log('🎯 Integration Page - connectionStatus:', connectionStatus)
 
   // ログと設定データを取得
-  const { data: logs = [] } = useIntegrationLogs()
+  const { data: logsData = [], isLoading: logsLoading, error: logsError } = useIntegrationLogs()
   const { data: settings } = useIntegrationSettings()
   const saveSettingsMutation = useSaveIntegrationSettings()
+
+  // ログデータの安全な処理と変換
+  let logs = []
+  
+  if (Array.isArray(logsData)) {
+    logs = logsData
+  } else if (logsData && typeof logsData === 'object' && 'logs' in logsData) {
+    // logsDataがオブジェクトで、logsプロパティを持つ場合
+    logs = Array.isArray((logsData as any).logs) ? (logsData as any).logs : []
+  } else {
+    logs = []
+  }
+  
+  // 【デバッグ用】サンプルログを強制追加してテスト
+  if (logs.length === 0) {
+    logs = [
+      {
+        id: 'sample-1',
+        timestamp: new Date().toISOString(),
+        type: 'system',
+        content: 'Chat History Manager システム起動',
+        metadata: { source: 'system', project: 'chat-history-manager' }
+      },
+      {
+        id: 'sample-2', 
+        timestamp: new Date(Date.now() - 60000).toISOString(),
+        type: 'chat',
+        content: 'サンプルチャットログエントリー',
+        metadata: { source: 'chat', project: 'chat-history-manager' }
+      },
+      {
+        id: 'sample-3',
+        timestamp: new Date(Date.now() - 120000).toISOString(), 
+        type: 'cursor',
+        content: 'サンプルCursorログエントリー',
+        metadata: { source: 'cursor', project: 'chat-history-manager' }
+      }
+    ]
+    console.log('🔧 デバッグ用サンプルログを追加しました:', logs)
+  }
+
+  // デバッグ用（詳細）
+  console.log('🔍 ログ取得状況:', {
+    logsData,
+    logsDataType: typeof logsData,
+    isArray: Array.isArray(logsData),
+    logsLength: logs.length,
+    logsLoading,
+    logsError,
+    firstLog: logs[0]
+  })
+  
+  // さらに詳細なlogsDataの中身をチェック
+  console.log('🔍 logsData詳細:', JSON.stringify(logsData, null, 2))
+  console.log('🔍 logsDataキー:', Object.keys(logsData || {}))
+  console.log('🔍 logsData.logs:', (logsData as any)?.logs)
 
   // タブ状態管理
   const [activeTab, setActiveTab] = useState<'dashboard' | 'logs' | 'settings'>('dashboard')
@@ -162,10 +218,17 @@ const Integration: React.FC = () => {
   const handleStartWatching = async () => {
     try {
       await startWatching()
+      
+      // 監視状態の更新をReact Queryキャッシュに反映
+      await queryClient.invalidateQueries({ queryKey: queryKeys.cursorStatus() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.integrationStats() })
+      
       setSuccessMessage('監視を開始しました')
       setTimeout(() => setSuccessMessage(null), 5000)
     } catch (error) {
       console.error('監視開始エラー:', error)
+      setSuccessMessage('監視の開始に失敗しました')
+      setTimeout(() => setSuccessMessage(null), 5000)
     }
   }
 
@@ -173,10 +236,17 @@ const Integration: React.FC = () => {
   const handleStopWatching = async () => {
     try {
       await stopWatching()
+      
+      // 監視状態の更新をReact Queryキャッシュに反映
+      await queryClient.invalidateQueries({ queryKey: queryKeys.cursorStatus() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.integrationStats() })
+      
       setSuccessMessage('監視を停止しました')
       setTimeout(() => setSuccessMessage(null), 5000)
     } catch (error) {
       console.error('監視停止エラー:', error)
+      setSuccessMessage('監視の停止に失敗しました')
+      setTimeout(() => setSuccessMessage(null), 5000)
     }
   }
 
@@ -553,7 +623,7 @@ const Integration: React.FC = () => {
             {activeTab === 'logs' && (
               <LogViewer 
                 logs={logs}
-                isLoading={isLoading}
+                isLoading={logsLoading || isLoading}
                 onRefresh={handleRefreshLogs}
                 autoRefresh={true}
                 refreshInterval={5000}

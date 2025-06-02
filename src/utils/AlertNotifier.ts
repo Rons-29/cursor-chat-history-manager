@@ -22,8 +22,8 @@ export class AlertNotifier {
       cooldownPeriod: config?.cooldownPeriod ?? 5 * 60 * 1000, // 5分
       grouping: {
         enabled: config?.grouping?.enabled ?? true,
-        timeWindow: config?.grouping?.timeWindow ?? 60 * 1000 // 1分
-      }
+        timeWindow: config?.grouping?.timeWindow ?? 60 * 1000, // 1分
+      },
     }
   }
 
@@ -65,4 +65,4 @@ export class AlertNotifier {
     this.lastAlertTime.clear()
     this.logger.info('アラート履歴をクリアしました')
   }
-} 
+}

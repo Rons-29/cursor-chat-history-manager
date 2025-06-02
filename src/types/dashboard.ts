@@ -47,4 +47,4 @@ export interface DashboardTableData {
       type: 'text' | 'number' | 'date' | 'tag'
     }>
   }>
-} 
+}

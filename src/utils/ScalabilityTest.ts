@@ -71,7 +71,8 @@ export class ScalabilityTest {
           p95ResponseTime: results.p95ResponseTime,
           p99ResponseTime: results.p99ResponseTime,
           errorRate: results.failedRequests / results.totalRequests,
-          throughput: results.successfulRequests / (this.config.stepDuration / 1000),
+          throughput:
+            results.successfulRequests / (this.config.stepDuration / 1000),
           memoryUsage: {
             max: results.maxMemoryUsage,
             average: results.averageMemoryUsage,
@@ -95,7 +96,9 @@ export class ScalabilityTest {
     }
   }
 
-  private analyzeResults(steps: ScalabilityTestResult['steps']): ScalabilityTestResult['recommendations'] {
+  private analyzeResults(
+    steps: ScalabilityTestResult['steps']
+  ): ScalabilityTestResult['recommendations'] {
     const bottlenecks: string[] = []
     let maxConcurrentUsers = 0
     let optimalConcurrentUsers = 0
@@ -105,17 +108,23 @@ export class ScalabilityTest {
 
       // エラー率が5%を超える場合
       if (results.errorRate > 0.05) {
-        bottlenecks.push(`エラー率が高すぎます (${(results.errorRate * 100).toFixed(1)}%)`)
+        bottlenecks.push(
+          `エラー率が高すぎます (${(results.errorRate * 100).toFixed(1)}%)`
+        )
       }
 
       // レスポンスタイムが200msを超える場合
       if (results.p95ResponseTime > 200) {
-        bottlenecks.push(`レスポンスタイムが遅すぎます (${results.p95ResponseTime.toFixed(0)}ms)`)
+        bottlenecks.push(
+          `レスポンスタイムが遅すぎます (${results.p95ResponseTime.toFixed(0)}ms)`
+        )
       }
 
       // メモリ使用量が1GBを超える場合
       if (results.memoryUsage.max > 1024 * 1024 * 1024) {
-        bottlenecks.push(`メモリ使用量が高すぎます (${(results.memoryUsage.max / 1024 / 1024).toFixed(0)}MB)`)
+        bottlenecks.push(
+          `メモリ使用量が高すぎます (${(results.memoryUsage.max / 1024 / 1024).toFixed(0)}MB)`
+        )
       }
 
       // エラー率が1%未満の最大ユーザー数を記録
@@ -135,4 +144,4 @@ export class ScalabilityTest {
       bottlenecks,
     }
   }
-} 
+}

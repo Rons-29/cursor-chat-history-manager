@@ -15,11 +15,15 @@ import {
 } from '@heroicons/react/24/outline'
 
 interface LogEntry {
+  id?: string
   timestamp: string
-  level: 'info' | 'warn' | 'error' | 'success'
-  message: string
+  level?: 'info' | 'warn' | 'error' | 'success'
+  type?: string // APIから来るtype
+  message?: string
+  content?: string // APIから来るcontent
   details?: any
-  source?: 'cursor' | 'integration' | 'system'
+  metadata?: any // APIから来るmetadata
+  source?: 'cursor' | 'integration' | 'system' | 'chat' | 'claude-dev'
 }
 
 interface LogViewerProps {
@@ -37,7 +41,10 @@ const LogViewer: React.FC<LogViewerProps> = ({
   autoRefresh = true,
   refreshInterval = 5000
 }) => {
-  const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>(logs)
+  // 安全な配列の確保
+  const safeLogs = Array.isArray(logs) ? logs : []
+  
+  const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>(safeLogs)
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -52,7 +59,14 @@ const LogViewer: React.FC<LogViewerProps> = ({
 
   // フィルタリング
   useEffect(() => {
-    let filtered = logs
+    // 安全な配列の確保とデータ変換
+    let filtered = Array.isArray(logs) ? logs.map(log => ({
+      ...log,
+      level: log.level || (log.type === 'error' ? 'error' : log.type === 'cursor' ? 'info' : log.type === 'system' ? 'info' : 'info'),
+      message: log.message || log.content || 'No message',
+      source: log.source || log.metadata?.source || log.type,
+      details: log.details || log.metadata
+    })) : []
 
     // レベルフィルタ
     if (levelFilter !== 'all') {
@@ -67,7 +81,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     // 検索フィルタ
     if (searchQuery) {
       filtered = filtered.filter(log => 
-        log.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (log.message || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         JSON.stringify(log.details || {}).toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
@@ -159,33 +173,35 @@ const LogViewer: React.FC<LogViewerProps> = ({
             >
               <option value="all">すべてのソース</option>
               <option value="cursor">Cursor</option>
-              <option value="integration">統合</option>
+              <option value="chat">チャット</option>
               <option value="system">システム</option>
+              <option value="integration">統合</option>
+              <option value="claude-dev">Claude Dev</option>
             </select>
           </div>
 
           {/* 統計 */}
           <div className="flex items-center text-sm text-gray-500">
             <FunnelIcon className="h-4 w-4 mr-1" />
-            {filteredLogs.length} / {logs.length} 件
+            {Array.isArray(filteredLogs) ? filteredLogs.length : 0} / {Array.isArray(logs) ? logs.length : 0} 件
           </div>
         </div>
       </div>
 
       {/* ログリスト */}
       <div className="max-h-96 overflow-y-auto">
-        {isLoading && filteredLogs.length === 0 ? (
+        {isLoading && (!Array.isArray(filteredLogs) || filteredLogs.length === 0) ? (
           <div className="flex items-center justify-center py-8">
             <ArrowPathIcon className="animate-spin h-6 w-6 text-gray-400 mr-2" />
             <span className="text-gray-500">ログを読み込み中...</span>
           </div>
-        ) : filteredLogs.length === 0 ? (
+        ) : (!Array.isArray(filteredLogs) || filteredLogs.length === 0) ? (
           <div className="text-center py-8 text-gray-500">
             表示するログがありません
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {filteredLogs.map((log, index) => (
+            {Array.isArray(filteredLogs) && filteredLogs.map((log, index) => (
               <div key={index} className={`p-4 ${getLogBgColor(log.level)}`}>
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
@@ -194,16 +210,16 @@ const LogViewer: React.FC<LogViewerProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-gray-900">
-                        {log.message}
+                        {log.message || log.content || 'メッセージなし'}
                       </p>
                       <div className="flex items-center text-xs text-gray-500">
                         <ClockIcon className="h-3 w-3 mr-1" />
                         {new Date(log.timestamp).toLocaleString('ja-JP')}
                       </div>
                     </div>
-                    {log.source && (
+                    {(log.source || log.metadata?.source || log.type) && (
                       <p className="text-xs text-gray-500 mt-1">
-                        ソース: {log.source}
+                        ソース: {log.source || log.metadata?.source || log.type}
                       </p>
                     )}
                     {log.details && (

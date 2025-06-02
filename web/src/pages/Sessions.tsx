@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, queryKeys } from '../api/client.js'
+import { Session } from '../types/Session'
+import { SessionCard } from '../components/SessionCard'
 
 const Sessions: React.FC = () => {
   const navigate = useNavigate()
@@ -241,54 +243,12 @@ const Sessions: React.FC = () => {
           ))
         ) : paginatedSessions.length > 0 ? (
           paginatedSessions.map(session => (
-            <div
+            <SessionCard
               key={session.id}
-              className="card-hover"
-              onClick={() => handleSessionClick(session.id)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {session.title || `セッション ${session.id.slice(0, 8)}`}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {session.metadata.summary || 'セッションの説明なし'}
-                    </p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <span className="text-xs text-gray-400">
-                        {session.metadata.totalMessages} メッセージ
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {formatTime(session.startTime)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {session.metadata.tags &&
-                    session.metadata.tags.length > 0 && (
-                      <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
-                        {session.metadata.tags[0]}
-                      </span>
-                    )}
-                  <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
+              session={session}
+              onSelect={handleSessionClick}
+              showPreview={true}
+            />
           ))
         ) : (
           <div className="card text-center py-8">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, queryKeys } from '../api/client.js'
@@ -9,6 +9,8 @@ import { ProgressIndicator } from '../components/ui/ProgressIndicator'
 import ApiConnectionIndicator from '../components/ui/ApiConnectionIndicator'
 import { useApiConnection } from '../hooks/useIntegration'
 import { ArrowPathIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { Session } from '../types/Session'
+import { SessionCard } from '../components/SessionCard'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -424,29 +426,13 @@ const Dashboard: React.FC = () => {
               </div>
             ) : sessionsData?.sessions && sessionsData.sessions.length > 0 ? (
               sessionsData.sessions.map(session => (
-                <div
+                <SessionCard
                   key={session.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() => handleSessionClick(session.id)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {session.title || `セッション ${session.id.slice(0, 8)}`}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {session.metadata.totalMessages}件のメッセージ
-                        {session.metadata.tags &&
-                          session.metadata.tags.length > 0 &&
-                          ` • ${session.metadata.tags.slice(0, 2).join(', ')}`}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-sm text-gray-400">
-                    {formatSessionTime(session.startTime)}
-                  </span>
-                </div>
+                  session={session}
+                  onSelect={handleSessionClick}
+                  showPreview={false}
+                  compact={true}
+                />
               ))
             ) : (
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -542,7 +528,7 @@ const Dashboard: React.FC = () => {
             setShowUpdateProgress(false)
             setIsRefreshing(false)
           }}
-          error={progressState.error}
+          error={progressState.error || undefined}
         />
 
         {/* プレミアム進捗カード（右下固定） */}

@@ -1,7 +1,11 @@
 import { EventEmitter } from 'events'
 import fs from 'fs-extra'
 import path from 'path'
-import type { CursorLogConfig, CursorLog, CursorLogStats } from '../server/types/integration.js'
+import type {
+  CursorLogConfig,
+  CursorLog,
+  CursorLogStats,
+} from '../server/types/integration.js'
 import { v4 as uuidv4 } from 'uuid'
 import { Logger } from '../server/utils/Logger.js'
 import { CacheManager } from '../utils/CacheManager.js'
@@ -25,18 +29,21 @@ export class CursorLogService extends EventEmitter {
       autoImport: config.autoImport ?? true,
       syncInterval: config.syncInterval ?? 300,
       batchSize: config.batchSize ?? 100,
-      retryAttempts: config.retryAttempts ?? 3
+      retryAttempts: config.retryAttempts ?? 3,
     }
     this.processedLogsDir = path.join(this.config.watchPath, 'processed')
     this.logger = logger
     this.maxLogSize = config.maxLogSize ?? 5 * 1024 * 1024 // 5MB
     this.maxLogFiles = config.maxLogFiles ?? 5
 
-    this.cache = new CacheManager<CursorLog[]>({
-      max: config.cacheSize ?? 1000,
-      maxAge: config.cacheTTL ?? 3600000, // 1時間
-      updateAgeOnGet: true
-    }, logger)
+    this.cache = new CacheManager<CursorLog[]>(
+      {
+        max: config.cacheSize ?? 1000,
+        maxAge: config.cacheTTL ?? 3600000, // 1時間
+        updateAgeOnGet: true,
+      },
+      logger
+    )
 
     this.initialize()
   }
@@ -61,11 +68,14 @@ export class CursorLogService extends EventEmitter {
     }
 
     try {
-      this.watcher = fs.watch(this.config.watchPath, async (eventType, filename) => {
-        if (eventType === 'rename' && filename) {
-          await this.processNewLog(filename)
+      this.watcher = fs.watch(
+        this.config.watchPath,
+        async (eventType, filename) => {
+          if (eventType === 'rename' && filename) {
+            await this.processNewLog(filename)
+          }
         }
-      })
+      )
     } catch (error) {
       throw new Error(`Failed to start watching: ${error}`)
     }
@@ -81,19 +91,22 @@ export class CursorLogService extends EventEmitter {
   private async processNewLog(filename: string): Promise<void> {
     try {
       const logPath = path.join(this.config.watchPath, filename)
-      if (!await fs.pathExists(logPath)) {
+      if (!(await fs.pathExists(logPath))) {
         return
       }
 
       const logContent = await fs.readJson(logPath)
       const processedLog = this.transformLog(logContent)
-      
+
       const processedPath = path.join(this.processedLogsDir, `${filename}.json`)
       await fs.writeJson(processedPath, processedLog, { spaces: 2 })
 
       this.emit('logProcessed', processedLog)
     } catch (error) {
-      this.emit('error', new Error(`Failed to process log ${filename}: ${error}`))
+      this.emit(
+        'error',
+        new Error(`Failed to process log ${filename}: ${error}`)
+      )
     }
   }
 
@@ -107,8 +120,8 @@ export class CursorLogService extends EventEmitter {
         project: log.metadata?.project || '',
         tags: log.metadata?.tags || [],
         source: 'cursor',
-        ...log.metadata
-      }
+        ...log.metadata,
+      },
     }
   }
 
@@ -123,7 +136,7 @@ export class CursorLogService extends EventEmitter {
 
     try {
       const processedLogsDir = path.join(this.config.watchPath, 'processed')
-      if (!await fs.pathExists(processedLogsDir)) {
+      if (!(await fs.pathExists(processedLogsDir))) {
         return []
       }
 
@@ -174,7 +187,7 @@ export class CursorLogService extends EventEmitter {
 
       return {
         totalLogs,
-        storageSize: totalSize
+        storageSize: totalSize,
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -184,11 +197,14 @@ export class CursorLogService extends EventEmitter {
     }
   }
 
-  private matchesSearchCriteria(log: CursorLog, options: {
-    query?: string
-    timeRange?: { start: Date; end: Date }
-    types?: string[]
-  }): boolean {
+  private matchesSearchCriteria(
+    log: CursorLog,
+    options: {
+      query?: string
+      timeRange?: { start: Date; end: Date }
+      types?: string[]
+    }
+  ): boolean {
     if (options.query) {
       const searchText = options.query.toLowerCase()
       if (!log.content.toLowerCase().includes(searchText)) {
@@ -198,8 +214,10 @@ export class CursorLogService extends EventEmitter {
 
     if (options.timeRange) {
       const logTime = new Date(log.timestamp).getTime()
-      if (logTime < options.timeRange.start.getTime() || 
-          logTime > options.timeRange.end.getTime()) {
+      if (
+        logTime < options.timeRange.start.getTime() ||
+        logTime > options.timeRange.end.getTime()
+      ) {
         return false
       }
     }
@@ -220,8 +238,8 @@ export class CursorLogService extends EventEmitter {
       timestamp: new Date(),
       ...log,
       metadata: {
-        ...log.metadata
-      }
+        ...log.metadata,
+      },
     }
     const filePath = path.join(this.processedLogsDir, `${newLog.id}.json`)
     await fs.writeJson(filePath, newLog, { spaces: 2 })
@@ -234,8 +252,13 @@ export class CursorLogService extends EventEmitter {
   }
 
   private async rotateLogs(): Promise<void> {
-    const files = await fs.readdir(this.config.watchPath)
-      .then(files => files.filter(file => file.startsWith('cursor-') && file.endsWith('.log')))
+    const files = await fs
+      .readdir(this.config.watchPath)
+      .then(files =>
+        files.filter(
+          file => file.startsWith('cursor-') && file.endsWith('.log')
+        )
+      )
       .then(files => files.sort().reverse())
 
     while (files.length >= this.maxLogFiles) {
@@ -246,14 +269,19 @@ export class CursorLogService extends EventEmitter {
     }
   }
 
-  async logToFile(type: string, data: Record<string, unknown>, sessionId?: string, userId?: string): Promise<void> {
+  async logToFile(
+    type: string,
+    data: Record<string, unknown>,
+    sessionId?: string,
+    userId?: string
+  ): Promise<void> {
     const log: CursorLog = {
       id: uuidv4(),
       timestamp: new Date(),
       type,
       content: JSON.stringify(data),
       sessionId,
-      userId
+      userId,
     }
 
     const logFile = this.getLogFilePath(new Date())
@@ -264,10 +292,10 @@ export class CursorLogService extends EventEmitter {
       await fs.appendFile(logFile, logLine)
       this.logger.debug('ログを記録しました', { type, sessionId })
     } catch (error) {
-      this.logger.error('ログ記録エラー', { 
-        error: error instanceof Error ? error.message : String(error), 
-        type, 
-        sessionId 
+      this.logger.error('ログ記録エラー', {
+        error: error instanceof Error ? error.message : String(error),
+        type,
+        sessionId,
       })
       throw error
     }
@@ -287,8 +315,13 @@ export class CursorLogService extends EventEmitter {
     }
 
     const logs: CursorLog[] = []
-    const files = await fs.readdir(this.config.watchPath)
-      .then(files => files.filter(file => file.startsWith('cursor-') && file.endsWith('.log')))
+    const files = await fs
+      .readdir(this.config.watchPath)
+      .then(files =>
+        files.filter(
+          file => file.startsWith('cursor-') && file.endsWith('.log')
+        )
+      )
       .then(files => files.sort())
 
     for (const file of files) {
@@ -319,8 +352,13 @@ export class CursorLogService extends EventEmitter {
   }
 
   async clearLogs(): Promise<void> {
-    const files = await fs.readdir(this.config.watchPath)
-      .then(files => files.filter(file => file.startsWith('cursor-') && file.endsWith('.log')))
+    const files = await fs
+      .readdir(this.config.watchPath)
+      .then(files =>
+        files.filter(
+          file => file.startsWith('cursor-') && file.endsWith('.log')
+        )
+      )
 
     for (const file of files) {
       await fs.unlink(path.join(this.config.watchPath, file))
@@ -341,7 +379,7 @@ export class CursorLogService extends EventEmitter {
       totalLogs: logs.length,
       types: {} as Record<string, number>,
       sessions: {} as Record<string, number>,
-      users: {} as Record<string, number>
+      users: {} as Record<string, number>,
     }
 
     for (const log of logs) {
@@ -356,4 +394,4 @@ export class CursorLogService extends EventEmitter {
 
     return stats
   }
-} 
+}

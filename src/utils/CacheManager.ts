@@ -29,7 +29,7 @@ export class CacheManager<T> {
     this.cache = new LRU({
       max: config.max,
       maxAge: config.maxAge,
-      updateAgeOnGet: config.updateAgeOnGet
+      updateAgeOnGet: config.updateAgeOnGet,
     })
     this.logger = logger
     this.stats = {
@@ -37,7 +37,7 @@ export class CacheManager<T> {
       misses: 0,
       sets: 0,
       deletes: 0,
-      lastStatsLog: Date.now()
+      lastStatsLog: Date.now(),
     }
   }
 
@@ -48,7 +48,7 @@ export class CacheManager<T> {
     try {
       this.cache.set(key, value)
       this.stats.sets++
-      
+
       // 1000回の操作ごとにまとめて統計ログを出力
       if (this.stats.sets % 1000 === 0) {
         this.logStats()
@@ -104,7 +104,7 @@ export class CacheManager<T> {
         misses: 0,
         sets: 0,
         deletes: 0,
-        lastStatsLog: Date.now()
+        lastStatsLog: Date.now(),
       }
       this.logger.info('キャッシュをクリアしました')
     } catch (error) {
@@ -120,8 +120,9 @@ export class CacheManager<T> {
     const now = Date.now()
     const duration = now - this.stats.lastStatsLog
     const total = this.stats.hits + this.stats.misses
-    const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(1) : '0.0'
-    
+    const hitRate =
+      total > 0 ? ((this.stats.hits / total) * 100).toFixed(1) : '0.0'
+
     this.logger.info('キャッシュ統計情報', {
       size: this.cache.size,
       hits: this.stats.hits,
@@ -129,9 +130,9 @@ export class CacheManager<T> {
       sets: this.stats.sets,
       deletes: this.stats.deletes,
       hitRate: `${hitRate}%`,
-      duration: `${Math.round(duration / 1000)}秒間`
+      duration: `${Math.round(duration / 1000)}秒間`,
     })
-    
+
     this.stats.lastStatsLog = now
   }
 
@@ -143,7 +144,7 @@ export class CacheManager<T> {
       size: this.cache.size,
       hits: this.stats.hits,
       misses: this.stats.misses,
-      keys: Array.from(this.cache.keys())
+      keys: Array.from(this.cache.keys()),
     }
   }
 
@@ -181,4 +182,4 @@ export class CacheManager<T> {
   forceLogStats(): void {
     this.logStats()
   }
-} 
+}

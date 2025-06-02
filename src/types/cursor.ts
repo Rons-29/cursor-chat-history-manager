@@ -68,4 +68,4 @@ export interface CursorLogStats {
   logsByProject: Record<string, number>
   logsByTag: Record<string, number>
   lastUpdated: Date
-} 
+}

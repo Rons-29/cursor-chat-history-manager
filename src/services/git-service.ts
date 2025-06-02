@@ -57,7 +57,7 @@ export class GitService {
   async initRepository(): Promise<void> {
     try {
       execSync('git init', { cwd: this.repoPath })
-      
+
       // .gitignoreが存在しない場合は作成
       const gitignorePath = path.join(this.repoPath, '.gitignore')
       try {
@@ -66,7 +66,9 @@ export class GitService {
         await this.createDefaultGitignore()
       }
     } catch (error) {
-      throw new Error(`Gitリポジトリの初期化に失敗: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `Gitリポジトリの初期化に失敗: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -171,29 +173,41 @@ test-results.xml
    */
   async getStatus(): Promise<GitStatus> {
     const isRepo = await this.isGitRepository()
-    
+
     if (!isRepo) {
       return {
         isGitRepo: false,
         hasChanges: false,
-        uncommittedFiles: []
+        uncommittedFiles: [],
       }
     }
 
     try {
       // 現在のブランチを取得
-      const { stdout: branchOutput } = await execAsync('git branch --show-current', { cwd: this.repoPath })
+      const { stdout: branchOutput } = await execAsync(
+        'git branch --show-current',
+        { cwd: this.repoPath }
+      )
       const currentBranch = branchOutput.trim()
 
       // 未コミットファイルを取得
-      const { stdout: statusOutput } = await execAsync('git status --porcelain', { cwd: this.repoPath })
-      const uncommittedFiles = statusOutput.split('\n').filter(line => line.trim()).map(line => line.slice(3))
+      const { stdout: statusOutput } = await execAsync(
+        'git status --porcelain',
+        { cwd: this.repoPath }
+      )
+      const uncommittedFiles = statusOutput
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => line.slice(3))
       const hasChanges = uncommittedFiles.length > 0
 
       // 最新コミット情報を取得
       let lastCommit
       try {
-        const { stdout: logOutput } = await execAsync('git log -1 --pretty=format:"%H|%s|%ad|%an" --date=iso', { cwd: this.repoPath })
+        const { stdout: logOutput } = await execAsync(
+          'git log -1 --pretty=format:"%H|%s|%ad|%an" --date=iso',
+          { cwd: this.repoPath }
+        )
         const [hash, message, date, author] = logOutput.split('|')
         lastCommit = { hash, message, date, author }
       } catch {
@@ -205,10 +219,12 @@ test-results.xml
         hasChanges,
         currentBranch,
         lastCommit,
-        uncommittedFiles
+        uncommittedFiles,
       }
     } catch (error) {
-      throw new Error(`Git状態取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `Git状態取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -220,7 +236,9 @@ test-results.xml
       const fileArgs = files.join(' ')
       execSync(`git add ${fileArgs}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`ファイル追加エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `ファイル追加エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -234,18 +252,22 @@ test-results.xml
       }
 
       let command = `git commit -m "${options.message}"`
-      
+
       if (options.author) {
         command += ` --author="${options.author}"`
       }
 
       const { stdout } = await execAsync(command, { cwd: this.repoPath })
-      
+
       // コミットハッシュを取得
-      const { stdout: hashOutput } = await execAsync('git rev-parse HEAD', { cwd: this.repoPath })
+      const { stdout: hashOutput } = await execAsync('git rev-parse HEAD', {
+        cwd: this.repoPath,
+      })
       return hashOutput.trim()
     } catch (error) {
-      throw new Error(`コミットエラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `コミットエラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -254,26 +276,28 @@ test-results.xml
    */
   async autoBackup(description?: string): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const message = description ? 
-      `Auto backup: ${description} (${timestamp})` : 
-      `Auto backup: ${timestamp}`
+    const message = description
+      ? `Auto backup: ${description} (${timestamp})`
+      : `Auto backup: ${timestamp}`
 
     return await this.commit({
       message,
       addAll: true,
-      author: 'Chat History Manager <auto-backup@local>'
+      author: 'Chat History Manager <auto-backup@local>',
     })
   }
 
   /**
    * コミット履歴を取得
    */
-  async getCommitHistory(limit: number = 10): Promise<Array<{
-    hash: string
-    message: string
-    date: string
-    author: string
-  }>> {
+  async getCommitHistory(limit: number = 10): Promise<
+    Array<{
+      hash: string
+      message: string
+      date: string
+      author: string
+    }>
+  > {
     try {
       const { stdout } = await execAsync(
         `git log -${limit} --pretty=format:"%H|%s|%ad|%an" --date=iso`,
@@ -285,34 +309,46 @@ test-results.xml
         return { hash, message, date, author }
       })
     } catch (error) {
-      throw new Error(`コミット履歴取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `コミット履歴取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
   /**
    * 特定のコミットに戻す
    */
-  async resetToCommit(commitHash: string, hard: boolean = false): Promise<void> {
+  async resetToCommit(
+    commitHash: string,
+    hard: boolean = false
+  ): Promise<void> {
     try {
       const resetType = hard ? '--hard' : '--soft'
       execSync(`git reset ${resetType} ${commitHash}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`リセットエラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `リセットエラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
   /**
    * ブランチを作成
    */
-  async createBranch(branchName: string, checkout: boolean = true): Promise<void> {
+  async createBranch(
+    branchName: string,
+    checkout: boolean = true
+  ): Promise<void> {
     try {
       execSync(`git branch ${branchName}`, { cwd: this.repoPath })
-      
+
       if (checkout) {
         execSync(`git checkout ${branchName}`, { cwd: this.repoPath })
       }
     } catch (error) {
-      throw new Error(`ブランチ作成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `ブランチ作成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -323,7 +359,9 @@ test-results.xml
     try {
       execSync(`git checkout ${branchName}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`ブランチ切り替えエラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `ブランチ切り替えエラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -333,14 +371,20 @@ test-results.xml
   async getBranches(): Promise<{ current: string; all: string[] }> {
     try {
       const { stdout } = await execAsync('git branch', { cwd: this.repoPath })
-      const branches = stdout.split('\n').map(line => line.trim()).filter(line => line)
-      
-      const current = branches.find(branch => branch.startsWith('*'))?.slice(2) || ''
+      const branches = stdout
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line)
+
+      const current =
+        branches.find(branch => branch.startsWith('*'))?.slice(2) || ''
       const all = branches.map(branch => branch.replace(/^\*\s*/, ''))
 
       return { current, all }
     } catch (error) {
-      throw new Error(`ブランチ取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `ブランチ取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -353,7 +397,9 @@ test-results.xml
       const { stdout } = await execAsync(command, { cwd: this.repoPath })
       return stdout
     } catch (error) {
-      throw new Error(`差分取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `差分取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -364,7 +410,9 @@ test-results.xml
     try {
       execSync(`git remote add ${name} ${url}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`リモート追加エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `リモート追加エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -376,7 +424,9 @@ test-results.xml
       const branchArg = branch ? ` ${branch}` : ''
       execSync(`git push ${remote}${branchArg}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`プッシュエラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `プッシュエラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -388,19 +438,27 @@ test-results.xml
       const branchArg = branch ? ` ${branch}` : ''
       execSync(`git pull ${remote}${branchArg}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`プルエラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `プルエラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
   /**
    * 設定を追加/更新
    */
-  async setConfig(key: string, value: string, global: boolean = false): Promise<void> {
+  async setConfig(
+    key: string,
+    value: string,
+    global: boolean = false
+  ): Promise<void> {
     try {
       const scope = global ? '--global' : '--local'
       execSync(`git config ${scope} ${key} "${value}"`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`設定エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `設定エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -412,7 +470,9 @@ test-results.xml
       const messageArg = message ? ` -m "${message}"` : ''
       execSync(`git tag ${tagName}${messageArg}`, { cwd: this.repoPath })
     } catch (error) {
-      throw new Error(`タグ作成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `タグ作成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
 
@@ -424,7 +484,9 @@ test-results.xml
       const { stdout } = await execAsync('git tag', { cwd: this.repoPath })
       return stdout.split('\n').filter(tag => tag.trim())
     } catch (error) {
-      throw new Error(`タグ取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      throw new Error(
+        `タグ取得エラー: ${error instanceof Error ? error.message : '不明なエラー'}`
+      )
     }
   }
-} 
+}

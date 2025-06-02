@@ -276,16 +276,19 @@ export class ConfigService {
   async getConfig(): Promise<ChatHistoryConfig> {
     const userConfig = await this.loadConfig()
     const defaultConfig = this.defaultConfig
-    
+
     return {
       storagePath: userConfig.storagePath,
       maxSessions: userConfig.maxSessions ?? defaultConfig.maxSessions!,
-      maxMessagesPerSession: userConfig.maxMessagesPerSession ?? defaultConfig.maxMessagesPerSession!,
+      maxMessagesPerSession:
+        userConfig.maxMessagesPerSession ??
+        defaultConfig.maxMessagesPerSession!,
       autoCleanup: userConfig.autoCleanup ?? defaultConfig.autoCleanup!,
       cleanupDays: userConfig.cleanupDays ?? defaultConfig.cleanupDays!,
       enableSearch: userConfig.enableSearch ?? defaultConfig.enableSearch!,
       enableBackup: userConfig.enableBackup ?? defaultConfig.enableBackup!,
-      backupInterval: userConfig.backupInterval ?? defaultConfig.backupInterval!
+      backupInterval:
+        userConfig.backupInterval ?? defaultConfig.backupInterval!,
     }
   }
 
@@ -301,7 +304,7 @@ export class ConfigService {
       cleanupDays: config.cleanupDays,
       enableSearch: config.enableSearch,
       enableBackup: config.enableBackup,
-      backupInterval: config.backupInterval
+      backupInterval: config.backupInterval,
     }
 
     await this.saveUserConfig(userConfig)

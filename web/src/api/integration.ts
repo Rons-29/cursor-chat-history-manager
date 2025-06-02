@@ -159,8 +159,17 @@ const fetchWithConnectionCheck = async (
     throw new Error(connectionStatus.error || 'APIサーバーに接続できません')
   }
   
+  // 正しいベースURLを構築
+  const baseUrl = 'http://localhost:3001'
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`
+  
+  console.log(`🌐 API Request: ${options.method || 'GET'} ${fullUrl}`)
+  
   // 通常のfetch実行
-  const response = await fetch(url, options)
+  const response = await fetch(fullUrl, options)
+  
+  console.log(`📡 API Response: ${response.status} ${response.statusText}`)
+  
   return response
 }
 
@@ -254,7 +263,7 @@ export const getEnhancedStats = async (): Promise<EnhancedStats> => {
  */
 export const getCursorStatus = async (): Promise<CursorStatus> => {
   try {
-    const response = await fetch('/api/integration/cursor/status', {
+    const response = await fetchWithConnectionCheck('/api/integration/cursor/status', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -334,8 +343,30 @@ export const startWatching = async (): Promise<void> => {
     })
 
     if (!response.ok) {
-      const errorData: ApiError = await response.json()
-      throw new Error(errorData.message || '監視の開始に失敗しました')
+      // レスポンスが空の場合の処理
+      let errorMessage = '監視の開始に失敗しました'
+      try {
+        const errorData: ApiError = await response.json()
+        errorMessage = errorData.message || errorMessage
+      } catch (jsonError) {
+        // JSONパースエラーの場合はステータステキストを使用
+        errorMessage = `${errorMessage} (${response.status} ${response.statusText})`
+      }
+      throw new Error(errorMessage)
+    }
+
+    // 成功時のレスポンス処理（空の場合もある）
+    try {
+      const responseText = await response.text()
+      if (responseText) {
+        const result = JSON.parse(responseText)
+        console.log('✅ 監視開始成功:', result)
+      } else {
+        console.log('✅ 監視開始成功 (レスポンスなし)')
+      }
+    } catch (jsonError) {
+      // JSONパースエラーは無視（成功時でもレスポンスが空の場合がある）
+      console.log('✅ 監視開始成功 (レスポンス解析不可)')
     }
   } catch (error) {
     console.error('監視開始エラー:', error)
@@ -356,8 +387,30 @@ export const stopWatching = async (): Promise<void> => {
     })
 
     if (!response.ok) {
-      const errorData: ApiError = await response.json()
-      throw new Error(errorData.message || '監視の停止に失敗しました')
+      // レスポンスが空の場合の処理
+      let errorMessage = '監視の停止に失敗しました'
+      try {
+        const errorData: ApiError = await response.json()
+        errorMessage = errorData.message || errorMessage
+      } catch (jsonError) {
+        // JSONパースエラーの場合はステータステキストを使用
+        errorMessage = `${errorMessage} (${response.status} ${response.statusText})`
+      }
+      throw new Error(errorMessage)
+    }
+
+    // 成功時のレスポンス処理（空の場合もある）
+    try {
+      const responseText = await response.text()
+      if (responseText) {
+        const result = JSON.parse(responseText)
+        console.log('✅ 監視停止成功:', result)
+      } else {
+        console.log('✅ 監視停止成功 (レスポンスなし)')
+      }
+    } catch (jsonError) {
+      // JSONパースエラーは無視（成功時でもレスポンスが空の場合がある）
+      console.log('✅ 監視停止成功 (レスポンス解析不可)')
     }
   } catch (error) {
     console.error('監視停止エラー:', error)
@@ -373,7 +426,7 @@ export const getCursorSessions = async (limit?: number, offset?: number) => {
     const params = new URLSearchParams()
     if (limit) params.append('limit', limit.toString())
     if (offset) params.append('offset', offset.toString())
-    params.append('source', 'cursor')
+    params.append('source', 'cursor') // 統合APIルートでCursorデータを指定
 
     const response = await fetch(`/api/sessions?${params.toString()}`, {
       method: 'GET',

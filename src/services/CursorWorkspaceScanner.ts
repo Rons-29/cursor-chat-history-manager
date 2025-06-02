@@ -32,7 +32,7 @@ export class CursorWorkspaceScanner extends EventEmitter {
       scanInterval: 300000, // 5分
       maxSessions: 1000,
       includeMetadata: true,
-      ...config
+      ...config,
     }
     this.logger = logger
   }
@@ -42,7 +42,7 @@ export class CursorWorkspaceScanner extends EventEmitter {
       await fs.ensureDir(this.config.outputPath)
       this.logger.info('CursorWorkspaceScanner initialized', {
         workspaceStoragePath: this.config.workspaceStoragePath,
-        outputPath: this.config.outputPath
+        outputPath: this.config.outputPath,
       })
     } catch (error) {
       throw new Error(`Failed to initialize CursorWorkspaceScanner: ${error}`)
@@ -60,15 +60,17 @@ export class CursorWorkspaceScanner extends EventEmitter {
       sessionsFound: 0,
       messagesImported: 0,
       duration: 0,
-      errors: []
+      errors: [],
     }
 
     try {
       this.logger.info('Starting Cursor workspace scan')
-      
+
       // Cursorワークスペースディレクトリの存在確認
-      if (!await fs.pathExists(this.config.workspaceStoragePath)) {
-        throw new Error(`Cursor workspace path not found: ${this.config.workspaceStoragePath}`)
+      if (!(await fs.pathExists(this.config.workspaceStoragePath))) {
+        throw new Error(
+          `Cursor workspace path not found: ${this.config.workspaceStoragePath}`
+        )
       }
 
       // ワークスペースディレクトリを走査
@@ -79,16 +81,19 @@ export class CursorWorkspaceScanner extends EventEmitter {
         try {
           const sessions = await this.extractSessionsFromWorkspace(workspaceDir)
           result.sessionsFound += sessions.length
-          
+
           for (const session of sessions) {
             result.messagesImported += session.messages.length
             await this.saveSession(session)
           }
-          
+
           this.emit('workspaceProcessed', {
             workspaceDir,
             sessionsFound: sessions.length,
-            messagesImported: sessions.reduce((sum, s) => sum + s.messages.length, 0)
+            messagesImported: sessions.reduce(
+              (sum, s) => sum + s.messages.length,
+              0
+            ),
           })
         } catch (error) {
           const errorMsg = `Failed to process workspace ${workspaceDir}: ${error}`
@@ -99,7 +104,7 @@ export class CursorWorkspaceScanner extends EventEmitter {
 
       result.duration = Date.now() - startTime
       this.logger.info('Cursor workspace scan completed', result)
-      
+
       this.emit('scanCompleted', result)
       return result
     } catch (error) {
@@ -114,19 +119,27 @@ export class CursorWorkspaceScanner extends EventEmitter {
 
   private async findWorkspaceDirectories(): Promise<string[]> {
     const workspaceDirs: string[] = []
-    
+
     try {
-      const entries = await fs.readdir(this.config.workspaceStoragePath, { withFileTypes: true })
-      
+      const entries = await fs.readdir(this.config.workspaceStoragePath, {
+        withFileTypes: true,
+      })
+
       for (const entry of entries) {
         if (entry.isDirectory()) {
-          const workspacePath = path.join(this.config.workspaceStoragePath, entry.name)
-          
+          const workspacePath = path.join(
+            this.config.workspaceStoragePath,
+            entry.name
+          )
+
           // Cursorのチャット履歴ファイルが存在するかチェック
           const chatHistoryPath = path.join(workspacePath, 'state.vscdb')
           const chatLogsPath = path.join(workspacePath, 'logs')
-          
-          if (await fs.pathExists(chatHistoryPath) || await fs.pathExists(chatLogsPath)) {
+
+          if (
+            (await fs.pathExists(chatHistoryPath)) ||
+            (await fs.pathExists(chatLogsPath))
+          ) {
             workspaceDirs.push(workspacePath)
           }
         }
@@ -134,18 +147,23 @@ export class CursorWorkspaceScanner extends EventEmitter {
     } catch (error) {
       this.logger.error('Failed to find workspace directories:', error)
     }
-    
+
     return workspaceDirs
   }
 
-  private async extractSessionsFromWorkspace(workspaceDir: string): Promise<ChatSession[]> {
+  private async extractSessionsFromWorkspace(
+    workspaceDir: string
+  ): Promise<ChatSession[]> {
     const sessions: ChatSession[] = []
-    
+
     try {
       // state.vscdbファイルからチャット履歴を抽出
       const stateDbPath = path.join(workspaceDir, 'state.vscdb')
       if (await fs.pathExists(stateDbPath)) {
-        const stateSessions = await this.extractFromStateDb(stateDbPath, workspaceDir)
+        const stateSessions = await this.extractFromStateDb(
+          stateDbPath,
+          workspaceDir
+        )
         sessions.push(...stateSessions)
       }
 
@@ -160,41 +178,56 @@ export class CursorWorkspaceScanner extends EventEmitter {
       const chatFiles = await this.findChatFiles(workspaceDir)
       for (const chatFile of chatFiles) {
         try {
-          const fileSessions = await this.extractFromChatFile(chatFile, workspaceDir)
+          const fileSessions = await this.extractFromChatFile(
+            chatFile,
+            workspaceDir
+          )
           sessions.push(...fileSessions)
         } catch (error) {
-          this.logger.warn(`Failed to extract from chat file ${chatFile}:`, error)
+          this.logger.warn(
+            `Failed to extract from chat file ${chatFile}:`,
+            error
+          )
         }
       }
     } catch (error) {
-      this.logger.error(`Failed to extract sessions from workspace ${workspaceDir}:`, error)
+      this.logger.error(
+        `Failed to extract sessions from workspace ${workspaceDir}:`,
+        error
+      )
     }
-    
+
     return sessions
   }
 
-  private async extractFromStateDb(stateDbPath: string, workspaceDir: string): Promise<ChatSession[]> {
+  private async extractFromStateDb(
+    stateDbPath: string,
+    workspaceDir: string
+  ): Promise<ChatSession[]> {
     const sessions: ChatSession[] = []
-    
+
     try {
       // SQLiteデータベースの代わりに、JSONファイルとして読み込みを試行
       // 実際のCursorの実装に応じて調整が必要
       const stateContent = await fs.readFile(stateDbPath, 'utf8')
-      
+
       // チャット履歴のパターンを検索
       const chatPatterns = [
         /"chat":\s*\[(.*?)\]/gs,
         /"messages":\s*\[(.*?)\]/gs,
-        /"conversation":\s*\[(.*?)\]/gs
+        /"conversation":\s*\[(.*?)\]/gs,
       ]
-      
+
       for (const pattern of chatPatterns) {
         const matches = stateContent.match(pattern)
         if (matches) {
           for (const match of matches) {
             try {
               const chatData = JSON.parse(`{${match}}`)
-              const session = this.createSessionFromChatData(chatData, workspaceDir)
+              const session = this.createSessionFromChatData(
+                chatData,
+                workspaceDir
+              )
               if (session) {
                 sessions.push(session)
               }
@@ -205,24 +238,33 @@ export class CursorWorkspaceScanner extends EventEmitter {
         }
       }
     } catch (error) {
-      this.logger.warn(`Failed to extract from state.vscdb ${stateDbPath}:`, error)
+      this.logger.warn(
+        `Failed to extract from state.vscdb ${stateDbPath}:`,
+        error
+      )
     }
-    
+
     return sessions
   }
 
-  private async extractFromLogs(logsPath: string, workspaceDir: string): Promise<ChatSession[]> {
+  private async extractFromLogs(
+    logsPath: string,
+    workspaceDir: string
+  ): Promise<ChatSession[]> {
     const sessions: ChatSession[] = []
-    
+
     try {
       const logFiles = await fs.readdir(logsPath)
-      
+
       for (const logFile of logFiles) {
         if (logFile.endsWith('.log') || logFile.endsWith('.json')) {
           const logFilePath = path.join(logsPath, logFile)
           try {
             const logContent = await fs.readFile(logFilePath, 'utf8')
-            const logSessions = await this.parseLogContent(logContent, workspaceDir)
+            const logSessions = await this.parseLogContent(
+              logContent,
+              workspaceDir
+            )
             sessions.push(...logSessions)
           } catch (error) {
             this.logger.warn(`Failed to read log file ${logFilePath}:`, error)
@@ -232,51 +274,59 @@ export class CursorWorkspaceScanner extends EventEmitter {
     } catch (error) {
       this.logger.warn(`Failed to extract from logs ${logsPath}:`, error)
     }
-    
+
     return sessions
   }
 
   private async findChatFiles(workspaceDir: string): Promise<string[]> {
     const chatFiles: string[] = []
-    
+
     try {
-      const findChatFilesRecursive = async (dir: string, depth: number = 0): Promise<void> => {
+      const findChatFilesRecursive = async (
+        dir: string,
+        depth: number = 0
+      ): Promise<void> => {
         if (depth > 3) return // 深度制限
-        
+
         const entries = await fs.readdir(dir, { withFileTypes: true })
-        
+
         for (const entry of entries) {
           const fullPath = path.join(dir, entry.name)
-          
+
           if (entry.isDirectory() && !entry.name.startsWith('.')) {
             await findChatFilesRecursive(fullPath, depth + 1)
           } else if (entry.isFile()) {
             // チャット関連ファイルのパターン
-            if (entry.name.includes('chat') || 
-                entry.name.includes('conversation') || 
-                entry.name.includes('message') ||
-                entry.name.endsWith('.chat') ||
-                entry.name.endsWith('.conversation')) {
+            if (
+              entry.name.includes('chat') ||
+              entry.name.includes('conversation') ||
+              entry.name.includes('message') ||
+              entry.name.endsWith('.chat') ||
+              entry.name.endsWith('.conversation')
+            ) {
               chatFiles.push(fullPath)
             }
           }
         }
       }
-      
+
       await findChatFilesRecursive(workspaceDir)
     } catch (error) {
       this.logger.warn(`Failed to find chat files in ${workspaceDir}:`, error)
     }
-    
+
     return chatFiles
   }
 
-  private async extractFromChatFile(chatFilePath: string, workspaceDir: string): Promise<ChatSession[]> {
+  private async extractFromChatFile(
+    chatFilePath: string,
+    workspaceDir: string
+  ): Promise<ChatSession[]> {
     const sessions: ChatSession[] = []
-    
+
     try {
       const content = await fs.readFile(chatFilePath, 'utf8')
-      
+
       // JSONファイルの場合
       if (chatFilePath.endsWith('.json')) {
         try {
@@ -289,35 +339,45 @@ export class CursorWorkspaceScanner extends EventEmitter {
           // JSON解析エラーの場合はテキストとして処理
         }
       }
-      
+
       // テキストファイルの場合
       const textSessions = await this.parseLogContent(content, workspaceDir)
       sessions.push(...textSessions)
     } catch (error) {
-      this.logger.warn(`Failed to extract from chat file ${chatFilePath}:`, error)
+      this.logger.warn(
+        `Failed to extract from chat file ${chatFilePath}:`,
+        error
+      )
     }
-    
+
     return sessions
   }
 
-  private async parseLogContent(content: string, workspaceDir: string): Promise<ChatSession[]> {
+  private async parseLogContent(
+    content: string,
+    workspaceDir: string
+  ): Promise<ChatSession[]> {
     const sessions: ChatSession[] = []
-    
+
     try {
       // ログ内容からチャットメッセージを抽出
       const lines = content.split('\n')
       let currentSession: ChatSession | null = null
-      
+
       for (const line of lines) {
         if (line.trim()) {
           try {
             // JSON形式のログエントリを試行
             const logEntry = JSON.parse(line)
-            if (logEntry.type === 'chat' || logEntry.message || logEntry.content) {
+            if (
+              logEntry.type === 'chat' ||
+              logEntry.message ||
+              logEntry.content
+            ) {
               if (!currentSession) {
                 currentSession = this.createNewSession(workspaceDir)
               }
-              
+
               const message = this.createMessageFromLogEntry(logEntry)
               if (message) {
                 currentSession.messages.push(message)
@@ -325,11 +385,15 @@ export class CursorWorkspaceScanner extends EventEmitter {
             }
           } catch (error) {
             // JSON解析失敗の場合はテキストメッセージとして処理
-            if (line.includes('user:') || line.includes('assistant:') || line.includes('system:')) {
+            if (
+              line.includes('user:') ||
+              line.includes('assistant:') ||
+              line.includes('system:')
+            ) {
               if (!currentSession) {
                 currentSession = this.createNewSession(workspaceDir)
               }
-              
+
               const message = this.createMessageFromText(line)
               if (message) {
                 currentSession.messages.push(message)
@@ -338,42 +402,55 @@ export class CursorWorkspaceScanner extends EventEmitter {
           }
         }
       }
-      
+
       if (currentSession && currentSession.messages.length > 0) {
         sessions.push(currentSession)
       }
     } catch (error) {
       this.logger.warn('Failed to parse log content:', error)
     }
-    
+
     return sessions
   }
 
-  private createSessionFromChatData(chatData: any, workspaceDir: string): ChatSession | null {
+  private createSessionFromChatData(
+    chatData: any,
+    workspaceDir: string
+  ): ChatSession | null {
     try {
       const session: ChatSession = {
         id: chatData.id || uuidv4(),
         title: chatData.title || this.generateSessionTitle(workspaceDir),
-        startTime: new Date(chatData.createdAt || chatData.timestamp || Date.now()),
-        createdAt: new Date(chatData.createdAt || chatData.timestamp || Date.now()),
-        updatedAt: new Date(chatData.updatedAt || chatData.timestamp || Date.now()),
+        startTime: new Date(
+          chatData.createdAt || chatData.timestamp || Date.now()
+        ),
+        createdAt: new Date(
+          chatData.createdAt || chatData.timestamp || Date.now()
+        ),
+        updatedAt: new Date(
+          chatData.updatedAt || chatData.timestamp || Date.now()
+        ),
         messages: [],
         tags: chatData.tags || ['cursor', 'imported'],
         metadata: {
           source: 'cursor',
           project: workspaceDir,
           originalId: chatData.id,
-          ...chatData.metadata
-        }
+          ...chatData.metadata,
+        },
       }
-      
+
       // メッセージの変換
       if (chatData.messages && Array.isArray(chatData.messages)) {
-        session.messages = chatData.messages.map((msg: any) => this.createMessageFromData(msg)).filter(Boolean)
+        session.messages = chatData.messages
+          .map((msg: any) => this.createMessageFromData(msg))
+          .filter(Boolean)
       } else if (chatData.chat && Array.isArray(chatData.chat)) {
-        session.messages = chatData.chat.map((msg: any) => this.createMessageFromData(msg)).filter(Boolean)
+        session.messages = chatData.chat
+          .map((msg: any) => this.createMessageFromData(msg))
+          .filter(Boolean)
       }
-      
+
       return session.messages.length > 0 ? session : null
     } catch (error) {
       this.logger.warn('Failed to create session from chat data:', error)
@@ -392,8 +469,8 @@ export class CursorWorkspaceScanner extends EventEmitter {
       tags: ['cursor', 'imported'],
       metadata: {
         source: 'cursor',
-        project: workspaceDir
-      }
+        project: workspaceDir,
+      },
     }
   }
 
@@ -403,11 +480,13 @@ export class CursorWorkspaceScanner extends EventEmitter {
         id: msgData.id || uuidv4(),
         role: this.normalizeRole(msgData.role || msgData.type || 'user'),
         content: msgData.content || msgData.text || msgData.message || '',
-        timestamp: new Date(msgData.timestamp || msgData.createdAt || Date.now()),
+        timestamp: new Date(
+          msgData.timestamp || msgData.createdAt || Date.now()
+        ),
         metadata: {
           originalId: msgData.id,
-          ...msgData.metadata
-        }
+          ...msgData.metadata,
+        },
       }
     } catch (error) {
       return null
@@ -423,8 +502,8 @@ export class CursorWorkspaceScanner extends EventEmitter {
         timestamp: new Date(logEntry.timestamp || Date.now()),
         metadata: {
           logEntry: true,
-          ...logEntry.metadata
-        }
+          ...logEntry.metadata,
+        },
       }
     } catch (error) {
       return null
@@ -440,17 +519,17 @@ export class CursorWorkspaceScanner extends EventEmitter {
           role: this.normalizeRole(roleMatch[1]),
           content: roleMatch[2].trim(),
           timestamp: new Date(),
-          metadata: {}
+          metadata: {},
         }
       }
-      
+
       // ロールが明示されていない場合はユーザーメッセージとして扱う
       return {
         id: uuidv4(),
         role: 'user',
         content: text.trim(),
         timestamp: new Date(),
-        metadata: {}
+        metadata: {},
       }
     } catch (error) {
       return null
@@ -459,7 +538,11 @@ export class CursorWorkspaceScanner extends EventEmitter {
 
   private normalizeRole(role: string): 'user' | 'assistant' | 'system' {
     const normalized = role.toLowerCase()
-    if (normalized.includes('assistant') || normalized.includes('ai') || normalized.includes('bot')) {
+    if (
+      normalized.includes('assistant') ||
+      normalized.includes('ai') ||
+      normalized.includes('bot')
+    ) {
       return 'assistant'
     } else if (normalized.includes('system')) {
       return 'system'
@@ -476,7 +559,10 @@ export class CursorWorkspaceScanner extends EventEmitter {
 
   private async saveSession(session: ChatSession): Promise<void> {
     try {
-      const sessionPath = path.join(this.config.outputPath, `${session.id}.json`)
+      const sessionPath = path.join(
+        this.config.outputPath,
+        `${session.id}.json`
+      )
       await fs.writeJson(sessionPath, session, { spaces: 2 })
       this.logger.debug(`Session saved: ${session.id}`)
     } catch (error) {
@@ -489,8 +575,10 @@ export class CursorWorkspaceScanner extends EventEmitter {
       return
     }
 
-    this.logger.info(`Starting auto scan with interval: ${this.config.scanInterval}ms`)
-    
+    this.logger.info(
+      `Starting auto scan with interval: ${this.config.scanInterval}ms`
+    )
+
     this.scanInterval = setInterval(async () => {
       try {
         await this.scanWorkspaces()
@@ -511,4 +599,4 @@ export class CursorWorkspaceScanner extends EventEmitter {
   isAutoScanRunning(): boolean {
     return this.scanInterval !== null
   }
-} 
+}

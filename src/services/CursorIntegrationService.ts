@@ -1,6 +1,11 @@
 import fs from 'fs-extra'
 import path from 'path'
-import type { ChatSession, Message, ChatHistoryConfig, ChatMessage } from '../types/index.js'
+import type {
+  ChatSession,
+  Message,
+  ChatHistoryConfig,
+  ChatMessage,
+} from '../types/index.js'
 import { watch, type FSWatcher, existsSync, readFileSync, statSync } from 'fs'
 import { readdir } from 'fs/promises'
 import os from 'os'
@@ -85,7 +90,7 @@ export class CursorIntegrationService extends EventEmitter {
       watchPath: '',
       syncInterval: 5000,
       batchSize: 100,
-      retryAttempts: 3
+      retryAttempts: 3,
     }
   }
 
@@ -210,14 +215,20 @@ export class CursorIntegrationService extends EventEmitter {
       this.foundTasks = taskDirs.length
 
       for (const dir of taskDirs) {
-        const historyPath = path.join(tasksPath, dir, 'api_conversation_history.json')
+        const historyPath = path.join(
+          tasksPath,
+          dir,
+          'api_conversation_history.json'
+        )
         if (existsSync(historyPath)) {
           await this.importChatHistory(historyPath)
         }
       }
 
       this.lastScanTime = new Date()
-      this.logger.info(`スキャン完了: ${this.foundTasks}件のタスクを処理しました`)
+      this.logger.info(
+        `スキャン完了: ${this.foundTasks}件のタスクを処理しました`
+      )
     } catch (error) {
       this.logger.error('スキャン処理に失敗しました:', error)
       throw error
@@ -235,7 +246,7 @@ export class CursorIntegrationService extends EventEmitter {
       if (!cursorChat) {
         return {
           success: false,
-          error: 'チャットデータの解析に失敗しました'
+          error: 'チャットデータの解析に失敗しました',
         }
       }
 
@@ -248,8 +259,8 @@ export class CursorIntegrationService extends EventEmitter {
           sessionId: existingSession.id,
           stats: {
             messagesImported: cursorChat.messages.length,
-            filesProcessed: 1
-          }
+            filesProcessed: 1,
+          },
         }
       } else {
         await this.createNewSession(cursorChat)
@@ -257,15 +268,16 @@ export class CursorIntegrationService extends EventEmitter {
           success: true,
           stats: {
             messagesImported: cursorChat.messages.length,
-            filesProcessed: 1
-          }
+            filesProcessed: 1,
+          },
         }
       }
     } catch (error) {
       this.logger.error('チャット履歴のインポートに失敗しました:', error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : '不明なエラーが発生しました'
+        error:
+          error instanceof Error ? error.message : '不明なエラーが発生しました',
       }
     }
   }
@@ -292,8 +304,8 @@ export class CursorIntegrationService extends EventEmitter {
           taskId: data.metadata?.taskId,
           projectPath: data.metadata?.projectPath,
           createdAt: data.metadata?.createdAt,
-          updatedAt: data.metadata?.updatedAt
-        }
+          updatedAt: data.metadata?.updatedAt,
+        },
       }
     } catch (error) {
       this.logger.error('チャットデータの解析に失敗しました:', error)
@@ -304,14 +316,14 @@ export class CursorIntegrationService extends EventEmitter {
   /**
    * チャットデータの検証
    */
-  private validateChatData(data: unknown): data is { 
-    messages: unknown[], 
-    metadata?: { 
-      taskId?: string;
-      projectPath?: string;
-      createdAt?: string;
-      updatedAt?: string;
-    } 
+  private validateChatData(data: unknown): data is {
+    messages: unknown[]
+    metadata?: {
+      taskId?: string
+      projectPath?: string
+      createdAt?: string
+      updatedAt?: string
+    }
   } {
     return (
       typeof data === 'object' &&
@@ -324,7 +336,9 @@ export class CursorIntegrationService extends EventEmitter {
   /**
    * メッセージの抽出
    */
-  private extractMessages(data: { messages: unknown[] }): CursorChatData['messages'] {
+  private extractMessages(data: {
+    messages: unknown[]
+  }): CursorChatData['messages'] {
     return data.messages
       .filter((msg): msg is { role: string; content: string } => {
         return (
@@ -339,14 +353,16 @@ export class CursorIntegrationService extends EventEmitter {
       .map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       }))
   }
 
   /**
    * 既存セッションの検索
    */
-  private async findExistingSession(cursorId: string): Promise<ChatSession | null> {
+  private async findExistingSession(
+    cursorId: string
+  ): Promise<ChatSession | null> {
     try {
       const sessions = await this.chatHistoryService.getSession(cursorId)
       return sessions?.metadata?.source === 'cursor' ? sessions : null
@@ -367,15 +383,15 @@ export class CursorIntegrationService extends EventEmitter {
         id: uuidv4(),
         role: msg.role,
         content: msg.content,
-        timestamp: new Date(msg.timestamp || Date.now())
+        timestamp: new Date(msg.timestamp || Date.now()),
       })),
       tags: ['cursor'],
       metadata: {
         source: 'cursor',
         project: cursorChat.metadata?.projectPath,
-        summary: `Cursor Chat Session ${cursorChat.id}`
+        summary: `Cursor Chat Session ${cursorChat.id}`,
       },
-      startTime: new Date(cursorChat.metadata?.createdAt || Date.now())
+      startTime: new Date(cursorChat.metadata?.createdAt || Date.now()),
     }
 
     await this.chatHistoryService.createSession(session)
@@ -399,7 +415,7 @@ export class CursorIntegrationService extends EventEmitter {
       .map(msg => ({
         role: msg.role,
         content: msg.content,
-        timestamp: new Date(msg.timestamp || Date.now())
+        timestamp: new Date(msg.timestamp || Date.now()),
       }))
 
     if (newMessages.length > 0) {
@@ -413,7 +429,7 @@ export class CursorIntegrationService extends EventEmitter {
    * 設定の取得
    */
   private async getConfig(): Promise<Required<CursorConfig>> {
-    const config = await this.configService.getConfig() as CursorConfig
+    const config = (await this.configService.getConfig()) as CursorConfig
     if (!config.cursorDataPath) {
       throw new Error('Cursorデータパスが設定されていません')
     }
@@ -423,7 +439,7 @@ export class CursorIntegrationService extends EventEmitter {
       cursorDataPath: config.cursorDataPath,
       autoImport: config.autoImport ?? true,
       watchInterval: config.watchInterval ?? 5000,
-      importOnStartup: config.importOnStartup ?? true
+      importOnStartup: config.importOnStartup ?? true,
     }
   }
 
@@ -444,8 +460,8 @@ export class CursorIntegrationService extends EventEmitter {
       cursor: {
         enabled: newConfig.enabled ?? true,
         autoImport: newConfig.autoImport ?? true,
-        watchPath: newConfig.cursorDataPath
-      }
+        watchPath: newConfig.cursorDataPath,
+      },
     }
     await this.configService.saveConfig(chatHistoryConfig)
     this.logger.info('Cursor統合の設定を更新しました')
@@ -460,7 +476,7 @@ export class CursorIntegrationService extends EventEmitter {
       lastScanTime: this.lastScanTime,
       foundTasks: this.foundTasks,
       importedSessions: this.importedSessions,
-      watchedDirectories: this.watchers.map(w => (w as any).path || '')
+      watchedDirectories: this.watchers.map(w => (w as any).path || ''),
     }
   }
 
@@ -480,7 +496,7 @@ export class CursorIntegrationService extends EventEmitter {
         watchPath: config.cursorDataPath,
         syncInterval: 5000,
         batchSize: 100,
-        retryAttempts: 3
+        retryAttempts: 3,
       }
       this.isInitialized = true
       this.logger.info('Cursor統合サービスを初期化しました')
@@ -502,7 +518,7 @@ export class CursorIntegrationService extends EventEmitter {
     return {
       totalSessions: stats.totalSessions,
       totalMessages: stats.totalMessages,
-      lastImport: this.lastScanTime || undefined
+      lastImport: this.lastScanTime || undefined,
     }
   }
 }

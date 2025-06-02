@@ -448,13 +448,13 @@ export const EnhancedSettingsPanel: React.FC<EnhancedSettingsPanelProps> = ({
         variant="detailed"
         showProgress={true}
         steps={progressState.steps}
-        currentStepId={progressState.currentStepId}
+        currentStepId={progressState.currentStepId || undefined}
         progress={progressState.progress}
         onCancel={() => {
           progressActions.cancel()
           setShowProgressOverlay(false)
         }}
-        error={progressState.error}
+        error={progressState.error || undefined}
       />
     </>
   )

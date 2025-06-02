@@ -1,4 +1,4 @@
-import React from 'react'
+import { StrictMode } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import Dashboard from './pages/Dashboard.tsx'
@@ -7,6 +7,8 @@ import SessionDetail from './pages/SessionDetail.tsx'
 import Search from './pages/Search.tsx'
 import Settings from './pages/Settings.tsx'
 import Integration from './pages/Integration.tsx'
+import ClaudeDevIntegration from './pages/ClaudeDevIntegration.tsx'
+import ClaudeDevSessionDetail from './pages/ClaudeDevSessionDetail.tsx'
 import TestIntegration from './pages/TestIntegration.tsx'
 import ProgressDemoPage from './pages/ProgressDemoPage.tsx'
 import NotFound from './pages/NotFound.tsx'
@@ -20,6 +22,8 @@ function App() {
         <Route path="/sessions/:id" element={<SessionDetail />} />
         <Route path="/search" element={<Search />} />
         <Route path="/integration" element={<Integration />} />
+        <Route path="/claude-dev" element={<ClaudeDevIntegration />} />
+        <Route path="/claude-dev/session/:id" element={<ClaudeDevSessionDetail />} />
         <Route path="/test-integration" element={<TestIntegration />} />
         <Route path="/progress-demo" element={<ProgressDemoPage />} />
         <Route path="/settings" element={<Settings />} />

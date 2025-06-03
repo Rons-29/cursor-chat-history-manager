@@ -203,7 +203,7 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// セッション一覧取得
+// セッション一覧取得（SQLite優先）
 app.get('/api/sessions', async (req, res) => {
   try {
     const { page = 1, limit = 50, keyword, startDate, endDate } = req.query
@@ -216,7 +216,38 @@ app.get('/api/sessions', async (req, res) => {
       endDate: endDate ? new Date(endDate as string) : undefined,
     }
 
-    const result = await chatHistoryService.searchSessions(filter)
+    // SQLiteサービスが利用可能な場合は優先使用（正確な数字）
+    let result
+    if (sqliteIndexService) {
+      const sqliteResult = await sqliteIndexService.getSessions({
+        page: filter.page,
+        pageSize: filter.pageSize,
+        keyword: filter.keyword,
+        startDate: filter.startDate,
+        endDate: filter.endDate,
+      })
+      
+      // SQLite形式からChatHistoryService形式に変換
+      result = {
+        sessions: sqliteResult.sessions.map(session => ({
+          id: session.id,
+          title: session.title,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          messages: [], // メッセージは必要に応じて別途取得
+          tags: session.tags,
+          metadata: { source: 'sqlite', summary: '', description: '' }
+        })),
+        currentPage: filter.page,
+        pageSize: filter.pageSize,
+        totalCount: sqliteResult.total,
+        totalPages: Math.ceil(sqliteResult.total / filter.pageSize),
+        hasMore: sqliteResult.hasMore,
+      }
+    } else {
+      // フォールバック: 従来のChatHistoryService使用
+      result = await chatHistoryService.searchSessions(filter)
+    }
 
     // APIレスポンス形式に変換
     const sessions = result.sessions.map(session => ({
@@ -357,24 +388,36 @@ const searchSessions: RequestHandler = async (req, res) => {
 
 app.post('/api/search', searchSessions)
 
-// 統計情報取得
+// 統計情報取得（SQLite優先）
 app.get('/api/stats', async (req, res) => {
   try {
-    const sessions = await chatHistoryService.searchSessions({
-      page: 1,
-      pageSize: 1,
-    })
-    const totalMessages = sessions.sessions.reduce(
-      (sum, session) => sum + session.messages.length,
-      0
-    )
+    let totalSessions, totalMessages
+
+    // SQLiteサービスが利用可能な場合は優先使用（正確な数字）
+    if (sqliteIndexService) {
+      const sqliteStats = await sqliteIndexService.getStats()
+      totalSessions = sqliteStats.totalSessions
+      totalMessages = sqliteStats.totalMessages
+    } else {
+      // フォールバック: 従来のChatHistoryService使用
+      const sessions = await chatHistoryService.searchSessions({
+        page: 1,
+        pageSize: 1,
+      })
+      totalSessions = sessions.totalCount
+      totalMessages = sessions.sessions.reduce(
+        (sum, session) => sum + session.messages.length,
+        0
+      )
+    }
 
     res.json({
-      totalSessions: sessions.totalCount,
+      totalSessions,
       totalMessages,
       thisMonthMessages: totalMessages, // 簡易実装
       activeProjects: 1,
       lastUpdated: new Date().toISOString(),
+      source: sqliteIndexService ? 'sqlite' : 'json-file', // デバッグ用
     })
   } catch (error) {
     logger.error('統計取得エラー:', error)

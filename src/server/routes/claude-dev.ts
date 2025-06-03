@@ -11,6 +11,7 @@ import {
   type RequestHandler,
 } from 'express'
 import ClaudeDevIntegrationService from '../../services/ClaudeDevIntegrationService.js'
+import serviceRegistry from '../../services/ServiceRegistry.js'
 import path from 'path'
 
 // 型安全なルートハンドラー
@@ -24,38 +25,22 @@ const asyncHandler =
   (req, res, next) =>
     Promise.resolve(fn(req, res)).catch(next)
 
-// グローバルサービスインスタンスの参照
-let claudeDevService: ClaudeDevIntegrationService | null = null
-
 /**
  * Claude Dev統合サービスの取得
- * メインサーバーで初期化されたインスタンスを使用
+ * ServiceRegistryを使用してサービスを取得
  */
 function getClaudeDevService(): ClaudeDevIntegrationService {
-  if (!claudeDevService) {
-    console.error(
-      'Claude Dev統合サービス取得エラー: サービスが初期化されていません'
-    )
-    console.error('サービス状態:', {
-      claudeDevService: claudeDevService,
-      type: typeof claudeDevService,
-      timestamp: new Date().toISOString(),
-    })
-    throw new Error(
-      'Claude Dev統合サービスが初期化されていません。サーバーを再起動してください。'
-    )
-  }
-  return claudeDevService
+  return serviceRegistry.getClaudeDevService()
 }
 
 /**
  * Claude Dev統合サービスの設定
- * メインサーバーから呼び出される
+ * ServiceRegistryを使用してサービスを設定
  */
 export function setClaudeDevService(
   service: ClaudeDevIntegrationService
 ): void {
-  claudeDevService = service
+  serviceRegistry.setClaudeDevService(service)
 }
 
 /**
@@ -346,14 +331,24 @@ router.get(
 
 // サービスのクリーンアップ
 process.on('SIGINT', () => {
-  if (claudeDevService) {
-    claudeDevService.close()
+  try {
+    const service = serviceRegistry.getClaudeDevService()
+    if (service) {
+      service.close()
+    }
+  } catch (error) {
+    // サービスが初期化されていない場合は無視
   }
 })
 
 process.on('SIGTERM', () => {
-  if (claudeDevService) {
-    claudeDevService.close()
+  try {
+    const service = serviceRegistry.getClaudeDevService()
+    if (service) {
+      service.close()
+    }
+  } catch (error) {
+    // サービスが初期化されていない場合は無視
   }
 })
 

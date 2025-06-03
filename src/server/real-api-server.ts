@@ -8,6 +8,7 @@ import { ConfigService } from '../services/ConfigService.js'
 import { IncrementalIndexService } from '../services/IncrementalIndexService.js'
 import { SqliteIndexService } from '../services/SqliteIndexService.js'
 // Claude Dev統合サービスは動的インポートで作成
+import serviceRegistry from '../services/ServiceRegistry.js'
 import { Logger } from './utils/Logger.js'
 
 // ルートインポート
@@ -165,7 +166,9 @@ async function initializeServices() {
       logger.info('Claude Dev統合サービスが初期化されました')
       console.log('Claude Dev統合サービス初期化完了!')
 
-      // Claude Devルートにサービスを設定
+      // ServiceRegistryにサービスを登録
+      serviceRegistry.setClaudeDevService(claudeDevService)
+      // 従来のルート設定も維持（互換性のため）
       setClaudeDevService(claudeDevService)
     } catch (error) {
       logger.error('Claude Dev統合サービスの初期化に失敗:', error)
@@ -190,6 +193,7 @@ async function initializeServices() {
 
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
+  const serviceStatus = serviceRegistry.getServiceStatus()
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -198,8 +202,9 @@ app.get('/api/health', (req, res) => {
       chatHistory: !!chatHistoryService,
       integration: !!integrationService,
       cursorLog: !!cursorLogService,
-      claudeDev: !!claudeDevService,
+      claudeDev: serviceStatus.claudeDev,
     },
+    debug: serviceRegistry.getDebugInfo(),
   })
 })
 

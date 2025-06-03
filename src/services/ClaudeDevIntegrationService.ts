@@ -155,13 +155,17 @@ export class ClaudeDevIntegrationService extends EventEmitter {
         `Claude Dev統合: データベースファイルを確認中: ${this.db.name}`
       )
 
-      // セッションテーブルの作成
+      // セッションテーブルの作成（既存スキーマと整合性確保）
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS sessions (
           id TEXT PRIMARY KEY,
           title TEXT NOT NULL,
           content TEXT NOT NULL,
-          timestamp INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          message_count INTEGER NOT NULL DEFAULT 0,
+          file_checksum TEXT,
+          file_modified_at INTEGER,
           metadata TEXT
         )
       `)
@@ -185,7 +189,7 @@ export class ClaudeDevIntegrationService extends EventEmitter {
 
       this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_sessions_timestamp 
-        ON sessions(timestamp)
+        ON sessions(created_at)
       `)
       console.log('Claude Dev統合: timestampインデックス作成完了')
 
@@ -466,14 +470,15 @@ export class ClaudeDevIntegrationService extends EventEmitter {
       const transaction = this.db.transaction(() => {
         // メインテーブルに保存
         const insertStmt = this.db.prepare(`
-          INSERT OR REPLACE INTO sessions (id, title, content, timestamp, metadata)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO sessions (id, title, content, created_at, updated_at, metadata)
+          VALUES (?, ?, ?, ?, ?, ?)
         `)
 
         insertStmt.run(
           session.id,
           session.title,
           session.content,
+          session.timestamp,
           session.timestamp,
           JSON.stringify(session.metadata)
         )
@@ -613,8 +618,8 @@ export class ClaudeDevIntegrationService extends EventEmitter {
         .prepare(
           `
         SELECT 
-          MIN(timestamp) as earliest,
-          MAX(timestamp) as latest
+          MIN(created_at) as earliest,
+          MAX(created_at) as latest
         FROM sessions 
         WHERE json_extract(metadata, '$.source') = 'claude-dev'
       `
@@ -673,22 +678,22 @@ export class ClaudeDevIntegrationService extends EventEmitter {
       if (keyword.trim()) {
         // FTS5を使用した全文検索
         query = `
-          SELECT s.id, s.title, s.content, s.timestamp, s.metadata
+          SELECT s.id, s.title, s.content, s.created_at as timestamp, s.metadata
           FROM sessions s
           JOIN sessions_fts fts ON s.id = fts.id
           WHERE fts MATCH ? 
           AND json_extract(s.metadata, '$.source') = 'claude-dev'
-          ORDER BY ${sortBy === 'relevance' ? 'rank' : 's.timestamp'} ${sortOrder}
+          ORDER BY ${sortBy === 'relevance' ? 'rank' : 's.created_at'} ${sortOrder}
           LIMIT ? OFFSET ?
         `
         params = [keyword, limit, offset]
       } else {
         // 全Claude Devセッションを取得
         query = `
-          SELECT id, title, content, timestamp, metadata
+          SELECT id, title, content, created_at as timestamp, metadata
           FROM sessions 
           WHERE json_extract(metadata, '$.source') = 'claude-dev'
-          ORDER BY timestamp ${sortOrder}
+          ORDER BY created_at ${sortOrder}
           LIMIT ? OFFSET ?
         `
         params = [limit, offset]
@@ -721,7 +726,7 @@ export class ClaudeDevIntegrationService extends EventEmitter {
       const row = this.db
         .prepare(
           `
-        SELECT id, title, content, timestamp, metadata
+        SELECT id, title, content, created_at as timestamp, metadata
         FROM sessions 
         WHERE id = ? AND json_extract(metadata, '$.source') = 'claude-dev'
       `

@@ -848,17 +848,16 @@ app.post('/api/integration/sqlite-migrate', async (req, res) => {
           const errorMessage = error instanceof Error ? error.message : String(error)
           errors.push(`セッション ${session.id} の移行エラー: ${errorMessage}`)
           
-          // エラーログを詳細出力（デバッグ用）
-          logger.error(`SQLite移行エラー [${session.id}]:`, {
-            error: errorMessage,
-            sessionData: {
-              id: session.id,
-              title: session.title,
-              messagesCount: session.messages?.length || 0,
-              hasContent: !!session.content,
-              messagesSample: session.messages?.slice(0, 2)
-            }
-          })
+                     // エラーログを詳細出力（デバッグ用）
+           logger.error(`SQLite移行エラー [${session.id}]:`, {
+             error: errorMessage,
+             sessionData: {
+               id: session.id,
+               title: session.title,
+               messagesCount: session.messages?.length || 0,
+               messagesSample: session.messages?.slice(0, 2)
+             }
+           })
         }
 
         // プログレス制限を緩和

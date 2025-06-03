@@ -268,44 +268,44 @@ const Integration: React.FC = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               {/* インポート完了 */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border dark:border-blue-800 p-4 rounded-lg transition-colors duration-300">
+              <div className="bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg transition-colors duration-300 hover:bg-blue-200 dark:hover:bg-blue-900/30">
                 <div className="flex items-center">
                   <div className="text-lg mr-2">📁</div>
                   <div>
-                    <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200">ポータブルファイル</h3>
+                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">ポータブルファイル</h3>
                     <p className="text-xs text-blue-700 dark:text-blue-300">完了</p>
                   </div>
                 </div>
               </div>
 
               {/* メッセージ */}
-              <div className="bg-green-50 dark:bg-green-900/20 border dark:border-green-800 p-4 rounded-lg transition-colors duration-300">
+              <div className="bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg transition-colors duration-300 hover:bg-green-200 dark:hover:bg-green-900/30">
                 <div className="flex items-center">
                   <div className="text-lg mr-2">💬</div>
                   <div>
-                    <h3 className="text-sm font-medium text-green-900 dark:text-green-200">メッセージ</h3>
+                    <h3 className="text-sm font-medium text-green-800 dark:text-green-200">メッセージ</h3>
                     <p className="text-xs text-green-700 dark:text-green-300">4件</p>
                   </div>
                 </div>
               </div>
 
               {/* プロファイル */}
-              <div className="bg-purple-50 dark:bg-purple-900/20 border dark:border-purple-800 p-4 rounded-lg transition-colors duration-300">
+              <div className="bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-4 rounded-lg transition-colors duration-300 hover:bg-purple-200 dark:hover:bg-purple-900/30">
                 <div className="flex items-center">
                   <div className="text-lg mr-2">👤</div>
                   <div>
-                    <h3 className="text-sm font-medium text-purple-900 dark:text-purple-200">プロファイル</h3>
+                    <h3 className="text-sm font-medium text-purple-800 dark:text-purple-200">プロファイル</h3>
                     <p className="text-xs text-purple-700 dark:text-purple-300">1件</p>
                   </div>
                 </div>
               </div>
 
               {/* ワークフロー/設定 */}
-              <div className="bg-orange-50 dark:bg-orange-900/20 border dark:border-orange-800 p-4 rounded-lg transition-colors duration-300">
+              <div className="bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-4 rounded-lg transition-colors duration-300 hover:bg-orange-200 dark:hover:bg-orange-900/30">
                 <div className="flex items-center">
                   <div className="text-lg mr-2">⚙️</div>
                   <div>
-                    <h3 className="text-sm font-medium text-orange-900 dark:text-orange-200">ワークフロー/設定</h3>
+                    <h3 className="text-sm font-medium text-orange-800 dark:text-orange-200">ワークフロー/設定</h3>
                     <p className="text-xs text-orange-700 dark:text-orange-300">実行</p>
                   </div>
                 </div>
@@ -599,40 +599,40 @@ const Integration: React.FC = () => {
               <div className="space-y-6">
                 {/* 統計情報 */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border dark:border-blue-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md">
-                    <h3 className="text-lg font-medium text-blue-900 dark:text-blue-200">総セッション数</h3>
-                    <p className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">
+                  <div className="bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md hover:bg-blue-200 dark:hover:bg-blue-900/30">
+                    <h3 className="text-lg font-medium text-blue-800 dark:text-blue-200">総セッション数</h3>
+                    <p className="text-3xl font-bold text-blue-700 dark:text-blue-400 mt-2">
                       {stats?.totalSessions?.toLocaleString() || '0'}
                     </p>
                     {/* デバッグ情報 */}
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       Debug: {stats ? `loaded (${stats.totalSessions})` : 'loading...'}
                     </p>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 border dark:border-green-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md">
-                    <h3 className="text-lg font-medium text-green-900 dark:text-green-200">総メッセージ数</h3>
-                    <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">
+                  <div className="bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md hover:bg-green-200 dark:hover:bg-green-900/30">
+                    <h3 className="text-lg font-medium text-green-800 dark:text-green-200">総メッセージ数</h3>
+                    <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-2">
                       {stats?.totalMessages?.toLocaleString() || '0'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       Debug: {stats ? `loaded (${stats.totalMessages})` : 'loading...'}
                     </p>
                   </div>
-                  <div className="bg-purple-50 dark:bg-purple-900/20 border dark:border-purple-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md">
-                    <h3 className="text-lg font-medium text-purple-900 dark:text-purple-200">Cursorセッション</h3>
-                    <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-2">
+                  <div className="bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md hover:bg-purple-200 dark:hover:bg-purple-900/30">
+                    <h3 className="text-lg font-medium text-purple-800 dark:text-purple-200">Cursorセッション</h3>
+                    <p className="text-3xl font-bold text-purple-700 dark:text-purple-400 mt-2">
                       {stats?.cursorSessions?.toLocaleString() || '0'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       Debug: {stats ? `loaded (${stats.cursorSessions})` : 'loading...'}
                     </p>
                   </div>
-                  <div className="bg-orange-50 dark:bg-orange-900/20 border dark:border-orange-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md">
-                    <h3 className="text-lg font-medium text-orange-900 dark:text-orange-200">監視状態</h3>
-                    <p className="text-lg font-bold text-orange-600 dark:text-orange-400 mt-2">
+                  <div className="bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md hover:bg-orange-200 dark:hover:bg-orange-900/30">
+                    <h3 className="text-lg font-medium text-orange-800 dark:text-orange-200">監視状態</h3>
+                    <p className="text-lg font-bold text-orange-700 dark:text-orange-400 mt-2">
                       {cursorStatus?.isWatching ? '監視中' : '停止中'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       Debug: {cursorStatus ? 'loaded' : 'loading...'}
                     </p>
                   </div>

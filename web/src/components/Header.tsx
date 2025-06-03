@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom'
 
 const Header: React.FC = () => {
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* ロゴ・タイトル */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center shadow-sm">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -25,10 +25,10 @@ const Header: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  チャット履歴管理
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                  ChatFlow
                 </h1>
-                <p className="text-xs text-gray-500">Cursor Integration</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">AI Development Platform</p>
               </div>
             </Link>
           </div>
@@ -38,7 +38,7 @@ const Header: React.FC = () => {
             {/* 検索ボタン */}
             <Link
               to="/search"
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              className="p-2 text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
               title="検索"
             >
               <svg
@@ -57,8 +57,9 @@ const Header: React.FC = () => {
             </Link>
 
             {/* 設定ボタン */}
-            <button
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+            <Link
+              to="/settings"
+              className="p-2 text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
               title="設定"
             >
               <svg
@@ -80,7 +81,7 @@ const Header: React.FC = () => {
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

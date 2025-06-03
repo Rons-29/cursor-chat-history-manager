@@ -1,7 +1,7 @@
 {
-  "name": "chat-history-manager",
+  "name": "chatflow",
   "version": "1.0.0",
-  "description": "Cursorエディタのチャット履歴を管理・検索・分析するための包括的なツール",
+  "description": "AI開発者のための次世代チャット履歴管理・分析プラットフォーム - Cursor、Claude Dev、その他AIツールとの会話を統合管理",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -42,27 +42,31 @@
     "docs:quality": "npm run docs:check && echo '📚 ドキュメント品質チェック完了'"
   },
   "keywords": [
-    "cursor",
+    "chatflow",
+    "ai",
     "chat",
     "history",
+    "cursor",
+    "claude-dev",
     "conversation",
-    "storage",
-    "search",
-    "ai",
-    "assistant",
+    "analytics",
     "development",
+    "productivity",
+    "assistant",
+    "search",
+    "management",
     "tools"
   ],
   "author": "Rons-29",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Rons-29/cursor-chat-history-manager.git"
+    "url": "git+https://github.com/Rons-29/chatflow.git"
   },
   "bugs": {
-    "url": "https://github.com/Rons-29/cursor-chat-history-manager/issues"
+    "url": "https://github.com/Rons-29/chatflow/issues"
   },
-  "homepage": "https://github.com/Rons-29/cursor-chat-history-manager#readme",
+  "homepage": "https://github.com/Rons-29/chatflow#readme",
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/postcss": "^4.1.8",

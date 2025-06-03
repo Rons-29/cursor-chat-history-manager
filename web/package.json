@@ -1,5 +1,5 @@
 {
-  "name": "chat-history-manager-web",
+  "name": "chatflow-web",
   "version": "1.0.0",
   "type": "module",
   "scripts": {

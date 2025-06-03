@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>チャット履歴管理 - Cursor Integration</title>
-    <meta name="description" content="Cursor AI アシスタントとのチャット履歴を効率的に管理・検索するWebアプリケーション" />
+    <title>ChatFlow - AI開発支援プラットフォーム</title>
+    <meta name="description" content="AI開発者のための次世代チャット履歴管理・分析プラットフォーム。Cursor、Claude Dev、その他AIツールとの会話を統合管理し、開発プロセスを最適化。" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,7 +14,116 @@
       * {
         touch-action: manipulation;
       }
+      
+      /* 改善されたライト・ダークモード対応 */
+      html {
+        color-scheme: light dark;
+      }
+      
+      /* フィルター部分の改善されたコントラスト */
+      .card {
+        background-color: white;
+        color: #111827;
+        border: 1px solid #e5e7eb;
+      }
+      
+      .dark .card {
+        background-color: #1f2937 !important;
+        color: #f9fafb !important;
+        border-color: #374151 !important;
+      }
+      
+      .input-field {
+        background-color: white;
+        color: #111827;
+        border: 1px solid #d1d5db;
+      }
+      
+      .dark .input-field {
+        background-color: #374151 !important;
+        color: #f9fafb !important;
+        border-color: #4b5563 !important;
+      }
+      
+      .dark .input-field:focus {
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+      }
+      
+      /* ラベルの改善されたコントラスト */
+      label {
+        color: #374151;
+      }
+      
+      .dark label {
+        color: #d1d5db !important;
+      }
+      
+      /* セレクトボックスの改善 */
+      select.input-field {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+      }
+      
+      .dark select.input-field {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%9ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+      }
     </style>
+    <script>
+      // テーマ管理スクリプト
+      (function() {
+        console.log('🎨 テーマ管理システム初期化中...');
+        
+        // システム設定に基づいてテーマを設定
+        function initializeTheme() {
+          const savedTheme = localStorage.getItem('theme');
+          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          let theme = 'light'; // デフォルトはライト
+          
+          if (savedTheme) {
+            theme = savedTheme;
+          } else if (systemPrefersDark) {
+            theme = 'dark';
+          }
+          
+          applyTheme(theme);
+          console.log(`🎨 テーマ設定: ${theme}`);
+        }
+        
+        function applyTheme(theme) {
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          localStorage.setItem('theme', theme);
+        }
+        
+        // テーマ切り替え関数をグローバルに公開
+        window.toggleTheme = function() {
+          const isDark = document.documentElement.classList.contains('dark');
+          const newTheme = isDark ? 'light' : 'dark';
+          applyTheme(newTheme);
+          console.log(`🎨 テーマ切り替え: ${newTheme}`);
+        };
+        
+        // 初期化実行
+        initializeTheme();
+        
+        // システム設定変更の監視
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (!localStorage.getItem('theme')) {
+            applyTheme(e.matches ? 'dark' : 'light');
+          }
+        });
+        
+        console.log('✅ テーマ管理システム初期化完了');
+      })();
+    </script>
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased">
     <div id="root"></div>

@@ -1,4 +1,4 @@
-# Cursor Chat History Manager
+# ChatFlow VS Code Extension
 
 Cursorエディタでのチャット履歴を自動保存・管理するVS Code拡張機能です。
 

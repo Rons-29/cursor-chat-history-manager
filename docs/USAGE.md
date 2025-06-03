@@ -1,4 +1,4 @@
-# Chat History Manager 使用ガイド（統合完了版）
+# ChatFlow 使用ガイド（統合完了版）
 
 ## 目次
 

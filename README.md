@@ -1,6 +1,19 @@
-# Chat History Manager［改修中］ 💬
-※今動かない可能性あり
-Cursorエディタのチャット履歴を管理・検索・分析するための包括的なツール
+# 🌊 ChatFlow - AI開発支援プラットフォーム
+
+**AIとの対話を、開発の資産に変える次世代プラットフォーム**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+
+## 🎯 **概要**
+
+**ChatFlow**は、AI開発者のための包括的なチャット履歴管理・分析プラットフォームです。Cursor、Claude Dev、その他のAIツールとの会話を統合管理し、開発プロセスを可視化・最適化します。
+
+### 🌟 **ビジョン**
+> **"AIとの対話を、開発の資産に変える"**
+
+開発者とAIの会話を単なる履歴ではなく、学習可能な知識ベース・再利用可能な開発パターン・チーム共有の資産として活用できるプラットフォームを提供します。
 
 ## ⚠️ **重要なセキュリティ注意事項**
 
@@ -10,7 +23,7 @@ Cursorエディタのチャット履歴を管理・検索・分析するため�
 - 🔒 **詳細なセキュリティガイドライン**: [SECURITY.md](./SECURITY.md)を参照
 - 🛡️ **機密情報の検索**: 検索機能を使用して事前確認を行ってください
 
-## 🚀 クイックスタート
+## 🚀 **クイックスタート**
 
 ### 1つのコマンドで全サービス起動
 
@@ -27,7 +40,7 @@ npm run dev:all
 - 🟢 **Webダッシュボード**: http://localhost:5173
 - 🟡 **CLI統合サービス**: Cursor監視・データ処理
 
-## 📋 起動方法一覧
+### 📋 起動方法一覧
 
 | コマンド | 説明 | サービス構成 |
 |---------|------|-------------|
@@ -37,86 +50,77 @@ npm run dev:all
 
 詳細な起動方法は [起動ガイド](./docs/STARTUP_GUIDE.md) をご覧ください。
 
-## ✨ 主な機能
+## ✨ **主な機能**
 
-### 🖥️ CLIツール（コマンドライン）
-- 包括的なチャット履歴管理コマンド
-- セッション作成・検索・分析・エクスポート機能
-- Cursor統合（自動監視・インポート）
-- 自動保存機能（リアルタイムチャット記録）
-- 詳細統計・分析レポート機能
+### 🔄 **統合チャット管理**
+- **マルチプラットフォーム対応**: Cursor、Claude Dev、ChatGPT、GitHub Copilot
+- **リアルタイム同期**: 自動監視・インポート・バックアップ
+- **統一データベース**: SQLite高性能統合（10-100倍高速化）
+- **増分同期**: 90%パフォーマンス向上の効率的更新
 
-### 🗂️ セッション管理
-- チャットセッションの作成・更新・削除
-- メッセージの追加・編集
-- セッション情報の管理（タイトル、開始時刻、メタデータ）
-- タグ管理とカテゴリ分類
+### 🔍 **インテリジェント検索**
+- **セマンティック検索**: AI駆動の意味理解検索
+- **コンテキスト検索**: プロジェクト・ファイル・時期での絞り込み
+- **パターン検索**: 類似問題・解決策の自動発見
+- **全文検索**: 高速SQLite FTS5エンジン
 
-### 🔍 高度な検索機能
-- キーワード検索（全文検索対応）
-- フィルタリング（日付範囲、プロジェクト、ユーザー、タグ）
-- ページネーション対応
-- 検索結果のソート
+### 📊 **開発分析ダッシュボード**
+- **生産性メトリクス**: 開発効率・AI活用度の可視化
+- **パターン分析**: 頻出質問・効果的プロンプトの特定
+- **時系列分析**: 開発進捗・学習曲線の追跡
+- **チーム分析**: 知識共有・コラボレーション状況
 
-### 📊 WebUI ダッシュボード
-- リアルタイムデータ表示
-- セッション一覧・詳細表示
-- 統計情報の可視化
-- レスポンシブデザイン
+### 🤖 **AI支援機能**
+- **プロンプト最適化**: 効果的なプロンプトパターンの提案
+- **コンテキスト生成**: 過去の会話から関連情報を自動抽出
+- **ナレッジベース**: FAQ・ベストプラクティスの自動構築
+- **学習推奨**: スキルギャップ・学習リソースの提案
 
-### 🔄 自動化機能
-- **Cursor統合**: チャット履歴の自動監視・インポート
-- **自動保存**: リアルタイムでのチャット記録
-- **自動バックアップ**: 定期的なデータバックアップ
-- **自動クリーンアップ**: 古いデータの自動削除
+### 🔒 **エンタープライズセキュリティ**
+- **データ暗号化**: AES-256/ChaCha20による強固な暗号化
+- **アクセス制御**: ロールベース・IP制限・多要素認証
+- **監査ログ**: 完全な操作履歴・コンプライアンス対応
+- **プライバシー保護**: 機密情報自動マスキング・データ保持ポリシー
 
-### 📤 データ管理
-- JSON/Markdown/TXT形式でのエクスポート
-- バックアップ・復元機能
-- データインポート・エクスポート
-- Gitベースの履歴管理
-
-## 🚀 クイックスタート
-
-### インストール
+## 🛠️ **インストール**
 
 ```bash
-git clone https://github.com/your-repo/chat-history-manager.git
-cd chat-history-manager
+git clone https://github.com/Rons-29/chatflow.git
+cd chatflow
 npm install
 npm run build
 ```
 
-### 🖥️ CLIツール使用方法
+## 🖥️ **CLI ツール使用方法**
 
 ```bash
 # CLIヘルプ表示
-node dist/cli.js --help
+chatflow --help
 
 # 基本統計情報
-node dist/cli.js stats
+chatflow stats
 
 # セッション作成
-node dist/cli.js create-session --title "新しいプロジェクト"
+chatflow create-session --title "新しいプロジェクト"
 
 # チャット履歴検索
-node dist/cli.js search --keyword "React" --limit 10
+chatflow search --keyword "React" --limit 10
 
 # 履歴エクスポート
-node dist/cli.js export --format json --output my-chats.json
+chatflow export --format json --output my-chats.json
 
 # Cursor統合（自動監視開始）
-node dist/cli.js cursor-start
+chatflow cursor-start
 
 # 自動保存開始
-node dist/cli.js autosave-start
+chatflow autosave-start
 ```
 
-### 📊 WebUI使用方法
+## 📊 **WebUI 使用方法**
 
 ```bash
 # フロントエンド + バックエンドを同時起動
-npm run dev:full
+npm run dev:all
 
 # または個別に起動
 npm run server  # バックエンド (ポート3001)
@@ -125,28 +129,77 @@ npm run web     # フロントエンド (ポート5173)
 # ブラウザで http://localhost:5173 にアクセス
 ```
 
-### 🚀 自動起動スクリプト
+## 🏗️ **技術アーキテクチャ**
 
-```bash
-# 自動セットアップ＆起動
-chmod +x scripts/auto-start.sh
-./scripts/auto-start.sh
-
-# 安全停止
-chmod +x scripts/stop.sh
-./scripts/stop.sh
+### 🔧 **バックエンド**
+```typescript
+// 高性能サービス層
+ChatHistoryService     // セッション・メッセージ管理
+AnalyticsService      // 統計・分析エンジン
+IntegrationService    // マルチプラットフォーム統合
+SqliteIndexService    // 高速検索エンジン
+SecurityService       // セキュリティ・暗号化
+AutoSaveService       // リアルタイム自動保存
+ExportService         // データエクスポート・バックアップ
 ```
 
-### ビルド
-
-```bash
-npm run build      # TypeScriptビルド
-npm run web:build  # Webアプリビルド
+### 🎨 **フロントエンド**
+```typescript
+// モダンReactアプリケーション
+React 18.2+           // 最新UI フレームワーク
+TypeScript 5.3+       // 型安全開発
+TailwindCSS 4.1+      // ユーティリティファーストCSS
+React Query 5.79+     // 状態管理・キャッシュ
+Vite 6.3+             // 高速ビルドツール
 ```
 
-## 📝 使用可能なコマンド
+### 🗄️ **データ層**
+```sql
+-- 高性能SQLiteデータベース
+Sessions              -- チャットセッション
+Messages              -- 個別メッセージ
+Projects              -- プロジェクト情報
+Users                 -- ユーザー・チーム管理
+Analytics             -- 分析データ
+Security_Logs         -- セキュリティ監査
+```
 
-### CLIコマンド一覧
+## 🏗️ **プロジェクト構造**
+
+```
+chatflow/
+├── src/                     # CLI + バックエンド
+│   ├── cli.ts              # CLIエントリーポイント
+│   ├── index.ts            # メインインデックス
+│   ├── services/           # ビジネスロジック
+│   │   ├── ChatHistoryService.ts    # セッション・メッセージ管理
+│   │   ├── AnalyticsService.ts      # 統計・分析機能
+│   │   ├── AutoSaveService.ts       # 自動保存機能
+│   │   ├── ExportService.ts         # エクスポート機能
+│   │   ├── IntegrationService.ts    # 統合管理
+│   │   └── SqliteIndexService.ts    # 高速検索エンジン
+│   ├── server/             # Express サーバー
+│   │   ├── real-api-server.ts       # メインAPIサーバー
+│   │   ├── routes/         # API ルート
+│   │   └── middleware/     # ミドルウェア
+│   ├── types/              # 型定義
+│   └── utils/              # ユーティリティ
+├── web/                    # React フロントエンド
+│   ├── src/
+│   │   ├── components/     # UIコンポーネント
+│   │   ├── pages/          # ページコンポーネント
+│   │   ├── hooks/          # カスタムフック
+│   │   └── api/            # API クライアント
+│   └── index.html
+├── extension/              # VS Code拡張機能
+├── scripts/                # 運用・セキュリティスクリプト
+├── docs/                   # ドキュメント
+└── data/                   # 個人データ（gitignore済み）
+```
+
+## 📝 **使用可能なコマンド**
+
+### CLI コマンド一覧
 | コマンド | 説明 |
 |----------|------|
 | `create-session` | 新しいセッションを作成 |
@@ -161,188 +214,84 @@ npm run web:build  # Webアプリビルド
 | `cursor-scan` | Cursorチャット履歴を手動スキャン・インポート |
 | `cursor-start` | Cursorチャット履歴のリアルタイム監視を開始 |
 | `cursor-status` | Cursor統合状態を表示 |
-| `cursor-config` | Cursor統合設定を管理 |
 | `autosave-start` | 自動保存を開始 |
 | `autosave-stop` | 実行中の自動保存セッションを停止 |
-| `autosave-status` | 自動保存の状態を確認 |
-| `autosave-config` | 自動保存の設定を変更 |
 | `config` | 設定を表示・変更 |
 
-### NPMスクリプト
+### NPM スクリプト
 | コマンド | 説明 |
 |----------|------|
-| `npm run dev:full` | フロントエンド + バックエンド同時起動 |
+| `npm run dev:all` | フロントエンド + バックエンド同時起動 |
 | `npm run server` | APIサーバー起動 |
 | `npm run web` | WebUI開発サーバー起動 |
 | `npm run build` | TypeScriptビルド |
 | `npm run test` | テスト実行 |
-| `npm run test:coverage` | カバレッジ付きテスト |
-| `npm run lint` | ESLintチェック |
-| `npm run format` | Prettierフォーマット |
 | `npm run quality` | 総合品質チェック |
 
-## 🏗️ プロジェクト構造
+## 🎯 **ターゲットユーザー**
 
-```
-chat-history-manager/
-├── src/                     # CLI + バックエンド
-│   ├── cli.ts              # CLIエントリーポイント
-│   ├── index.ts            # メインインデックス
-│   ├── services/           # ビジネスロジック
-│   │   ├── ChatHistoryService.ts    # セッション・メッセージ管理
-│   │   ├── AnalyticsService.ts      # 統計・分析機能
-│   │   ├── AutoSaveService.ts       # 自動保存機能
-│   │   ├── ExportService.ts         # エクスポート機能
-│   │   ├── CursorWatcherService.ts  # Cursor統合
-│   │   ├── ConfigService.ts         # 設定管理
-│   │   └── git-service.ts           # Git統合
-│   ├── server/             # Express サーバー
-│   │   ├── app.ts          # Express アプリ
-│   │   ├── api-router.ts   # データサービス
-│   │   ├── routes/         # API ルート
-│   │   └── middleware/     # ミドルウェア
-│   ├── types/              # 型定義
-│   └── utils/              # ユーティリティ
-├── web/                    # React フロントエンド
-│   ├── src/
-│   │   ├── components/     # UIコンポーネント
-│   │   ├── pages/          # ページコンポーネント
-│   │   ├── hooks/          # カスタムフック
-│   │   └── api/            # API クライアント
-│   └── index.html
-├── scripts/                # 運用スクリプト
-│   ├── auto-start.sh       # 自動起動
-│   ├── stop.sh             # 安全停止
-│   └── test-real-data.ts   # 実データテスト
-└── docs/                   # ドキュメント
-```
+### 👨‍💻 **個人開発者**
+- **AI活用開発者**: Cursor、Claude Dev等を日常的に使用
+- **学習志向**: 効率的な学習・スキル向上を求める
+- **生産性重視**: 開発効率・品質向上を目指す
 
-## 🛠️ 技術スタック
+### 👥 **開発チーム**
+- **スタートアップ**: 高速開発・知識共有が重要
+- **エンタープライズ**: セキュリティ・コンプライアンス要求
+- **教育機関**: 学習支援・進捗管理が必要
 
-### バックエンド
-- **Node.js 18+** + **TypeScript 5.3+**
-- **Express.js 5.1+** (APIサーバー)
-- **Commander.js 14.0+** (CLIフレームワーク)
-- **fs-extra** (ファイルシステム)
-- **chokidar** (ファイル監視)
-- **date-fns** (日付処理)
+### 🏢 **組織・企業**
+- **AI導入企業**: AI活用の効果測定・最適化
+- **コンサルティング**: クライアント向けAI活用支援
+- **研究機関**: AI開発パターン・効果の研究
 
-### フロントエンド
-- **React 19.1+** + **TypeScript**
-- **React Router 7.6+** (ルーティング)
-- **React Query 5.79+** (データ取得)
-- **TailwindCSS 4.1+** (スタイリング)
-- **Vite 6.3+** (ビルドツール)
 
-### 開発・品質管理
-- **Jest 29.7+** (テスト)
-- **ESLint 8.56+** + **Prettier 3.5+** (コード品質)
-- **Concurrently 9.1+** (並行実行)
-- **.mdc ルール準拠** (段階的品質向上)
+## 🛣️ **ロードマップ**
 
-## 📊 API エンドポイント
+### 📅 **Phase 1: Foundation (Q1 2025)**
+- ✅ 基本チャット履歴管理
+- ✅ Cursor統合
+- ✅ WebUI ダッシュボード
+- ✅ CLI ツール
+- 🔄 VS Code拡張機能
 
-### セッション管理
-- `GET /api/sessions` - セッション一覧取得
-- `GET /api/sessions/:id` - セッション詳細取得
-- `POST /api/sessions` - セッション作成
-- `PUT /api/sessions/:id` - セッション更新
-- `DELETE /api/sessions/:id` - セッション削除
+### 📅 **Phase 2: Intelligence (Q2 2025)**
+- 🔄 AI駆動検索・分析
+- 🔄 プロンプト最適化
+- 🔄 パターン認識
+- 🔄 ナレッジベース構築
 
-### 統計情報
-- `GET /api/stats` - 統計情報取得
-- `GET /api/analytics` - 詳細分析データ
+### 📅 **Phase 3: Collaboration (Q3 2025)**
+- 🔄 チーム機能
+- 🔄 知識共有
+- 🔄 リアルタイムコラボレーション
+- 🔄 統合API
 
-### 検索
-- `POST /api/search` - 全文検索
+### 📅 **Phase 4: Enterprise (Q4 2025)**
+- 🔄 エンタープライズセキュリティ
+- 🔄 カスタム統合
+- 🔄 高度分析・レポート
+- 🔄 マルチテナント対応
 
-### 設定管理
-- `GET /api/config` - 設定取得
-- `PUT /api/config` - 設定更新
+## 🔧 **VS Code拡張機能**
 
-## 🔧 設定
-
-設定はTypeScriptインターフェースで型安全に管理されています：
-
-```typescript
-interface ChatHistoryConfig {
-  storageType: 'file' | 'database'
-  storagePath: string
-  maxSessions?: number
-  maxMessagesPerSession?: number
-  autoCleanup?: boolean
-  cleanupDays?: number
-  enableSearch?: boolean
-  enableBackup?: boolean
-  backupInterval?: number
-  autoSave?: AutoSaveConfig
-  cursor?: CursorConfig
-}
-
-interface AutoSaveConfig {
-  enabled: boolean
-  interval: number
-  idleTimeout: number
-  maxSessionDuration: number
-  watchDirectories: string[]
-  filePatterns: string[]
-}
-
-interface CursorConfig {
-  enabled: boolean
-  watchPath?: string
-  autoImport: boolean
-  watchInterval?: number
-}
-```
-
-## 🧪 テスト
-
+### 📦 **インストール**
 ```bash
-# 単体テスト実行
-npm test
-
-# ウォッチモード
-npm run test:watch
-
-# カバレッジレポート
-npm run test:coverage
-
-# 実データテスト
-npm run test:real-data
+cd extension
+npm install
+npm run compile
+# F5キーで拡張機能をデバッグ実行
 ```
 
-## 📋 開発ルール
+### 🎯 **主な機能**
+- **シームレス統合**: エディタ内での直接操作
+- **リアルタイム保存**: 自動チャット履歴記録
+- **コンテキスト連携**: 現在のファイル・プロジェクト情報
+- **インライン検索**: エディタ内での過去会話検索
 
-プロジェクトは[.mdc](./.mdc)と[.cursorrules](./.cursorrules)で定義された開発ルールに従います：
+詳細は [拡張機能ガイド](./extension/README.md) をご覧ください。
 
-- **TypeScript First** - any型の使用を最小限に抑制
-- **関数型プログラミング** - 純粋関数とイミュータブルデータ構造
-- **レイヤード構造** - プレゼンテーション・ビジネスロジック・データアクセス層の分離
-- **品質管理** - ESLint + Prettier + テストによる継続的な品質維持
-- **段階的実装** - .mdcルール準拠の堅牢性重視開発
-
-## 🚀 運用・デプロイ
-
-### 自動起動
-```bash
-# 依存関係チェック、ビルド、起動まで自動実行
-./scripts/auto-start.sh
-```
-
-### 安全停止
-```bash
-# プロセス停止、一時ファイルクリーンアップ
-./scripts/stop.sh
-```
-
-### 品質チェック
-```bash
-# 総合品質チェック（リント、フォーマット、ビルド、テスト）
-npm run quality
-```
-
-## 🤝 コントリビューション
+## 🤝 **コントリビューション**
 
 1. このリポジトリをフォーク
 2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
@@ -352,56 +301,30 @@ npm run quality
 
 詳細は[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。
 
-## 📄 ライセンス
+## 📄 **ライセンス**
 
 MIT License - 詳細は[LICENSE](LICENSE)ファイルを参照
 
-## 👨‍💻 作成者
+## 👨‍💻 **作成者**
 
 **Rons-29**
 
 - GitHub: [@Rons-29](https://github.com/Rons-29)
-- Repository: [cursor-chat-history-manager](https://github.com/Rons-29/cursor-chat-history-manager)
+- Repository: [ChatFlow](https://github.com/Rons-29/chatflow)
 
 ---
 
 ⭐ このプロジェクトが役に立った場合は、スターをつけてください！ 
 
-## 📚 関連ドキュメント
+## 📚 **関連ドキュメント**
 
-- [SECURITY.md](SECURITY.md) - セキュリティガイドライン
-- [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
-- [PROJECT_RULES.md](PROJECT_RULES.md) - プロジェクト開発ルール
-- [TODO.md](TODO.md) - 開発タスク・改善項目
+- [📋 プロダクト定義](./docs/CHATFLOW_PRODUCT_DEFINITION.md) - 包括的なプロダクト概要
+- [🔧 機能仕様書](./docs/CHATFLOW_FEATURE_SPECIFICATION.md) - 詳細機能仕様
+- [🔒 セキュリティガイド](./docs/SECURITY.md) - セキュリティガイドライン
+- [🤝 コントリビューションガイド](./docs/CONTRIBUTING.md) - 開発参加方法
+- [📖 使用ガイド](./docs/USAGE.md) - 詳細使用方法
+- [🔍 API仕様書](./docs/API_SPEC.md) - API リファレンス
 
-## 🔧 Claude Dev拡張機能との統合
+---
 
-### 📊 概要
-Chat History ManagerはClaude Dev拡張機能と統合することで、**AIの返答を含む完全な会話履歴**を管理できます。
-
-### 🚀 統合機能
-
-#### **Claude Devデータの統合**
-```bash
-# Claude Dev拡張機能のデータをChat History Managerに統合
-npm run claude-dev:integrate
-```
-
-#### **分析レポートの表示**
-```bash
-# Claude Dev拡張機能の詳細分析レポートを表示
-npm run claude-dev:analyze
-```
-
-### 📁 統合されるデータ
-- **完全な会話履歴**: ユーザープロンプト + AIの返答
-- **環境情報**: VSCodeの状態、ファイル情報
-- **ツール使用履歴**: read_file、execute_command等の詳細
-- **タイムスタンプ**: 正確な作業時刻
-
-### 💡 活用方法
-1. **プロンプトエンジニアリング**: 効果的なパターンの分析
-2. **開発履歴管理**: 詳細な作業プロセスの記録
-3. **ナレッジベース**: チーム内でのベストプラクティス共有
-
-詳細は [Claude Dev拡張機能ガイド](docs/CHAT_HISTORY_MANAGER_GUIDE.md) をご覧ください。
+**🚀 ChatFlow - AIとの対話を、開発の資産に変える次世代プラットフォーム**

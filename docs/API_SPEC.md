@@ -1,7 +1,7 @@
-# Chat History Manager 統合API仕様書
+# ChatFlow 統合API仕様書
 
 ## 概要
-Chat History Managerの統合アーキテクチャ完了後のAPI仕様を記載します。
+ChatFlowの統合アーキテクチャ完了後のAPI仕様を記載します。
 統合APIルート（`unified-api.ts`）による統一されたエンドポイント設計です。
 
 ---

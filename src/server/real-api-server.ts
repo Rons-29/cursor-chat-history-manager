@@ -18,6 +18,7 @@ import settingsRoutes from './routes/settings.js'
 import claudeDevRoutes, { setClaudeDevService } from './routes/claude-dev.js'
 import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
 import enhancedSessionRoutes from './routes/enhanced-sessions.js'
+import cursorChatImportRoutes from './routes/cursor-chat-import.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -1129,13 +1130,33 @@ app.get('/api/integration/index-methods', (req, res) => {
   }
 })
 
-// ルート設定
-app.use('/api', unifiedApiRoutes) // 統合APIルートを優先
-app.use('/api/v1', apiRoutes) // 旧APIは /v1 に移動
+// テスト用の直接エンドポイント
+app.get('/api/enhanced-sessions', async (req, res) => {
+  try {
+    console.log('🚀 Enhanced sessions endpoint called!')
+    res.json({
+      success: true,
+      message: 'Enhanced sessions API is working!',
+      query: req.query,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error('Enhanced sessions error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ルート設定（順序重要：最も具体的なルートから先に設定）
+// 1. 最も具体的なパスを最初に
+app.use('/api/cursor-chat-import', cursorChatImportRoutes)
 app.use('/api/integration', integrationRoutes)
 app.use('/api/settings', settingsRoutes)
-app.use('/api/claude-dev', claudeDevRoutes) // 専用機能のみ残す
-app.use('/api', enhancedSessionRoutes) // 強化されたセッションAPI
+app.use('/api/claude-dev', claudeDevRoutes)
+app.use('/api/v1', apiRoutes)
+
+// 2. より一般的な /api ルートを最後に
+app.use('/api', enhancedSessionRoutes)
+app.use('/api', unifiedApiRoutes)
 
 // エラーハンドリング
 app.use(
@@ -1169,6 +1190,12 @@ async function startServer() {
     app.listen(PORT, () => {
       logger.info(`🚀 Real API Server running on http://localhost:${PORT}`)
       logger.info('📊 Available endpoints:')
+      logger.info('  🚀 Enhanced API:')
+      logger.info('  GET  /api/enhanced-sessions')
+      logger.info('  GET  /api/enhanced-sessions/:id')
+      logger.info('  POST /api/enhance-titles')
+      logger.info('  GET  /api/enhanced-stats')
+      logger.info('  📊 Standard API:')
       logger.info('  GET  /api/health')
       logger.info('  GET  /api/sessions')
       logger.info('  GET  /api/sessions/:id')
@@ -1198,6 +1225,12 @@ async function startServer() {
       logger.info('  POST /api/settings/import')
       logger.info('  GET  /api/settings/backups')
       logger.info('  GET  /api/settings/health')
+      logger.info('  📁 Cursor Chat Import API:')
+      logger.info('  GET  /api/cursor-chat-import/status')
+      logger.info('  POST /api/cursor-chat-import/import-all')
+      logger.info('  GET  /api/cursor-chat-import/files')
+      logger.info('  GET  /api/cursor-chat-import/stats')
+      logger.info('  GET  /api/cursor-chat-import/usage-guide')
     })
   } catch (error) {
     console.error('サーバー起動エラー:', error)

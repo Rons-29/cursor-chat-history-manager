@@ -21,17 +21,7 @@ export interface ChatSession {
   startTime: Date
   endTime?: Date
   tags: string[]
-  metadata?: {
-    project?: string
-    source?: string
-    summary?: string
-    description?: string
-    status?: 'active' | 'archived' | 'deleted'
-    tags?: string[]
-    totalMessages?: number
-    taskId?: string
-    cursorId?: string
-  }
+  metadata?: SessionMetadata
 }
 
 export interface ChatHistoryFilter {
@@ -154,6 +144,13 @@ export interface SessionMetadata {
   totalMessages?: number
   taskId?: string
   cursorId?: string
+  // Cursor Chat Import用の追加プロパティ
+  fileHash?: string
+  importDate?: string
+  exportDate?: string
+  originalFormat?: 'markdown' | 'text' | 'json'
+  messageCount?: number
+  estimatedDuration?: number
 }
 
 // WebUIで使用される統計データ型

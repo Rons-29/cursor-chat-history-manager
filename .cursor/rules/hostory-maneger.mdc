@@ -339,8 +339,20 @@ throw new SessionNotFoundError('セッションが見つかりません', 'SESSI
 
 ## 🔄 開発フロー
 
+### 🔍 **探索重視型開発フロー（修正作業時必須）**
+**ルール**: `.cursor/rules/exploration-driven-development.mdc`  
+**テンプレート**: `docs/templates/`  
+
+修正・バグ・データ問題発見時は**必ず探索フェーズから開始**：
+1. **探索レポート作成**: `docs/templates/exploration-report-template.md`を使用
+2. **詳細調査実行**: 影響範囲・根本原因・リスク評価
+3. **修正戦略決定**: 探索結果に基づく適切なアプローチ選択
+4. **ブランチ作成**: 探索完了後のみブランチ作成許可
+5. **テスト結果記録**: `docs/templates/test-results-template.md`を使用
+
 ### 開発前チェックリスト
 - [ ] Issue確認・ブランチ作成(命名規則準拠)
+- [ ] **探索レポート作成（修正作業の場合）**
 - [ ] 型定義から設計開始
 - [ ] セキュリティ要件確認
 

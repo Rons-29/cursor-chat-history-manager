@@ -31,7 +31,7 @@ class GlobalServiceRegistry {
     console.log('🔧 ServiceRegistry: Claude Dev統合サービスが登録されました:', {
       hasService: !!service,
       serviceType: typeof service,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   }
 
@@ -43,7 +43,7 @@ class GlobalServiceRegistry {
       hasService: !!this.services.claudeDev,
       type: typeof this.services.claudeDev,
       isNull: this.services.claudeDev === null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
 
     if (!this.services.claudeDev) {
@@ -129,4 +129,4 @@ class GlobalServiceRegistry {
 const serviceRegistry = new GlobalServiceRegistry()
 
 export default serviceRegistry
-export { type ServiceRegistry } 
+export { type ServiceRegistry }

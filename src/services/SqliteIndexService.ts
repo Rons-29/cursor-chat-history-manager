@@ -51,7 +51,9 @@ export class SqliteIndexService {
     if (!this.db) throw new Error('Database not initialized')
 
     // 既存の古いスキーマをチェック・修正
-    const tableInfo = this.db.prepare("PRAGMA table_info(sessions)").all() as Array<{
+    const tableInfo = this.db
+      .prepare('PRAGMA table_info(sessions)')
+      .all() as Array<{
       cid: number
       name: string
       type: string
@@ -61,10 +63,10 @@ export class SqliteIndexService {
     }>
 
     const hasContentColumn = tableInfo.some(col => col.name === 'content')
-    
+
     if (hasContentColumn) {
       this.logger.info('古いSQLiteスキーマを検出、新しいスキーマに移行中...')
-      
+
       // 新しいテーブルを作成
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS sessions_new (
@@ -107,17 +109,17 @@ export class SqliteIndexService {
     } else {
       // 通常のテーブル作成
       this.db.exec(`
-        CREATE TABLE IF NOT EXISTS sessions (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL DEFAULT '',
-          created_at INTEGER NOT NULL,
-          updated_at INTEGER NOT NULL,
-          message_count INTEGER NOT NULL DEFAULT 0,
-          file_checksum TEXT,
-          file_modified_at INTEGER,
-          metadata TEXT
-        )
-      `)
+      CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        message_count INTEGER NOT NULL DEFAULT 0,
+        file_checksum TEXT,
+        file_modified_at INTEGER,
+        metadata TEXT
+      )
+    `)
     }
 
     // タグテーブル
@@ -550,5 +552,19 @@ export class SqliteIndexService {
       this.db = null
       this.initialized = false
     }
+  }
+
+  /**
+   * データベース接続インスタンスを取得（他のサービスとの共有用）
+   */
+  getDatabase(): Database.Database | null {
+    return this.db
+  }
+
+  /**
+   * データベースが初期化されているかを確認
+   */
+  isInitialized(): boolean {
+    return this.initialized && this.db !== null
   }
 }

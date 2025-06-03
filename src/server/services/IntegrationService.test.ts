@@ -17,20 +17,20 @@ describe('IntegrationService', () => {
         autoImport: true,
         syncInterval: 1000,
         batchSize: 100,
-        retryAttempts: 3
+        retryAttempts: 3,
       },
       chatHistory: {
         storagePath: '/test/storage',
         maxSessions: 1000,
         maxMessagesPerSession: 100,
         autoCleanup: true,
-        cleanupDays: 30
+        cleanupDays: 30,
       },
       sync: {
         interval: 5000,
         batchSize: 100,
-        retryAttempts: 3
-      }
+        retryAttempts: 3,
+      },
     }
     service = new IntegrationService(config, logger)
   })
@@ -70,8 +70,8 @@ describe('IntegrationService', () => {
       const results = await service.search({
         timeRange: {
           start: new Date('2024-01-01'),
-          end: new Date('2024-12-31')
-        }
+          end: new Date('2024-12-31'),
+        },
       })
       expect(Array.isArray(results)).toBe(true)
     })
@@ -103,10 +103,10 @@ describe('IntegrationService', () => {
       const analytics = await service.getAnalytics({
         timeRange: {
           start: new Date('2024-01-01'),
-          end: new Date('2024-12-31')
+          end: new Date('2024-12-31'),
         },
         granularity: 'daily',
-        metrics: ['messageCount', 'sessionCount']
+        metrics: ['messageCount', 'sessionCount'],
       })
 
       expect(analytics).toHaveProperty('timeRange')
@@ -121,4 +121,4 @@ describe('IntegrationService', () => {
       expect(analytics).toHaveProperty('metrics')
     })
   })
-}) 
+})

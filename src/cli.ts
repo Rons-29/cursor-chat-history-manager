@@ -13,12 +13,12 @@ import { AnalyticsService } from './services/AnalyticsService.js'
 import { ExportService } from './services/ExportService.js'
 import { AutoSaveService } from './services/AutoSaveService.js'
 // import { CursorWatcherService } from './services/CursorWatcherService.js'
-import type { 
-  ChatHistoryFilter, 
+import type {
+  ChatHistoryFilter,
   ExportFormat,
   Message,
   ChatSession,
-  ChatMessage
+  ChatMessage,
 } from './types/index.js'
 import { format } from 'date-fns'
 import fs from 'fs-extra'
@@ -39,10 +39,10 @@ async function initializeServices(): Promise<void> {
   try {
     configService = new ConfigService()
     const config = await configService.getConfig()
-    
+
     chatHistoryService = new ChatHistoryService(config)
     await chatHistoryService.initialize()
-    
+
     analyticsService = new AnalyticsService(chatHistoryService)
     const logger = Logger.getInstance('./logs')
     await logger.initialize()
@@ -50,12 +50,12 @@ async function initializeServices(): Promise<void> {
       outputDir: './exports',
       format: 'json' as const,
       includeMetadata: true,
-      compression: false
+      compression: false,
     }
     exportService = new ExportService(exportConfig, chatHistoryService, logger)
     autoSaveService = new AutoSaveService(chatHistoryService, configService)
     // cursorWatcherService = new CursorWatcherService(chatHistoryService, configService)
-    
+
     console.log(chalk.green('✅ サービス初期化完了'))
   } catch (error) {
     console.error(chalk.red('❌ サービス初期化エラー:'), error)
@@ -73,21 +73,23 @@ async function main() {
     .version('1.0.0')
 
   // === セッション管理コマンド ===
-  
+
   program
     .command('create-session')
     .description('新しいセッションを作成')
     .option('-t, --title <title>', 'セッションタイトル')
     .option('-g, --tags <tags>', 'タグ（カンマ区切り）')
-    .action(async (options) => {
+    .action(async options => {
       try {
-        const tags = options.tags ? options.tags.split(',').map((t: string) => t.trim()) : []
+        const tags = options.tags
+          ? options.tags.split(',').map((t: string) => t.trim())
+          : []
         const session = await chatHistoryService.createSession({
           id: Date.now().toString(),
           title: options.title || 'New Session',
           messages: [],
           tags,
-          startTime: new Date()
+          startTime: new Date(),
         })
         console.log(chalk.green(`✅ セッション作成: ${session.id}`))
         console.log(`タイトル: ${session.title}`)
@@ -103,13 +105,13 @@ async function main() {
     .requiredOption('-s, --session <sessionId>', 'セッションID')
     .requiredOption('-c, --content <content>', 'メッセージ内容')
     .option('-r, --role <role>', 'ロール (user|assistant|system)', 'user')
-    .action(async (options) => {
+    .action(async options => {
       try {
         const message: ChatMessage = {
           id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           role: options.role,
           content: options.content,
-          timestamp: new Date()
+          timestamp: new Date(),
         }
         await chatHistoryService.addMessage(options.session, message)
         console.log(chalk.green('✅ メッセージ追加完了'))
@@ -122,7 +124,7 @@ async function main() {
     .command('show-session')
     .description('セッション詳細を表示')
     .argument('<sessionId>', 'セッションID')
-    .action(async (sessionId) => {
+    .action(async sessionId => {
       try {
         const session = await chatHistoryService.getSession(sessionId)
         if (!session) {
@@ -140,11 +142,17 @@ async function main() {
         if (session.messages.length > 0) {
           console.log(chalk.blue('\n=== メッセージ ==='))
           session.messages.forEach((msg, index) => {
-            const roleColor = msg.role === 'user' ? chalk.cyan : 
-                             msg.role === 'assistant' ? chalk.green : chalk.gray
+            const roleColor =
+              msg.role === 'user'
+                ? chalk.cyan
+                : msg.role === 'assistant'
+                  ? chalk.green
+                  : chalk.gray
             console.log(`\n${index + 1}. ${roleColor(msg.role.toUpperCase())}`)
             console.log(`   時刻: ${new Date(msg.timestamp).toLocaleString()}`)
-            console.log(`   内容: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}`)
+            console.log(
+              `   内容: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}`
+            )
           })
         }
       } catch (error) {
@@ -160,7 +168,11 @@ async function main() {
     .action(async (sessionId, options) => {
       try {
         if (!options.force) {
-          console.log(chalk.yellow('⚠️ セッション削除は実装されていません（安全性のため）'))
+          console.log(
+            chalk.yellow(
+              '⚠️ セッション削除は実装されていません（安全性のため）'
+            )
+          )
           return
         }
         console.log(chalk.green('✅ セッション削除完了'))
@@ -179,20 +191,26 @@ async function main() {
     .option('-s, --start <start>', '開始日（YYYY-MM-DD）')
     .option('-e, --end <end>', '終了日（YYYY-MM-DD）')
     .option('-l, --limit <limit>', '表示件数', '10')
-    .action(async (options) => {
+    .action(async options => {
       try {
         const filter: ChatHistoryFilter = {
           keyword: options.keyword,
-          tags: options.tags ? options.tags.split(',').map((t: string) => t.trim()) : undefined,
+          tags: options.tags
+            ? options.tags.split(',').map((t: string) => t.trim())
+            : undefined,
           startDate: options.start ? new Date(options.start) : undefined,
           endDate: options.end ? new Date(options.end) : undefined,
-          limit: parseInt(options.limit)
+          limit: parseInt(options.limit),
         }
 
         const result = await chatHistoryService.searchSessions(filter)
-        
-        console.log(chalk.blue(`\n=== 検索結果: ${result.totalCount}件中${result.sessions.length}件表示 ===`))
-        
+
+        console.log(
+          chalk.blue(
+            `\n=== 検索結果: ${result.totalCount}件中${result.sessions.length}件表示 ===`
+          )
+        )
+
         if (result.sessions.length === 0) {
           console.log(chalk.yellow('該当するセッションがありません'))
           return
@@ -201,9 +219,13 @@ async function main() {
         result.sessions.forEach((session, index) => {
           console.log(`\n${index + 1}. ${chalk.green(session.title)}`)
           console.log(`   ID: ${session.id}`)
-          console.log(`   作成: ${new Date(session.createdAt).toLocaleString()}`)
+          console.log(
+            `   作成: ${new Date(session.createdAt).toLocaleString()}`
+          )
           console.log(`   メッセージ数: ${session.messages.length}`)
-          console.log(`   タグ: ${session.tags ? session.tags.join(', ') : 'なし'}`)
+          console.log(
+            `   タグ: ${session.tags ? session.tags.join(', ') : 'なし'}`
+          )
         })
 
         if (result.hasMore) {
@@ -220,16 +242,22 @@ async function main() {
     .action(async () => {
       try {
         const stats = await chatHistoryService.getStats()
-        
+
         console.log(chalk.blue('\n=== チャット履歴統計 ==='))
         console.log(`総セッション数: ${chalk.green(stats.totalSessions)}`)
         console.log(`総メッセージ数: ${chalk.green(stats.totalMessages)}`)
-        console.log(`今月のメッセージ数: ${chalk.green(stats.thisMonthMessages)}`)
-        console.log(`アクティブプロジェクト数: ${chalk.green(stats.activeProjects)}`)
+        console.log(
+          `今月のメッセージ数: ${chalk.green(stats.thisMonthMessages)}`
+        )
+        console.log(
+          `アクティブプロジェクト数: ${chalk.green(stats.activeProjects)}`
+        )
         console.log(`ストレージサイズ: ${chalk.green(stats.storageSize)}`)
-        
+
         if (stats.lastActivity) {
-          console.log(`最終活動: ${chalk.green(stats.lastActivity.toLocaleString())}`)
+          console.log(
+            `最終活動: ${chalk.green(stats.lastActivity.toLocaleString())}`
+          )
         }
       } catch (error) {
         console.error(chalk.red('❌ エラー:'), error)
@@ -240,7 +268,7 @@ async function main() {
     .command('analyze')
     .description('詳細分析レポートを表示')
     .option('-p, --period <period>', '期間 (week|month|year)', 'month')
-    .action(async (options) => {
+    .action(async options => {
       try {
         const stats = await analyticsService.getUsageStats()
         const sessions = await chatHistoryService.searchSessions({})
@@ -248,14 +276,22 @@ async function main() {
         console.log(chalk.blue('\n📊 統計情報'))
         console.log(`総セッション数: ${chalk.green(stats.totalSessions)}`)
         console.log(`総メッセージ数: ${chalk.green(stats.totalMessages)}`)
-        console.log(`平均メッセージ数/セッション: ${chalk.green(stats.averageSessionLength.toFixed(1))}`)
+        console.log(
+          `平均メッセージ数/セッション: ${chalk.green(stats.averageSessionLength.toFixed(1))}`
+        )
         console.log(`最も活発な時間: ${chalk.green(stats.mostActiveHour)}時`)
 
         if (options.usage) {
           console.log(chalk.blue('\n📈 使用状況詳細'))
-          console.log(`ユーザーメッセージ: ${chalk.green(stats.userMessageCount)}`)
-          console.log(`アシスタントメッセージ: ${chalk.green(stats.assistantMessageCount)}`)
-          console.log(`平均セッション時間: ${chalk.green(stats.averageSessionDuration.toFixed(1))}分`)
+          console.log(
+            `ユーザーメッセージ: ${chalk.green(stats.userMessageCount)}`
+          )
+          console.log(
+            `アシスタントメッセージ: ${chalk.green(stats.assistantMessageCount)}`
+          )
+          console.log(
+            `平均セッション時間: ${chalk.green(stats.averageSessionDuration.toFixed(1))}分`
+          )
           console.log(`最も活発な曜日: ${chalk.green(stats.mostActiveDay)}`)
         }
       } catch (error) {
@@ -271,39 +307,45 @@ async function main() {
     .option('-f, --format <format>', 'フォーマット (json|markdown|txt)', 'json')
     .option('-o, --output <path>', '出力ファイルパス')
     .option('-s, --sessions <ids>', 'セッションID（カンマ区切り）')
-    .action(async (options) => {
+    .action(async options => {
       try {
         await initializeServices()
 
         const filter = {
-          ...options.sessionId && { sessionId: options.sessionId },
-          ...options.projectId && { projectId: parseInt(options.projectId) },
-          ...options.startDate && { startDate: new Date(options.startDate) },
-          ...options.endDate && { endDate: new Date(options.endDate) },
-          ...options.tags && { tags: options.tags.split(',') },
-          limit: 10000
+          ...(options.sessionId && { sessionId: options.sessionId }),
+          ...(options.projectId && { projectId: parseInt(options.projectId) }),
+          ...(options.startDate && { startDate: new Date(options.startDate) }),
+          ...(options.endDate && { endDate: new Date(options.endDate) }),
+          ...(options.tags && { tags: options.tags.split(',') }),
+          limit: 10000,
         }
 
         const searchResult = await chatHistoryService.searchSessions(filter)
         const sessions = searchResult.sessions
 
         if (sessions.length === 0) {
-          console.log(chalk.yellow('📭 エクスポートするセッションが見つかりません'))
+          console.log(
+            chalk.yellow('📭 エクスポートするセッションが見つかりません')
+          )
           return
         }
 
-        const outputPath = options.output || `export_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.${options.format}`
+        const outputPath =
+          options.output ||
+          `export_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.${options.format}`
 
         await exportService.exportSessions(sessions, {
           format: options.format as 'json' | 'markdown' | 'txt',
           outputPath,
-          includeMetadata: true
+          includeMetadata: true,
         })
 
         console.log(chalk.green('✅ エクスポートが完了しました'))
         console.log(`📁 ファイル: ${outputPath}`)
         console.log(`📊 セッション数: ${sessions.length}`)
-        console.log(`💬 メッセージ数: ${sessions.reduce((sum, s) => sum + s.messages.length, 0)}`)
+        console.log(
+          `💬 メッセージ数: ${sessions.reduce((sum, s) => sum + s.messages.length, 0)}`
+        )
       } catch (error) {
         console.error(chalk.red('❌ エクスポートエラー:'), error)
         process.exit(1)
@@ -315,12 +357,12 @@ async function main() {
     .command('import')
     .description('履歴ファイルからインポート')
     .requiredOption('-f, --file <file>', 'インポートファイルパス')
-    .action(async (options) => {
+    .action(async options => {
       try {
         await initializeServices()
 
         const filePath = options.file
-        if (!await fs.pathExists(filePath)) {
+        if (!(await fs.pathExists(filePath))) {
           console.error(chalk.red('❌ ファイルが見つかりません:'), filePath)
           process.exit(1)
         }
@@ -443,13 +485,13 @@ async function main() {
     .command('autosave-start')
     .description('自動保存を開始')
     .option('-t, --title <title>', 'セッションタイトル')
-    .action(async (options) => {
+    .action(async options => {
       try {
         await initializeServices()
         await autoSaveService.start()
 
         console.log(chalk.green('✅ 自動保存セッションを開始しました'))
-        
+
         // シグナルハンドラーでセッション終了
         process.on('SIGINT', async () => {
           console.log(chalk.yellow('\n⏹️  自動保存セッションを終了中...'))
@@ -492,17 +534,25 @@ async function main() {
         const status = autoSaveService.getStatus()
 
         console.log(chalk.blue('\n💾 自動保存状態'))
-        console.log(`状態: ${status.isActive ? chalk.green('実行中') : chalk.red('停止中')}`)
-        console.log(`最終保存: ${status.lastSaveTime ? status.lastSaveTime.toLocaleString() : 'なし'}`)
+        console.log(
+          `状態: ${status.isActive ? chalk.green('実行中') : chalk.red('停止中')}`
+        )
+        console.log(
+          `最終保存: ${status.lastSaveTime ? status.lastSaveTime.toLocaleString() : 'なし'}`
+        )
         console.log(`セッションID: ${status.currentSessionId || 'なし'}`)
 
         if (status.isActive && status.currentSessionId) {
           const currentSession = autoSaveService.getCurrentSession()
           if (currentSession) {
             console.log(`現在のセッション: ${currentSession.title}`)
-            console.log(`開始時刻: ${currentSession.createdAt.toLocaleString()}`)
+            console.log(
+              `開始時刻: ${currentSession.createdAt.toLocaleString()}`
+            )
             console.log(`メッセージ数: ${currentSession.messages.length}`)
-            console.log(`経過時間: ${Math.floor((Date.now() - currentSession.createdAt.getTime()) / 60000)}分`)
+            console.log(
+              `経過時間: ${Math.floor((Date.now() - currentSession.createdAt.getTime()) / 60000)}分`
+            )
           }
         }
       } catch (error) {
@@ -518,7 +568,7 @@ async function main() {
     .option('--disable', '自動保存を無効化')
     .option('--idle-timeout <minutes>', 'アイドルタイムアウト (分)')
     .option('--max-duration <minutes>', '最大セッション時間 (分)')
-    .action(async (options) => {
+    .action(async options => {
       try {
         await initializeServices()
         const config = await configService.getConfig()
@@ -531,7 +581,7 @@ async function main() {
               watchDirectories: [],
               filePatterns: ['*.md', '*.ts', '*.js'],
               maxSessionDuration: 2 * 60 * 60 * 1000,
-              idleTimeout: 5 * 60 * 1000
+              idleTimeout: 5 * 60 * 1000,
             }
           }
           config.autoSave.enabled = true
@@ -545,7 +595,7 @@ async function main() {
               watchDirectories: [],
               filePatterns: ['*.md', '*.ts', '*.js'],
               maxSessionDuration: 2 * 60 * 60 * 1000,
-              idleTimeout: 5 * 60 * 1000
+              idleTimeout: 5 * 60 * 1000,
             }
           }
           config.autoSave.enabled = false
@@ -559,10 +609,11 @@ async function main() {
               watchDirectories: [],
               filePatterns: ['*.md', '*.ts', '*.js'],
               maxSessionDuration: 2 * 60 * 60 * 1000,
-              idleTimeout: 5 * 60 * 1000
+              idleTimeout: 5 * 60 * 1000,
             }
           }
-          config.autoSave.idleTimeout = parseInt(options.idleTimeout) * 60 * 1000
+          config.autoSave.idleTimeout =
+            parseInt(options.idleTimeout) * 60 * 1000
         }
 
         if (options.maxDuration !== undefined) {
@@ -573,18 +624,25 @@ async function main() {
               watchDirectories: [],
               filePatterns: ['*.md', '*.ts', '*.js'],
               maxSessionDuration: 2 * 60 * 60 * 1000,
-              idleTimeout: 5 * 60 * 1000
+              idleTimeout: 5 * 60 * 1000,
             }
           }
-          config.autoSave.maxSessionDuration = parseInt(options.maxDuration) * 60 * 1000
+          config.autoSave.maxSessionDuration =
+            parseInt(options.maxDuration) * 60 * 1000
         }
 
         await configService.saveConfig(config)
 
         console.log(chalk.blue('\n💾 自動保存設定'))
-        console.log(`自動保存: ${config.autoSave?.enabled ? chalk.green('有効') : chalk.yellow('無効')}`)
-        console.log(`アイドルタイムアウト: ${(config.autoSave?.idleTimeout || 0) / 60000}分`)
-        console.log(`最大セッション時間: ${(config.autoSave?.maxSessionDuration || 0) / 60000}分`)
+        console.log(
+          `自動保存: ${config.autoSave?.enabled ? chalk.green('有効') : chalk.yellow('無効')}`
+        )
+        console.log(
+          `アイドルタイムアウト: ${(config.autoSave?.idleTimeout || 0) / 60000}分`
+        )
+        console.log(
+          `最大セッション時間: ${(config.autoSave?.maxSessionDuration || 0) / 60000}分`
+        )
       } catch (error) {
         console.error(chalk.red('❌ エラー:'), error)
         process.exit(1)
@@ -604,7 +662,7 @@ async function main() {
     .option('--enable-cleanup', '自動クリーンアップを有効化')
     .option('--disable-cleanup', '自動クリーンアップを無効化')
     .option('--cleanup-days <days>', 'クリーンアップ間隔 (日)')
-    .action(async (options) => {
+    .action(async options => {
       try {
         if (options.reset) {
           await configService.resetToDefault()
@@ -642,8 +700,12 @@ async function main() {
         console.log(chalk.blue('\n⚙️  現在の設定'))
         console.log(`ストレージパス: ${config.storagePath}`)
         console.log(`最大セッション数: ${config.maxSessions}`)
-        console.log(`最大メッセージ数/セッション: ${config.maxMessagesPerSession}`)
-        console.log(`自動クリーンアップ: ${config.autoCleanup ? '有効' : '無効'}`)
+        console.log(
+          `最大メッセージ数/セッション: ${config.maxMessagesPerSession}`
+        )
+        console.log(
+          `自動クリーンアップ: ${config.autoCleanup ? '有効' : '無効'}`
+        )
         console.log(`クリーンアップ間隔: ${config.cleanupDays}日`)
       } catch (error) {
         console.error(chalk.red('❌ エラー:'), error)

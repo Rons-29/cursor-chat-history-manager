@@ -83,10 +83,10 @@ export interface IntegrationStats {
 
 export interface IntegrationAnalytics {
   timeRange: {
-    start: Date;
-    end: Date;
-  };
-  granularity: 'hourly' | 'daily' | 'weekly' | 'monthly';
+    start: Date
+    end: Date
+  }
+  granularity: 'hourly' | 'daily' | 'weekly' | 'monthly'
   summary: {
     totalLogs: number
     totalChats: number
@@ -109,10 +109,10 @@ export interface IntegrationAnalytics {
     count: number
   }>
   metrics: {
-    messageCount: number[];
-    sessionCount: number[];
-    timestamps: string[];
-  };
+    messageCount: number[]
+    sessionCount: number[]
+    timestamps: string[]
+  }
 }
 
 export interface IntegrationAnalyticsRequest {
@@ -127,20 +127,20 @@ export interface IntegrationAnalyticsRequest {
 export interface IntegrationAnalyticsResponse extends IntegrationAnalytics {}
 
 export interface IntegrationSearchOptions {
-  query?: string;
+  query?: string
   timeRange?: {
-    start: Date;
-    end: Date;
-  };
-  types?: string[];
-  project?: string;
-  tags?: string[];
-  pageSize?: number;
+    start: Date
+    end: Date
+  }
+  types?: string[]
+  project?: string
+  tags?: string[]
+  pageSize?: number
 }
 
 export interface CursorWatcherStatus {
-  isActive: boolean;
-  lastCheck: Date;
-  watchPath: string;
-  errorCount: number;
-} 
+  isActive: boolean
+  lastCheck: Date
+  watchPath: string
+  errorCount: number
+}

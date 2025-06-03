@@ -13,7 +13,10 @@ describe('ChatHistoryService Performance Tests', () => {
 
   beforeAll(async () => {
     await fs.ensureDir(testStoragePath)
-    logger = new Logger({ logPath: path.join(testStoragePath, 'logs'), level: 'info' })
+    logger = new Logger({
+      logPath: path.join(testStoragePath, 'logs'),
+      level: 'info',
+    })
     await logger.initialize()
     performanceTest = new PerformanceTest(logger)
   })
@@ -31,7 +34,7 @@ describe('ChatHistoryService Performance Tests', () => {
       cleanupDays: 30,
       enableSearch: true,
       enableBackup: false,
-      backupInterval: 24
+      backupInterval: 24,
     })
     await service.initialize()
   })
@@ -40,7 +43,9 @@ describe('ChatHistoryService Performance Tests', () => {
     await service.cleanup()
   })
 
-  const createTestSession = async (messageCount: number): Promise<ChatSession> => {
+  const createTestSession = async (
+    messageCount: number
+  ): Promise<ChatSession> => {
     const now = new Date()
     const session: ChatSession = {
       id: `test-${Date.now()}`,
@@ -50,13 +55,13 @@ describe('ChatHistoryService Performance Tests', () => {
       startTime: now,
       createdAt: now,
       updatedAt: now,
-      metadata: { project: 'test', source: 'test' }
+      metadata: { project: 'test', source: 'test' },
     }
 
     for (let i = 0; i < messageCount; i++) {
       const message: ChatMessage = {
         id: `msg-${i}`,
-        role: i % 2 === 0 ? 'user' as const : 'assistant' as const,
+        role: i % 2 === 0 ? ('user' as const) : ('assistant' as const),
         content: `Test message ${i}`,
         timestamp: new Date(),
       }
@@ -208,7 +213,7 @@ describe('ChatHistoryService Performance Tests', () => {
             const messages = Array(100)
               .fill(null)
               .map((_, i) => ({
-                role: i % 2 === 0 ? 'user' as const : 'assistant' as const,
+                role: i % 2 === 0 ? ('user' as const) : ('assistant' as const),
                 content: `Batch message ${i}`,
               }))
             await Promise.all(
@@ -283,7 +288,7 @@ describe('ChatHistoryService Performance Tests', () => {
   describe('メモリ使用量の測定', () => {
     it('大量のセッション作成時のメモリ使用量を測定できること', async () => {
       const initialMemory = process.memoryUsage().heapUsed
-      
+
       const sessions = await Promise.all(
         Array(100)
           .fill(null)
@@ -304,4 +309,4 @@ describe('ChatHistoryService Performance Tests', () => {
       expect(memoryIncrease / 1024 / 1024).toBeLessThan(500) // 500MB以内
     })
   })
-}) 
+})

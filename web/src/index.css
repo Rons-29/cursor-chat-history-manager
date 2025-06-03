@@ -2,12 +2,31 @@
 
 /* TailwindCSS v4 テーマ設定 */
 @theme {
-  --color-primary-50: #eff6ff;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-900: #1e3a8a;
+  /* Cursor風カラーシステム - 青紫系 */
+  --color-cursor-50: #f0f4ff;
+  --color-cursor-100: #e0ebff;
+  --color-cursor-200: #c7d8ff;
+  --color-cursor-300: #a4bcff;
+  --color-cursor-400: #8b9aff;
+  --color-cursor-500: #6366f1;
+  --color-cursor-600: #4f46e5;
+  --color-cursor-700: #4338ca;
+  --color-cursor-800: #3730a3;
+  --color-cursor-900: #312e81;
+
+  /* メインプライマリカラーをCursor風に更新 */
+  --color-primary-50: #f0f4ff;
+  --color-primary-100: #e0ebff;
+  --color-primary-200: #c7d8ff;
+  --color-primary-300: #a4bcff;
+  --color-primary-400: #8b9aff;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
   
+  /* 改善されたグレースケール - より読みやすいコントラスト */
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
   --color-gray-200: #e5e7eb;
@@ -18,6 +37,67 @@
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
+  
+  /* ダークモード専用カラー - より良いコントラスト */
+  --color-dark-50: #f8fafc;
+  --color-dark-100: #f1f5f9;
+  --color-dark-200: #e2e8f0;
+  --color-dark-300: #cbd5e1;
+  --color-dark-400: #94a3b8;
+  --color-dark-500: #64748b;
+  --color-dark-600: #475569;
+  --color-dark-700: #334155;
+  --color-dark-800: #1e293b;
+  --color-dark-900: #0f172a;
+
+  /* カラフル統計カード用拡張カラー - Cursor風に調整 */
+  --color-blue-50: #f0f4ff;
+  --color-blue-100: #e0ebff;
+  --color-blue-200: #c7d8ff;
+  --color-blue-600: #4f46e5;
+  --color-blue-700: #4338ca;
+  --color-blue-800: #3730a3;
+  --color-blue-900: #312e81;
+
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+
+  --color-purple-50: #faf5ff;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7c3aed;
+  --color-purple-800: #6b21a8;
+  --color-purple-900: #581c87;
+
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  --color-orange-800: #9a3412;
+  --color-orange-900: #7c2d12;
+
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
   
   --font-family-sans: 'Inter', system-ui, sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Consolas', monospace;
@@ -33,25 +113,525 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
   
-  /* スクロールバーのカスタマイズ */
+  /* タブラ数字（等幅数字）の設定 */
+  .tabular-nums {
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  /* 改善されたダークモード設定 */
+  .dark {
+    color-scheme: dark;
+  }
+  
+  .dark body {
+    background-color: var(--color-dark-900);
+    color: var(--color-dark-100);
+  }
+  
+  /* ダークモード背景色の改善 */
+  .dark .bg-gray-50 { 
+    background-color: var(--color-dark-800) !important; 
+  }
+  
+  .dark .min-h-screen {
+    background-color: var(--color-dark-900) !important;
+  }
+
+  /* スクロール不要ダッシュボード用最適化 */
+  .dashboard-no-scroll {
+    max-height: 100vh;
+    overflow-y: hidden;
+  }
+
+  .dashboard-compact {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-content {
+    flex: 1;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 1.5rem;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* 2×2グリッド専用最適化 */
+  .stats-grid-2x2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    max-width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid-2x2 {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  /* 2×2レイアウト用カード最適化 */
+  .stats-card-2x2 {
+    min-height: 180px;
+    max-height: 220px;
+    padding: 2rem;
+  }
+
+  .stats-number-2x2 {
+    font-size: 4rem;
+    line-height: 0.9;
+    transform: scaleY(1.1);
+    margin-bottom: 0.5rem;
+  }
+
+  .stats-icon-2x2 {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  /* レスポンシブ調整 */
+  @media (max-width: 1024px) {
+    .stats-number-2x2 {
+      font-size: 3.5rem;
+    }
+    
+    .stats-icon-2x2 {
+      width: 4rem;
+      height: 4rem;
+    }
+    
+    .stats-card-2x2 {
+      min-height: 160px;
+      max-height: 200px;
+      padding: 1.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .stats-number-2x2 {
+      font-size: 3rem;
+    }
+    
+    .stats-icon-2x2 {
+      width: 3.5rem;
+      height: 3.5rem;
+    }
+    
+    .stats-card-2x2 {
+      min-height: 140px;
+      max-height: 180px;
+      padding: 1.25rem;
+    }
+  }
+
+  /* コンパクト統計カード */
+  .stats-card-compact {
+    min-height: 140px;
+    max-height: 160px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .stats-number-compact {
+    font-size: 2.5rem;
+    line-height: 0.9;
+    margin-bottom: 0.25rem;
+  }
+
+  .stats-icon-compact {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0.5rem;
+  }
+
+  /* モバイル時の調整 */
+  @media (max-width: 768px) {
+    .stats-number-compact {
+      font-size: 2rem;
+    }
+
+    .stats-icon-compact {
+      width: 2rem;
+      height: 2rem;
+      padding: 0.25rem;
+    }
+
+    .stats-card-compact {
+      min-height: 120px;
+      max-height: 140px;
+      padding: 0.75rem;
+    }
+  }
+
+  /* 高さ制限のある画面での追加最適化 */
+  @media (max-height: 800px) {
+    .stats-card-compact {
+      min-height: 120px;
+      max-height: 140px;
+      padding: 0.75rem;
+    }
+
+    .stats-number-compact {
+      font-size: 2rem;
+    }
+
+    .stats-icon-compact {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+
+  @media (max-height: 700px) {
+    .dashboard-content {
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    .stats-card-compact {
+      min-height: 100px;
+      max-height: 120px;
+      padding: 0.5rem;
+    }
+
+    .stats-number-compact {
+      font-size: 1.75rem;
+    }
+
+    .stats-icon-compact {
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+  }
+
+  /* 改善されたレイアウト・構造 */
+  .dark .bg-white { background-color: var(--color-dark-800) !important; }
+  .dark .bg-gray-100 { background-color: var(--color-dark-700) !important; }
+  .dark .bg-gray-200 { background-color: var(--color-dark-600) !important; }
+  .dark .text-gray-900 { color: var(--color-dark-50) !important; }
+  .dark .text-gray-800 { color: var(--color-dark-100) !important; }
+  .dark .text-gray-700 { color: var(--color-dark-200) !important; }
+  .dark .text-gray-600 { color: var(--color-dark-300) !important; }
+  .dark .text-gray-500 { color: var(--color-dark-400) !important; }
+  
+  /* 統計カード専用グラデーション - ライトモード（強化版） */
+  .stats-card-cursor {
+    background: linear-gradient(135deg, 
+      var(--color-cursor-50) 0%, 
+      var(--color-cursor-100) 50%,
+      rgba(79, 70, 229, 0.08) 100%);
+    border: 2px solid var(--color-cursor-200);
+    box-shadow: 
+      0 8px 16px rgba(79, 70, 229, 0.1),
+      0 4px 8px rgba(79, 70, 229, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .stats-card-blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.05) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+  
+  .stats-card-green {
+    background: linear-gradient(135deg, 
+      var(--color-green-50) 0%, 
+      var(--color-green-100) 50%,
+      rgba(34, 197, 94, 0.08) 100%);
+    border: 2px solid var(--color-green-200);
+    box-shadow: 
+      0 8px 16px rgba(34, 197, 94, 0.1),
+      0 4px 8px rgba(34, 197, 94, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  
+  .stats-card-purple {
+    background: linear-gradient(135deg, 
+      var(--color-purple-50) 0%, 
+      var(--color-purple-100) 50%,
+      rgba(168, 85, 247, 0.08) 100%);
+    border: 2px solid var(--color-purple-200);
+    box-shadow: 
+      0 8px 16px rgba(168, 85, 247, 0.1),
+      0 4px 8px rgba(168, 85, 247, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  
+  .stats-card-orange {
+    background: linear-gradient(135deg, 
+      var(--color-orange-50) 0%, 
+      var(--color-orange-100) 50%,
+      rgba(251, 146, 60, 0.08) 100%);
+    border: 2px solid var(--color-orange-200);
+    box-shadow: 
+      0 8px 16px rgba(251, 146, 60, 0.1),
+      0 4px 8px rgba(251, 146, 60, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  /* 統計カード専用グラデーション - ダークモード（超強化版） */
+  .dark .stats-card-cursor {
+    background: linear-gradient(135deg, 
+      rgba(79, 70, 229, 0.25) 0%, 
+      rgba(67, 56, 202, 0.35) 50%,
+      rgba(99, 102, 241, 0.15) 100%);
+    border: 2px solid rgba(79, 70, 229, 0.4);
+    backdrop-filter: blur(15px);
+    box-shadow: 
+      0 8px 16px rgba(79, 70, 229, 0.2),
+      0 4px 8px rgba(79, 70, 229, 0.15),
+      inset 0 1px 0 rgba(139, 154, 255, 0.3);
+  }
+
+  .dark .stats-card-blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(29, 78, 216, 0.08) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  
+  .dark .stats-card-green {
+    background: linear-gradient(135deg, 
+      rgba(22, 163, 74, 0.25) 0%, 
+      rgba(21, 128, 61, 0.35) 50%,
+      rgba(34, 197, 94, 0.15) 100%);
+    border: 2px solid rgba(34, 197, 94, 0.4);
+    backdrop-filter: blur(15px);
+    box-shadow: 
+      0 8px 16px rgba(34, 197, 94, 0.2),
+      0 4px 8px rgba(34, 197, 94, 0.15),
+      inset 0 1px 0 rgba(74, 222, 128, 0.3);
+  }
+  
+  .dark .stats-card-purple {
+    background: linear-gradient(135deg, 
+      rgba(147, 51, 234, 0.25) 0%, 
+      rgba(124, 58, 237, 0.35) 50%,
+      rgba(168, 85, 247, 0.15) 100%);
+    border: 2px solid rgba(168, 85, 247, 0.4);
+    backdrop-filter: blur(15px);
+    box-shadow: 
+      0 8px 16px rgba(168, 85, 247, 0.2),
+      0 4px 8px rgba(168, 85, 247, 0.15),
+      inset 0 1px 0 rgba(196, 181, 253, 0.3);
+  }
+  
+  .dark .stats-card-orange {
+    background: linear-gradient(135deg, 
+      rgba(234, 88, 12, 0.25) 0%, 
+      rgba(194, 65, 12, 0.35) 50%,
+      rgba(251, 146, 60, 0.15) 100%);
+    border: 2px solid rgba(251, 146, 60, 0.4);
+    backdrop-filter: blur(15px);
+    box-shadow: 
+      0 8px 16px rgba(251, 146, 60, 0.2),
+      0 4px 8px rgba(251, 146, 60, 0.15),
+      inset 0 1px 0 rgba(253, 186, 116, 0.3);
+  }
+
+  /* 統計カードテキスト色の改善 */
+  .stats-card-cursor .text-cursor-900 { color: var(--color-cursor-900); }
+  .stats-card-cursor .text-cursor-600 { color: var(--color-cursor-600); }
+  .stats-card-blue .text-blue-900 { color: var(--color-blue-900); }
+  .stats-card-blue .text-blue-600 { color: var(--color-blue-600); }
+  .stats-card-green .text-green-900 { color: var(--color-green-900); }
+  .stats-card-green .text-green-600 { color: var(--color-green-600); }
+  .stats-card-purple .text-purple-900 { color: var(--color-purple-900); }
+  .stats-card-purple .text-purple-600 { color: var(--color-purple-600); }
+  .stats-card-orange .text-orange-900 { color: var(--color-orange-900); }
+  .stats-card-orange .text-orange-600 { color: var(--color-orange-600); }
+
+  /* ダークモード統計カードテキスト色（コントラスト向上） */
+  .dark .stats-card-cursor .text-cursor-900 { color: #e0ebff !important; }
+  .dark .stats-card-cursor .text-cursor-600 { color: #a4bcff !important; }
+  .dark .stats-card-blue .text-blue-900 { color: #dbeafe !important; }
+  .dark .stats-card-blue .text-blue-600 { color: #93c5fd !important; }
+  .dark .stats-card-green .text-green-900 { color: #dcfce7 !important; }
+  .dark .stats-card-green .text-green-600 { color: #86efac !important; }
+  .dark .stats-card-purple .text-purple-900 { color: #f3e8ff !important; }
+  .dark .stats-card-purple .text-purple-600 { color: #c4b5fd !important; }
+  .dark .stats-card-orange .text-orange-900 { color: #ffedd5 !important; }
+  .dark .stats-card-orange .text-orange-600 { color: #fdba74 !important; }
+
+  /* 改善されたカード・パネル */
+  .dark .card {
+    background-color: var(--color-dark-800);
+    border-color: var(--color-dark-600);
+    color: var(--color-dark-100);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 改善された入力フィールド・フォーム */
+  .dark .input-field,
+  .dark input[type="text"],
+  .dark input[type="number"],
+  .dark input[type="email"],
+  .dark input[type="password"],
+  .dark textarea,
+  .dark select {
+    background-color: var(--color-dark-700);
+    border-color: var(--color-dark-500);
+    color: var(--color-dark-100);
+  }
+  
+  .dark .input-field:focus,
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    background-color: var(--color-dark-800);
+  }
+  
+  /* 改善されたボタン */
+  .dark .btn-secondary {
+    background-color: var(--color-dark-700);
+    color: var(--color-dark-200);
+    border-color: var(--color-dark-500);
+  }
+  
+  .dark .btn-secondary:hover {
+    background-color: var(--color-dark-600);
+    color: var(--color-dark-100);
+  }
+  
+  /* 改善されたボーダー */
+  .dark .border-gray-200 { border-color: var(--color-dark-600) !important; }
+  .dark .border-gray-300 { border-color: var(--color-dark-500) !important; }
+  
+  /* 改善されたサイドバー・ナビゲーション */
+  .dark .border-r { border-color: var(--color-dark-700) !important; }
+  
+  /* 改善されたホバー効果 */
+  .dark .hover\\:bg-gray-50:hover { background-color: var(--color-dark-700) !important; }
+  .dark .hover\\:bg-gray-100:hover { background-color: var(--color-dark-600) !important; }
+  
+  /* 改善されたドロップダウン・メニュー */
+  .dark .shadow-lg { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3); }
+  
+  /* 改善されたテーブル */
+  .dark th {
+    background-color: var(--color-dark-800);
+    color: var(--color-dark-200);
+    border-color: var(--color-dark-600);
+  }
+  
+  .dark td {
+    border-color: var(--color-dark-600);
+  }
+  
+  /* 改善されたチェックボックス・ラジオボタン */
+  .dark input[type="checkbox"],
+  .dark input[type="radio"] {
+    background-color: var(--color-dark-700);
+    border-color: var(--color-dark-500);
+  }
+  
+  .dark input[type="checkbox"]:checked,
+  .dark input[type="radio"]:checked {
+    background-color: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+  }
+  
+  /* 改善されたコードブロック・プリフォーマット */
+  .dark pre,
+  .dark code {
+    background-color: var(--color-dark-900);
+    color: var(--color-dark-200);
+  }
+  
+  /* 改善されたアラート・通知（コントラスト向上） */
+  .dark .bg-red-50 { background-color: rgba(127, 29, 29, 0.2) !important; }
+  .dark .bg-green-100 { background-color: rgba(20, 83, 45, 0.3) !important; }
+  .dark .bg-blue-50 { background-color: rgba(30, 58, 138, 0.2) !important; }
+  .dark .bg-yellow-50 { background-color: rgba(120, 53, 15, 0.2) !important; }
+  
+  .dark .text-red-700 { color: #fca5a5 !important; }
+  .dark .text-green-600 { color: #4ade80 !important; }
+  .dark .text-blue-700 { color: #60a5fa !important; }
+  .dark .text-yellow-700 { color: #fbbf24 !important; }
+  
+  /* 改善されたスクロールバー */
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
   
   ::-webkit-scrollbar-track {
     background-color: var(--color-gray-100);
+    border-radius: 4px;
   }
   
   ::-webkit-scrollbar-thumb {
     background-color: var(--color-gray-300);
-    border-radius: 9999px;
+    border-radius: 4px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-gray-400);
   }
+  
+  /* ダークモード改善されたスクロールバー */
+  .dark ::-webkit-scrollbar-track {
+    background-color: var(--color-dark-800);
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: var(--color-dark-600);
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-dark-500);
+  }
+}
+
+/* レンジスライダーの改善 */
+.range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-gray-200);
+  outline: none;
+  transition: background 0.3s ease;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.dark .range-slider::-webkit-slider-thumb {
+  background: var(--color-primary-500);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.dark .range-slider::-moz-range-thumb {
+  background: var(--color-primary-500);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* 基本的なユーティリティクラス */
@@ -284,6 +864,206 @@
   
   .card-hover:hover {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  /* 統計カード専用の数値スタイル - 超巨大表示 */
+  .stats-number {
+    font-family: var(--font-family-mono);
+    font-weight: 900;
+    line-height: 0.85;
+    letter-spacing: -0.05em;
+    text-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      0 4px 8px rgba(0, 0, 0, 0.1),
+      0 8px 16px rgba(0, 0, 0, 0.05);
+    transform: scaleY(1.1);
+  }
+  
+  .stats-label {
+    font-family: var(--font-family-sans);
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .stats-icon-bg {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.15) 100%);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.1),
+      0 8px 16px rgba(0, 0, 0, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  
+  .dark .stats-icon-bg {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      0 8px 16px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  /* 統計カードホバー効果強化 */
+  .stats-card-cursor:hover .stats-number,
+  .stats-card-blue:hover .stats-number,
+  .stats-card-green:hover .stats-number,
+  .stats-card-purple:hover .stats-number,
+  .stats-card-orange:hover .stats-number {
+    transform: scaleY(1.15) scale(1.02);
+    transition: transform 0.3s ease-out;
+  }
+
+  /* カード間隔を最大化 */
+  .stats-grid {
+    gap: 2.5rem;
+  }
+
+  /* 超高コントラスト数値 */
+  .stats-ultra-contrast {
+    filter: contrast(1.2) saturate(1.1);
+  }
+
+  /* 数値パルス効果（更新時のアニメーション） */
+  @keyframes numberPulse {
+    0% { transform: scaleY(1.1) scale(1); opacity: 1; }
+    50% { transform: scaleY(1.15) scale(1.03); opacity: 0.9; }
+    100% { transform: scaleY(1.1) scale(1); opacity: 1; }
+  }
+
+  .stats-number.animate-pulse-number {
+    animation: numberPulse 2s ease-in-out infinite;
+  }
+
+  /* カードグロー効果 */
+  @keyframes cardGlow {
+    0%, 100% { box-shadow: 0 8px 16px rgba(37, 99, 235, 0.1), 0 4px 8px rgba(37, 99, 235, 0.05); }
+    50% { box-shadow: 0 12px 24px rgba(37, 99, 235, 0.15), 0 6px 12px rgba(37, 99, 235, 0.1); }
+  }
+
+  .stats-card-blue:hover {
+    animation: cardGlow 3s ease-in-out infinite;
+  }
+
+  /* 数値フォーカス効果 */
+  .stats-number:hover {
+    transform: scaleY(1.2) scale(1.05) !important;
+    text-shadow: 
+      0 3px 6px rgba(0, 0, 0, 0.2),
+      0 6px 12px rgba(0, 0, 0, 0.15),
+      0 12px 24px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-out;
+  }
+
+  /* 視線誘導ライン */
+  .stats-focus-line {
+    position: relative;
+  }
+
+  .stats-focus-line::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, currentColor 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .stats-focus-line:hover::after {
+    opacity: 0.6;
+  }
+
+  /* 極限コンパクトカード - 最大画面内収納 */
+  .stats-card-ultra-compact {
+    min-height: 80px;
+    max-height: 100px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .stats-number-ultra-compact {
+    font-size: 1.75rem;
+    line-height: 0.9;
+    margin-bottom: 0;
+  }
+
+  .stats-icon-ultra-compact {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0.25rem;
+  }
+
+  /* モバイル時の極限最適化 */
+  @media (max-width: 768px) {
+    .stats-card-ultra-compact {
+      min-height: 70px;
+      max-height: 90px;
+      padding: 0.375rem;
+    }
+
+    .stats-number-ultra-compact {
+      font-size: 1.5rem;
+    }
+
+    .stats-icon-ultra-compact {
+      width: 1.5rem;
+      height: 1.5rem;
+      padding: 0.25rem;
+    }
+  }
+
+  /* 超高さ制限での極限最適化 */
+  @media (max-height: 600px) {
+    .dashboard-content {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    .stats-card-ultra-compact {
+      min-height: 60px;
+      max-height: 80px;
+      padding: 0.25rem;
+    }
+
+    .stats-number-ultra-compact {
+      font-size: 1.25rem;
+    }
+
+    .stats-icon-ultra-compact {
+      width: 1.25rem;
+      height: 1.25rem;
+      padding: 0.125rem;
+    }
+  }
+
+  /* 統合サービス用カラー拡張 */
+  .stats-card-blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.05) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .stats-card-indigo {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(67, 56, 202, 0.05) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+
+  /* ダークモード対応 */
+  .dark .stats-card-blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(29, 78, 216, 0.08) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .dark .stats-card-indigo {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(67, 56, 202, 0.08) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
   }
 }
 

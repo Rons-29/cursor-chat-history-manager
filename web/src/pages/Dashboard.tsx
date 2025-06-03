@@ -1,555 +1,333 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { ExclamationTriangleIcon, ArrowRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { apiClient, queryKeys } from '../api/client.js'
-import { LoadingOverlay } from '../components/ui/LoadingOverlay'
-import { DataLoadingProgress, DataLoadingStep } from '../components/ui/DataLoadingProgress'
-import { useProgressTracking } from '../hooks/useProgressTracking'
-import { ProgressIndicator } from '../components/ui/ProgressIndicator'
-import ApiConnectionIndicator from '../components/ui/ApiConnectionIndicator'
-import { useApiConnection } from '../hooks/useIntegration'
-import { ArrowPathIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { Session } from '../types/Session'
-import { SessionCard } from '../components/SessionCard'
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  console.log('🚀 Dashboard component mounting...')
+  
+  // 最小限の状態のみ
+  const [hasError, setHasError] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [showUpdateProgress, setShowUpdateProgress] = useState(false)
-  const [refreshError, setRefreshError] = useState<string | null>(null)
-  const [refreshMessage, setRefreshMessage] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  // 進捗追跡フック
-  const [progressState, progressActions] = useProgressTracking({
-    enableTimeEstimation: true,
-    onComplete: () => {
-      setTimeout(() => {
-        setShowUpdateProgress(false)
-        progressActions.reset()
-      }, 2000)
-    },
-    onError: (error) => {
-      console.error('データ更新エラー:', error)
-      setTimeout(() => {
-        setShowUpdateProgress(false)
-        progressActions.reset()
-      }, 3000)
-    }
-  })
+  console.log('🚀 Dashboard state initialized')
 
-  // 統計データ取得
-  const {
-    data: stats,
-    isLoading: statsLoading,
-    error: statsError,
-  } = useQuery({
-    queryKey: queryKeys.stats(),
-    queryFn: () => apiClient.getStats(),
-    refetchInterval: 30000, // 30秒ごとに更新
-  })
-
-  // セッション一覧取得（最近の5件）
+  // セッション統計データ取得
   const {
     data: sessionsData,
     isLoading: sessionsLoading,
     error: sessionsError,
+    refetch: refetchSessions,
   } = useQuery({
-    queryKey: queryKeys.sessions({ limit: 5 }),
-    queryFn: () => apiClient.getSessions({ limit: 5 }),
-    refetchInterval: 30000,
+    queryKey: queryKeys.sessions({ page: 1, limit: 5 }),
+    queryFn: () => apiClient.getSessions({ page: 1, limit: 5 }),
+    refetchInterval: 60000, // 1分ごとに更新
   })
 
-  // API接続状態監視
+  // ヘルスチェック
   const {
-    data: connectionStatus,
-    isLoading: connectionLoading,
-    error: connectionError
-  } = useApiConnection()
+    data: healthData,
+    isLoading: healthLoading,
+    refetch: refetchHealth,
+  } = useQuery({
+    queryKey: ['health'],
+    queryFn: () => fetch('http://localhost:3001/api/health').then(res => res.json()),
+    refetchInterval: 30000, // 30秒ごとに更新
+  })
 
-  // データ更新処理（API接続チェック付き）
-  const handleRefreshData = async () => {
+  // 手動更新機能
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true)
     try {
-      setIsRefreshing(true)
-      setRefreshError(null)
-
-      // 事前にAPI接続をチェック
-      const connectionCheck = await fetch('/api/health').then(res => res.ok).catch(() => false)
-      
-      if (!connectionCheck) {
-        throw new Error('❌ APIサーバーに接続できません\n\n💡 解決方法:\n1. APIサーバーを起動してください: npm run server\n2. サーバーが起動するまで少し待ってから再試行してください')
-      }
-
-      // 全データを再取得
+      // 全てのクエリを並行して更新
       await Promise.all([
+        refetchSessions(),
+        refetchHealth(),
         queryClient.invalidateQueries({ queryKey: ['sessions'] }),
-        queryClient.invalidateQueries({ queryKey: ['integration-stats'] }),
-        queryClient.invalidateQueries({ queryKey: ['cursor-status'] }),
-        queryClient.invalidateQueries({ queryKey: ['api-connection'] })
+        queryClient.invalidateQueries({ queryKey: ['health'] })
       ])
-
-      setRefreshMessage('データを正常に更新しました')
-      setTimeout(() => setRefreshMessage(null), 3000)
     } catch (error) {
-      console.error('データ更新エラー:', error)
-      setRefreshError(error instanceof Error ? error.message : 'データ更新に失敗しました')
+      console.error('Manual refresh error:', error)
     } finally {
       setIsRefreshing(false)
     }
   }
 
-  // ページ遷移ハンドラー
-  const handleNavigateToSessions = () => navigate('/sessions')
-  const handleNavigateToSearch = () => navigate('/search')
-
-  // エクスポート機能（仮実装）
-  const handleExport = () => {
-    alert('エクスポート機能は準備中です')
-  }
-
-  // 設定画面
-  const handleSettings = () => {
-    navigate('/settings')
-  }
-
-  // セッション詳細ページに遷移
-  const handleSessionClick = (sessionId: string) => {
-    navigate(`/sessions/${sessionId}`)
-  }
-
-  const formatLastUpdated = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      const now = new Date()
-      const diffMs = now.getTime() - date.getTime()
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-
-      if (diffHours < 1) return '1時間未満'
-      if (diffHours < 24) return `${diffHours}時間前`
-      return `${Math.floor(diffHours / 24)}日前`
-    } catch {
-      return '--'
+  // エラーハンドリング
+  useEffect(() => {
+    console.log('🚀 Dashboard error handler setup')
+    const handleError = (error: ErrorEvent) => {
+      console.error('⚠️ Dashboard Global Error:', error)
+      setHasError(true)
     }
+    
+    window.addEventListener('error', handleError)
+    return () => window.removeEventListener('error', handleError)
+  }, [])
+
+  // デバッグ情報をコンソールに出力
+  useEffect(() => {
+    console.log('📊 Dashboard Debug Info:', {
+      sessionsData,
+      sessionsLoading,
+      sessionsError,
+      healthData,
+      healthLoading
+    })
+  }, [sessionsData, sessionsLoading, sessionsError, healthData, healthLoading])
+
+  // エラー時のフォールバック表示
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ExclamationTriangleIcon className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            ダッシュボード読み込みエラー
+          </h2>
+          <p className="text-gray-600 mb-4">
+            アプリケーションの読み込みに問題が発生しました
+          </p>
+          <button
+            onClick={() => {
+              setHasError(false)
+              window.location.reload()
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium"
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  const formatSessionTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('ja-JP', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return '--'
-    }
-  }
+  const totalSessions = sessionsData?.pagination?.total || 0
+  const recentSessions = sessionsData?.sessions?.slice(0, 3) || []
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* 🧪 レンダリングテスト */}
+      <div className="fixed top-0 right-0 z-50 bg-green-500 text-white p-2 text-xs">
+        ✅ Dashboard Loaded: {new Date().toLocaleTimeString()}
+      </div>
+      
+      {/* テーマ切り替えボタン */}
+      <div className="fixed top-0 left-0 z-50 p-4">
+        <button
+          onClick={() => window.toggleTheme?.()}
+          className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-2 shadow-sm hover:shadow-md transition-all"
+          title="テーマ切り替え"
+        >
+          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+      
+      <div className="max-w-full px-3 sm:px-4 lg:px-6 py-2">
         {/* ヘッダー */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
-              <p className="mt-2 text-gray-600">
-                チャット履歴の統計情報と最新の活動状況
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              ChatFlow Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              AI開発支援プラットフォーム - データ統合管理
+            </p>
+          </div>
+          
+          {/* 手動更新ボタン */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-all duration-200 ${
+              isRefreshing 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'
+            }`}
+            title="データを手動で更新"
+          >
+            <ArrowPathIcon 
+              className={`w-4 h-4 mr-2 transition-transform duration-200 ${
+                isRefreshing ? 'animate-spin' : ''
+              }`} 
+            />
+            {isRefreshing ? '更新中...' : '更新'}
+          </button>
+        </div>
+
+        {/* 統計カード - 2×2グリッド */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              総セッション数
+            </h3>
+            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+              {sessionsLoading ? '...' : totalSessions.toLocaleString()}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Cursorチャット履歴
+            </p>
+            {/* デバッグ情報 */}
+            {sessionsError && (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                エラー: {sessionsError.message}
               </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* API接続状態インジケーター */}
-              <ApiConnectionIndicator variant="compact" />
-              
-              <button
-                onClick={handleRefreshData}
-                disabled={isRefreshing || !connectionStatus?.isConnected}
-                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  isRefreshing || !connectionStatus?.isConnected
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-                title={
-                  !connectionStatus?.isConnected 
-                    ? 'APIサーバーが起動していません' 
-                    : isRefreshing 
-                      ? 'データ更新中です' 
-                      : 'データを最新の状態に更新します'
-                }
+            )}
+          </div>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              システム状態
+            </h3>
+            <p className="text-lg font-medium text-green-600 dark:text-green-400">
+              {healthLoading ? '確認中...' : healthData?.status === 'ok' ? '✅ 正常動作中' : '⚠️ 要確認'}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              API & データベース
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              最新活動
+            </h3>
+            <p className="text-lg font-medium text-gray-900 dark:text-white">
+              {recentSessions.length > 0 ? '最近のセッション' : 'データなし'}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {recentSessions.length} 件表示中
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              クイックアクション
+            </h3>
+            <div className="space-y-2">
+              <Link
+                to="/sessions"
+                className="block text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
               >
-                {isRefreshing ? (
-                  <ArrowPathIcon className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                ) : (
-                  <ArrowPathIcon className="-ml-1 mr-2 h-4 w-4" />
-                )}
-                {isRefreshing ? '更新中...' : 'データ更新'}
+                → セッション一覧
+              </Link>
+              <Link
+                to="/search"
+                className="block text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
+              >
+                → 検索
+              </Link>
+              <Link
+                to="/integration"
+                className="block text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
+              >
+                → 統合設定
+              </Link>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="block text-left text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-sm font-medium disabled:opacity-50"
+              >
+                → {isRefreshing ? '更新中...' : 'データ更新'}
               </button>
             </div>
           </div>
         </div>
 
-        {/* API接続状態詳細表示（未接続時のみ） */}
-        {!connectionStatus?.isConnected && (
-          <div className="mb-6">
-            <ApiConnectionIndicator 
-              variant="default" 
-              showDetails={true}
-              className="max-w-md"
-            />
-          </div>
-        )}
-
-        {/* 更新成功メッセージ */}
-        {refreshMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <div className="flex">
-              <CheckCircleIcon className="h-5 w-5 text-green-400" />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">
-                  {refreshMessage}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 更新エラーメッセージ */}
-        {refreshError && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  データ更新エラー
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <pre className="whitespace-pre-wrap">
-                    {refreshError}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* API未接続時の警告メッセージ */}
-        {!connectionStatus?.isConnected && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex">
-              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
-              <div className="ml-3">
-                <p className="text-sm text-yellow-800">
-                  <strong>APIサーバーが起動していません。</strong>
-                  最新のデータを表示するには、APIサーバーを起動してください。
-                </p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  コマンド: <code className="bg-yellow-100 px-1 rounded">npm run server</code>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 統計カード */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  総セッション数
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : (stats?.totalSessions ?? '--')}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  今月のメッセージ
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : (stats?.thisMonthMessages ?? '--')}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  アクティブプロジェクト
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading ? '...' : (stats?.activeProjects ?? '--')}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-purple-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">最終更新</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statsLoading
-                    ? '...'
-                    : stats?.lastUpdated
-                      ? formatLastUpdated(stats.lastUpdated)
-                      : '--'}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-orange-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* エラー表示 */}
-        {(statsError || sessionsError) && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex">
-              <svg
-                className="w-5 h-5 text-red-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  データの読み込みエラー
-                </h3>
-                <p className="text-sm text-red-700 mt-1">
-                  {statsError?.message ||
-                    sessionsError?.message ||
-                    'APIサーバーに接続できませんでした'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 最近のセッション */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               最近のセッション
             </h2>
-            <button className="btn-secondary" onClick={handleNavigateToSessions}>
-              すべて見る
-            </button>
+            <Link
+              to="/sessions"
+              className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+            >
+              すべて表示
+              <ArrowRightIcon className="w-4 h-4 ml-1" />
+            </Link>
           </div>
-
-          <div className="space-y-3">
+          
+          <div className="p-6">
             {sessionsLoading ? (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      セッション読み込み中...
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      データを取得しています
-                    </p>
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                   </div>
-                </div>
-                <span className="text-sm text-gray-400">--</span>
+                ))}
               </div>
-            ) : sessionsData?.sessions && sessionsData.sessions.length > 0 ? (
-              sessionsData.sessions.map(session => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  onSelect={handleSessionClick}
-                  showPreview={false}
-                  compact={true}
-                />
-              ))
-            ) : (
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      セッションが見つかりません
+            ) : sessionsError ? (
+              <div className="text-center py-8">
+                <ExclamationTriangleIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                <p className="text-gray-500">セッションデータの読み込みに失敗しました</p>
+                <p className="text-sm text-gray-400 mt-1">{sessionsError.message}</p>
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isRefreshing ? '更新中...' : 'データ再取得'}
+                </button>
+              </div>
+            ) : recentSessions.length > 0 ? (
+              <div className="space-y-4">
+                {recentSessions.map((session) => (
+                  <Link
+                    key={session.id}
+                    to={`/sessions/${session.id}`}
+                    className="block p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                      {session.title || 'Untitled Session'}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      {session.metadata.totalMessages} メッセージ • {new Date(session.startTime).toLocaleDateString('ja-JP')}
                     </p>
-                    <p className="text-sm text-gray-500">データがありません</p>
-                  </div>
+                    <div className="flex flex-wrap gap-1">
+                      {session.metadata.tags?.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-block px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
                 </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  セッションデータがありません
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Cursorチャット履歴をインポートしてください
+                </p>
+                <Link
+                  to="/integration"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                >
+                  統合設定へ
+                  <ArrowRightIcon className="w-4 h-4 ml-1" />
+                </Link>
               </div>
             )}
           </div>
         </div>
-
-        {/* クイックアクション */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            クイックアクション
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="btn-primary" onClick={handleNavigateToSearch}>
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              検索開始
-            </button>
-            <button className="btn-secondary" onClick={handleExport}>
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-              エクスポート
-            </button>
-            <button className="btn-secondary" onClick={handleSettings}>
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-              設定
-            </button>
-          </div>
-        </div>
-
-        {/* データ更新進捗オーバーレイ */}
-        <LoadingOverlay
-          isVisible={showUpdateProgress}
-          title="データを更新中"
-          message="最新の情報を取得しています..."
-          variant="detailed"
-          showProgress={true}
-          steps={progressState.steps}
-          currentStepId={progressState.currentStepId}
-          progress={progressState.progress}
-          onCancel={() => {
-            progressActions.cancel()
-            setShowUpdateProgress(false)
-            setIsRefreshing(false)
-          }}
-          error={progressState.error || undefined}
-        />
-
-        {/* プレミアム進捗カード（右下固定） */}
-        {showUpdateProgress && progressState.isActive && (
-          <div className="fixed bottom-6 right-6 z-50">
-            <ProgressIndicator
-              steps={progressState.steps}
-              currentStepId={progressState.currentStepId || undefined}
-              progress={progressState.progress}
-              isActive={progressState.isActive}
-              variant="premium"
-              showTimeRemaining={true}
-              showStepDetails={true}
-              onCancel={() => {
-                progressActions.cancel()
-                setShowUpdateProgress(false)
-                setIsRefreshing(false)
-              }}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

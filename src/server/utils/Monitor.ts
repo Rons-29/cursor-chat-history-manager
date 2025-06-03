@@ -11,7 +11,7 @@ export class Monitor extends EventEmitter {
    */
   start(): void {
     if (this.isRunning) return
-    
+
     this.isRunning = true
     this.emit('started')
   }
@@ -21,7 +21,7 @@ export class Monitor extends EventEmitter {
    */
   stop(): void {
     if (!this.isRunning) return
-    
+
     this.isRunning = false
     this.emit('stopped')
   }
@@ -38,7 +38,7 @@ export class Monitor extends EventEmitter {
    */
   addMetric(metric: Metric): void {
     this.metrics.push(metric)
-    
+
     // 古いメトリクスを削除（最新1000件を保持）
     if (this.metrics.length > 1000) {
       this.metrics = this.metrics.slice(-1000)
@@ -54,7 +54,7 @@ export class Monitor extends EventEmitter {
     const now = new Date()
     const periodMs = this.getPeriodMs(period)
     const startTime = new Date(now.getTime() - periodMs)
-    
+
     const periodMetrics = this.metrics.filter(
       metric => metric.timestamp >= startTime
     )
@@ -67,11 +67,11 @@ export class Monitor extends EventEmitter {
       endTime: now,
       metrics: periodMetrics,
       summary: this.calculateSummary(periodMetrics),
-      charts: this.generateCharts(periodMetrics, period)
+      charts: this.generateCharts(periodMetrics, period),
     }
 
     this.reports.push(report)
-    
+
     // 古いレポートを削除（最新100件を保持）
     if (this.reports.length > 100) {
       this.reports = this.reports.slice(-100)
@@ -86,10 +86,10 @@ export class Monitor extends EventEmitter {
    */
   private getPeriodMs(period: ReportPeriod): number {
     const periods = {
-      hourly: 60 * 60 * 1000,      // 1時間
-      daily: 24 * 60 * 60 * 1000,  // 1日
+      hourly: 60 * 60 * 1000, // 1時間
+      daily: 24 * 60 * 60 * 1000, // 1日
       weekly: 7 * 24 * 60 * 60 * 1000, // 1週間
-      monthly: 30 * 24 * 60 * 60 * 1000 // 30日
+      monthly: 30 * 24 * 60 * 60 * 1000, // 30日
     }
     return periods[period]
   }
@@ -103,7 +103,7 @@ export class Monitor extends EventEmitter {
         totalEvents: 0,
         averageValue: 0,
         minValue: 0,
-        maxValue: 0
+        maxValue: 0,
       }
     }
 
@@ -112,7 +112,7 @@ export class Monitor extends EventEmitter {
       totalEvents: metrics.length,
       averageValue: values.reduce((a, b) => a + b, 0) / values.length,
       minValue: Math.min(...values),
-      maxValue: Math.max(...values)
+      maxValue: Math.max(...values),
     }
   }
 
@@ -127,13 +127,13 @@ export class Monitor extends EventEmitter {
       data: this.groupMetricsByTime(metrics, period).map(group => ({
         x: group.timestamp.toISOString(),
         y: group.count,
-        label: group.timestamp.toLocaleString()
+        label: group.timestamp.toLocaleString(),
       })),
       config: {
         color: '#3b82f6',
         showLegend: false,
-        showTooltip: true
-      }
+        showTooltip: true,
+      },
     }
 
     // タイプ別分布チャート
@@ -143,12 +143,12 @@ export class Monitor extends EventEmitter {
       data: this.groupMetricsByType(metrics).map(group => ({
         x: group.type,
         y: group.count,
-        label: `${group.type} (${group.count})`
+        label: `${group.type} (${group.count})`,
       })),
       config: {
         showLegend: true,
-        showTooltip: true
-      }
+        showTooltip: true,
+      },
     }
 
     return [timelineChart, typeDistributionChart]
@@ -159,22 +159,24 @@ export class Monitor extends EventEmitter {
    */
   private groupMetricsByTime(metrics: Metric[], period: ReportPeriod) {
     const groups = new Map<string, { timestamp: Date; count: number }>()
-    
+
     metrics.forEach(metric => {
       const key = this.getTimeKey(metric.timestamp, period)
       const existing = groups.get(key)
-      
+
       if (existing) {
         existing.count++
       } else {
         groups.set(key, {
           timestamp: this.roundToTimeUnit(metric.timestamp, period),
-          count: 1
+          count: 1,
         })
       }
     })
 
-    return Array.from(groups.values()).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+    return Array.from(groups.values()).sort(
+      (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+    )
   }
 
   /**
@@ -182,13 +184,16 @@ export class Monitor extends EventEmitter {
    */
   private groupMetricsByType(metrics: Metric[]) {
     const groups = new Map<string, number>()
-    
+
     metrics.forEach(metric => {
       const count = groups.get(metric.type) || 0
       groups.set(metric.type, count + 1)
     })
 
-    return Array.from(groups.entries()).map(([type, count]) => ({ type, count }))
+    return Array.from(groups.entries()).map(([type, count]) => ({
+      type,
+      count,
+    }))
   }
 
   /**
@@ -216,7 +221,7 @@ export class Monitor extends EventEmitter {
    */
   private roundToTimeUnit(timestamp: Date, period: ReportPeriod): Date {
     const rounded = new Date(timestamp)
-    
+
     switch (period) {
       case 'hourly':
         rounded.setMinutes(0, 0, 0)
@@ -233,7 +238,7 @@ export class Monitor extends EventEmitter {
         rounded.setHours(0, 0, 0, 0)
         break
     }
-    
+
     return rounded
   }
 
@@ -245,7 +250,8 @@ export class Monitor extends EventEmitter {
       isRunning: this.isRunning,
       metricsCount: this.metrics.length,
       reportsCount: this.reports.length,
-      lastMetric: this.metrics.length > 0 ? this.metrics[this.metrics.length - 1] : null
+      lastMetric:
+        this.metrics.length > 0 ? this.metrics[this.metrics.length - 1] : null,
     }
   }
-} 
+}

@@ -1,7 +1,7 @@
 // UI Components
-export { default as ProgressIndicator } from './ProgressIndicator'
-export { default as LoadingOverlay } from './LoadingOverlay'
-export { default as DataLoadingProgress } from './DataLoadingProgress'
+export { ProgressIndicator } from './ProgressIndicator'
+export { LoadingOverlay } from './LoadingOverlay'
+export { DataLoadingProgress } from './DataLoadingProgress'
 export { default as ApiConnectionIndicator } from './ApiConnectionIndicator'
 
 // Re-export types

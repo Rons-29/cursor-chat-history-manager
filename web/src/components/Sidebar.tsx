@@ -159,10 +159,10 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 shadow-lg border-r border-gray-200 dark:border-slate-600 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
       {/* サイドバーヘッダー */}
-      <div className="flex items-center justify-center h-16 px-4 bg-gray-50 border-b border-gray-200">
-        <h2 className="text-lg font-medium text-gray-900">ナビゲーション</h2>
+      <div className="flex items-center justify-center h-16 px-4 bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-100">ナビゲーション</h2>
       </div>
 
       {/* ナビゲーションメニュー */}
@@ -174,13 +174,13 @@ const Sidebar: React.FC = () => {
                 to={item.href}
                 className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
                   isActive(item.href)
-                    ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-600'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-600'
+                    : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-100'
                 }`}
               >
                 <span
                   className={
-                    isActive(item.href) ? 'text-primary-600' : 'text-gray-400'
+                    isActive(item.href) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                   }
                 >
                   {item.icon}
@@ -193,16 +193,16 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* サイドバーフッター */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-full flex items-center justify-center">
             <span className="text-white text-sm font-medium">CH</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">
               Chat History
             </p>
-            <p className="text-xs text-gray-500">v1.0.0</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">v1.0.0</p>
           </div>
         </div>
       </div>

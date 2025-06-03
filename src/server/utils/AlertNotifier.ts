@@ -9,7 +9,7 @@ export class AlertNotifier {
    */
   sendAlert(alert: Alert): void {
     this.alerts.push(alert)
-    
+
     // 購読者に通知
     this.subscribers.forEach(callback => {
       try {
@@ -30,7 +30,7 @@ export class AlertNotifier {
    */
   subscribe(callback: (alert: Alert) => void): () => void {
     this.subscribers.push(callback)
-    
+
     // 購読解除関数を返す
     return () => {
       const index = this.subscribers.indexOf(callback)
@@ -74,7 +74,7 @@ export class AlertNotifier {
       info: 0,
       warning: 0,
       error: 0,
-      critical: 0
+      critical: 0,
     }
 
     this.alerts.forEach(alert => {
@@ -102,9 +102,9 @@ export class AlertNotifier {
       severity: 'critical',
       timestamp: new Date(),
       source,
-      acknowledged: false
+      acknowledged: false,
     }
-    
+
     this.sendAlert(alert)
   }
 
@@ -119,9 +119,9 @@ export class AlertNotifier {
       severity: 'warning',
       timestamp: new Date(),
       source,
-      acknowledged: false
+      acknowledged: false,
     }
-    
+
     this.sendAlert(alert)
   }
 
@@ -136,9 +136,9 @@ export class AlertNotifier {
       severity: 'info',
       timestamp: new Date(),
       source,
-      acknowledged: false
+      acknowledged: false,
     }
-    
+
     this.sendAlert(alert)
   }
-} 
+}

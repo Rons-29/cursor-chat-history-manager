@@ -31,7 +31,11 @@ export async function initializeRealDataMiddleware(): Promise<void> {
 }
 
 // リクエストに実データサービス情報を追加するMiddleware
-export const realDataMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const realDataMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     // リクエストの検証
     if (!req.body || typeof req.body !== 'object') {

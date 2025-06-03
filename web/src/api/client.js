@@ -28,22 +28,53 @@ class ApiClient {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
         const config = {
+            mode: 'cors',
+            // credentials: 'include', // CORSエラーの原因 - 削除
             ...options,
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 ...options.headers,
             },
         };
 
         try {
+            console.log(`🌐 API Request: ${config.method || 'GET'} ${url}`);
+            console.log(`   Headers:`, config.headers);
+            console.log(`   Config:`, { mode: config.mode, credentials: config.credentials });
+            
             const response = await fetch(url, config);
+            
+            console.log(`✅ API Response: ${response.status} ${response.statusText}`);
+            console.log(`   CORS Headers:`, {
+                'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                'access-control-allow-methods': response.headers.get('access-control-allow-methods'),
+                'access-control-allow-headers': response.headers.get('access-control-allow-headers'),
+            });
+            
             if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                const errorText = await response.text();
+                console.error(`❌ API Error Response:`, errorText);
+                throw new Error(`HTTP Error: ${response.status} ${response.statusText} - ${errorText}`);
             }
-            return await response.json();
+            
+            const data = await response.json();
+            console.log(`📝 API Data:`, data);
+            return data;
         }
         catch (error) {
-            console.error(`API Request failed: ${url}`, error);
+            console.error(`❌ API Request failed: ${url}`, error);
+            
+            // ネットワークエラーやCORSエラーの詳細情報
+            if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                console.error('🚫 Network/CORS Error Details:');
+                console.error('   - Check if API server is running on port 3001');
+                console.error('   - Check CORS configuration');
+                console.error('   - Check network connectivity');
+                console.error('   - Credentials mode removed to fix CORS issue');
+            }
+            
             throw error;
         }
     }

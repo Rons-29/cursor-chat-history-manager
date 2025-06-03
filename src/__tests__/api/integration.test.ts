@@ -14,12 +14,12 @@ import type { Application } from 'express'
 describe('/api/integration', () => {
   let tempDir: string
   let logger: Logger
-  
+
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'integration-api-test-'))
     logger = Logger.getInstance(path.join(tempDir, 'logs'))
     await logger.initialize()
-    
+
     const cursorConfig = {
       enabled: true,
       watchPath: path.join(tempDir, 'cursor'),
@@ -27,7 +27,7 @@ describe('/api/integration', () => {
       autoImport: true,
       syncInterval: 300,
       batchSize: 100,
-      retryAttempts: 3
+      retryAttempts: 3,
     }
 
     const integrationConfig = {
@@ -40,13 +40,13 @@ describe('/api/integration', () => {
         cleanupDays: 30,
         enableSearch: true,
         enableBackup: false,
-        backupInterval: 24
+        backupInterval: 24,
       },
       sync: {
         interval: 5000,
         batchSize: 100,
-        retryAttempts: 3
-      }
+        retryAttempts: 3,
+      },
     }
 
     const integrationService = new IntegrationService(integrationConfig, logger)
@@ -60,8 +60,9 @@ describe('/api/integration', () => {
 
   describe('GET /api/integration/search', () => {
     it('should search integrated logs', async () => {
-      const response: Response = await request(app)
-        .get('/api/integration/search?q=test&types=chat,cursor')
+      const response: Response = await request(app).get(
+        '/api/integration/search?q=test&types=chat,cursor'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('results')
@@ -70,8 +71,9 @@ describe('/api/integration', () => {
     })
 
     it('should handle search with time range', async () => {
-      const response: Response = await request(app)
-        .get('/api/integration/search?q=test&startDate=2024-01-01&endDate=2024-12-31')
+      const response: Response = await request(app).get(
+        '/api/integration/search?q=test&startDate=2024-01-01&endDate=2024-12-31'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('results')
@@ -81,8 +83,9 @@ describe('/api/integration', () => {
 
   describe('GET /api/integration/stats', () => {
     it('統計情報を取得できること', async () => {
-      const response: Response = await request(app)
-        .get('/api/integration/stats')
+      const response: Response = await request(app).get(
+        '/api/integration/stats'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('totalLogs')
@@ -94,8 +97,9 @@ describe('/api/integration', () => {
 
   describe('POST /api/integration/sync', () => {
     it('同期を開始できること', async () => {
-      const response: Response = await request(app)
-        .post('/api/integration/sync/start')
+      const response: Response = await request(app).post(
+        '/api/integration/sync/start'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('message')
@@ -108,7 +112,7 @@ describe('/api/integration', () => {
       const mockAnalytics = {
         timeRange: {
           start: new Date('2024-01-01'),
-          end: new Date('2024-12-31')
+          end: new Date('2024-12-31'),
         },
         granularity: 'daily' as const,
         summary: {
@@ -116,19 +120,19 @@ describe('/api/integration', () => {
           totalChats: 60,
           totalCursorLogs: 40,
           uniqueProjects: 5,
-          uniqueTags: 10
+          uniqueTags: 10,
         },
         logsByType: {
           chat: 60,
-          cursor: 40
+          cursor: 40,
         },
         logsByProject: {
           '1': 50,
-          '2': 50
+          '2': 50,
         },
         logsByTag: {
           tag1: 30,
-          tag2: 70
+          tag2: 70,
         },
         activityTimeline: [],
         hourlyDistribution: {},
@@ -136,17 +140,20 @@ describe('/api/integration', () => {
         metrics: {
           messageCount: [10, 20, 30],
           sessionCount: [5, 10, 15],
-          timestamps: ['2024-01-01', '2024-01-02', '2024-01-03']
-        }
+          timestamps: ['2024-01-01', '2024-01-02', '2024-01-03'],
+        },
       }
 
       // IntegrationService.getAnalytics をモック
-      jest.spyOn(IntegrationService.prototype, 'getAnalytics').mockResolvedValue(mockAnalytics)
+      jest
+        .spyOn(IntegrationService.prototype, 'getAnalytics')
+        .mockResolvedValue(mockAnalytics)
     })
 
     it('should return analytics data', async () => {
-      const response: Response = await request(app)
-        .get('/api/integration/analytics?startDate=2024-01-01&endDate=2024-12-31')
+      const response: Response = await request(app).get(
+        '/api/integration/analytics?startDate=2024-01-01&endDate=2024-12-31'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('summary')
@@ -154,8 +161,9 @@ describe('/api/integration', () => {
     })
 
     it('期間を指定した分析データを取得できること', async () => {
-      const response: Response = await request(app)
-        .get('/api/integration/analytics?startDate=2024-01-01&endDate=2024-01-31&granularity=daily&types=chat')
+      const response: Response = await request(app).get(
+        '/api/integration/analytics?startDate=2024-01-01&endDate=2024-01-31&granularity=daily&types=chat'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toHaveProperty('summary')
@@ -164,4 +172,4 @@ describe('/api/integration', () => {
       expect(response.body.summary).toHaveProperty('totalCursorLogs')
     })
   })
-}) 
+})

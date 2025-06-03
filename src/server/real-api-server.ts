@@ -1,5 +1,4 @@
 import express from 'express'
-import cors from 'cors'
 import path from 'path'
 import type { RequestHandler } from 'express'
 import { ChatHistoryService } from '../services/ChatHistoryService.js'
@@ -21,16 +20,22 @@ import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
 const app = express()
 const PORT = process.env.PORT || 3001
 
-// ミドルウェア
-app.use(
-  cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    credentials: true,
-  })
-)
-app.use(express.json())
+// 最もシンプルなCORS設定
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', '*')
+  res.header('Access-Control-Allow-Headers', '*')
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200)
+    return
+  }
+
+  next()
+})
+
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // CORSミドルウェアがプリフライトリクエストを自動処理
 
@@ -814,11 +819,45 @@ app.post('/api/integration/sqlite-migrate', async (req, res) => {
 
       for (const session of unmigratedSessions) {
         try {
-          await sqliteIndexService.upsertSession(session)
+          // セッションデータの検証・修正
+          const validatedSession = {
+            ...session,
+            title: session.title || 'Untitled Session',
+            messages: session.messages || [],
+            tags: session.tags || [],
+            metadata: session.metadata || {},
+            createdAt: session.createdAt || new Date(),
+            updatedAt: session.updatedAt || new Date()
+          }
+
+          // メッセージの検証
+          if (validatedSession.messages.length > 0) {
+            validatedSession.messages = validatedSession.messages.map(msg => ({
+              ...msg,
+              content: msg.content || '', // 空のcontentをデフォルト値で置換
+              role: msg.role || 'user',
+              timestamp: msg.timestamp || new Date(),
+              id: msg.id || `msg-${Date.now()}-${Math.random()}`
+            }))
+          }
+
+          await sqliteIndexService.upsertSession(validatedSession)
           totalMigrated++
         } catch (error) {
           totalErrors++
-          errors.push(`セッション ${session.id} の移行エラー: ${error}`)
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          errors.push(`セッション ${session.id} の移行エラー: ${errorMessage}`)
+          
+                     // エラーログを詳細出力（デバッグ用）
+           logger.error(`SQLite移行エラー [${session.id}]:`, {
+             error: errorMessage,
+             sessionData: {
+               id: session.id,
+               title: session.title,
+               messagesCount: session.messages?.length || 0,
+               messagesSample: session.messages?.slice(0, 2)
+             }
+           })
         }
 
         // プログレス制限を緩和

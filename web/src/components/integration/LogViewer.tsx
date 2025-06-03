@@ -202,10 +202,10 @@ const LogViewer: React.FC<LogViewerProps> = ({
         ) : (
           <div className="divide-y divide-gray-200">
             {Array.isArray(filteredLogs) && filteredLogs.map((log, index) => (
-              <div key={index} className={`p-4 ${getLogBgColor(log.level)}`}>
+              <div key={index} className={`p-4 ${getLogBgColor(log.level || 'info')}`}>
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    {getLogIcon(log.level)}
+                    {getLogIcon(log.level || 'info')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -214,12 +214,12 @@ const LogViewer: React.FC<LogViewerProps> = ({
                       </p>
                       <div className="flex items-center text-xs text-gray-500">
                         <ClockIcon className="h-3 w-3 mr-1" />
-                        {new Date(log.timestamp).toLocaleString('ja-JP')}
+                        {new Date(log.timestamp || Date.now()).toLocaleString('ja-JP')}
                       </div>
                     </div>
                     {(log.source || log.metadata?.source || log.type) && (
                       <p className="text-xs text-gray-500 mt-1">
-                        ソース: {log.source || log.metadata?.source || log.type}
+                        ソース: {log.source || log.metadata?.source || log.type || '不明'}
                       </p>
                     )}
                     {log.details && (

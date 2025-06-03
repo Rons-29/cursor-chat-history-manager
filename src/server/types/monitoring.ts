@@ -112,4 +112,4 @@ export interface ResourceUsage {
     incoming: number
     outgoing: number
   }
-} 
+}

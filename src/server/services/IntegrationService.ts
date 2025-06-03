@@ -4,14 +4,14 @@
  */
 
 import { EventEmitter } from 'events'
-import type { 
-  IntegrationConfig, 
+import type {
+  IntegrationConfig,
   IntegrationSearchOptions,
   IntegrationStats,
   IntegrationAnalytics,
   CursorWatcherStatus,
   IntegratedLog,
-  IntegrationAnalyticsRequest
+  IntegrationAnalyticsRequest,
 } from '../types/integration.js'
 import { Logger } from '../utils/Logger.js'
 import { ChatHistoryService } from '../../services/ChatHistoryService.js'
@@ -27,7 +27,7 @@ export class IntegrationService extends EventEmitter {
     isActive: false,
     lastCheck: new Date(),
     watchPath: '',
-    errorCount: 0
+    errorCount: 0,
   }
 
   constructor(config: IntegrationConfig, logger: Logger) {
@@ -52,9 +52,15 @@ export class IntegrationService extends EventEmitter {
       this.isInitialized = true
       await this.logger.info('IntegrationServiceを初期化しました')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('初期化エラー', error instanceof Error ? error : undefined)
-      throw new Error(`Failed to initialize IntegrationService: ${errorMessage}`)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        '初期化エラー',
+        error instanceof Error ? error : undefined
+      )
+      throw new Error(
+        `Failed to initialize IntegrationService: ${errorMessage}`
+      )
     }
   }
 
@@ -69,28 +75,32 @@ export class IntegrationService extends EventEmitter {
     try {
       // Cursorログの監視を開始
       await this.cursorLogService.startWatching()
-      
+
       // 定期的な同期処理を開始
       this.setupPeriodicSync()
-      
+
       // ステータス更新
       this.cursorWatcherStatus.isActive = true
       this.cursorWatcherStatus.watchPath = this.config.cursor.watchPath
       this.cursorWatcherStatus.lastCheck = new Date()
-      
+
       await this.logger.info('統合同期を開始しました', {
         watchPath: this.config.cursor.watchPath,
-        interval: this.config.sync.interval
+        interval: this.config.sync.interval,
       })
 
-      this.emit('syncStarted', { 
+      this.emit('syncStarted', {
         watchPath: this.config.cursor.watchPath,
-        interval: this.config.sync.interval 
+        interval: this.config.sync.interval,
       })
     } catch (error) {
       this.cursorWatcherStatus.errorCount += 1
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('同期開始エラー', error instanceof Error ? error : undefined)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        '同期開始エラー',
+        error instanceof Error ? error : undefined
+      )
       throw new Error(`Failed to start sync: ${errorMessage}`)
     }
   }
@@ -107,7 +117,10 @@ export class IntegrationService extends EventEmitter {
       try {
         await this.performSync()
       } catch (error) {
-        await this.logger.error('定期同期エラー', error instanceof Error ? error : undefined)
+        await this.logger.error(
+          '定期同期エラー',
+          error instanceof Error ? error : undefined
+        )
         this.emit('syncError', error)
       }
     }, this.config.sync.interval * 1000)
@@ -118,26 +131,26 @@ export class IntegrationService extends EventEmitter {
    */
   private async performSync(): Promise<void> {
     const startTime = Date.now()
-    
+
     try {
       // Cursorログの新規スキャン
       const newLogs = await this.scanNewCursorLogs()
-      
+
       // チャット履歴との統合処理
       await this.integrateLogs(newLogs)
-      
+
       // ステータス更新
       this.cursorWatcherStatus.lastCheck = new Date()
-      
+
       const duration = Date.now() - startTime
-      await this.logger.debug('同期処理完了', { 
-        newLogs: newLogs.length, 
-        duration 
+      await this.logger.debug('同期処理完了', {
+        newLogs: newLogs.length,
+        duration,
       })
 
-      this.emit('syncCompleted', { 
-        importCount: newLogs.length, 
-        duration 
+      this.emit('syncCompleted', {
+        importCount: newLogs.length,
+        duration,
       })
     } catch (error) {
       this.cursorWatcherStatus.errorCount += 1
@@ -150,7 +163,7 @@ export class IntegrationService extends EventEmitter {
    */
   private async scanNewCursorLogs(): Promise<IntegratedLog[]> {
     const logs: IntegratedLog[] = []
-    
+
     try {
       // 最後のチェック時刻以降のログを取得
       const cursorLogs = await this.cursorLogService.getLogs(
@@ -169,15 +182,18 @@ export class IntegrationService extends EventEmitter {
             tags: log.metadata?.tags,
             status: log.metadata?.status,
             taskId: log.sessionId,
-            cursorId: log.id
-          }
+            cursorId: log.id,
+          },
         }
         logs.push(integratedLog)
       }
 
       return logs
     } catch (error) {
-      await this.logger.error('Cursorログスキャンエラー', error instanceof Error ? error : undefined)
+      await this.logger.error(
+        'Cursorログスキャンエラー',
+        error instanceof Error ? error : undefined
+      )
       return []
     }
   }
@@ -190,18 +206,18 @@ export class IntegrationService extends EventEmitter {
       try {
         // プロジェクト情報の抽出・更新
         await this.extractProjectInfo(log)
-        
+
         // タグの自動タグ付与
         await this.autoTagLog(log)
-        
+
         // 関連セッションの検索と紐付け
         await this.linkRelatedSessions(log)
 
         this.emit('logIntegrated', log)
       } catch (error) {
-        await this.logger.warn('ログ統合エラー', { 
-          logId: log.id, 
-          error: error instanceof Error ? error.message : String(error) 
+        await this.logger.warn('ログ統合エラー', {
+          logId: log.id,
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }
@@ -213,12 +229,12 @@ export class IntegrationService extends EventEmitter {
   private async extractProjectInfo(log: IntegratedLog): Promise<void> {
     // ログ内容からプロジェクト名を推定
     const content = log.content.toLowerCase()
-    
+
     // よくあるプロジェクト指標を検索
     const projectPatterns = [
       /project[:\s]+([a-zA-Z0-9-_]+)/i,
       /repo[:\s]+([a-zA-Z0-9-_]+)/i,
-      /workspace[:\s]+([a-zA-Z0-9-_]+)/i
+      /workspace[:\s]+([a-zA-Z0-9-_]+)/i,
     ]
 
     for (const pattern of projectPatterns) {
@@ -239,13 +255,13 @@ export class IntegrationService extends EventEmitter {
 
     // コンテンツベースの自動タグ付与
     const tagPatterns: Record<string, RegExp[]> = {
-      'error': [/error/i, /エラー/i, /fail/i, /exception/i],
-      'debug': [/debug/i, /デバッグ/i, /console\.log/i],
-      'feature': [/feature/i, /機能/i, /implement/i, /実装/i],
-      'bug': [/bug/i, /バグ/i, /issue/i, /問題/i],
-      'refactor': [/refactor/i, /リファクタ/i, /clean/i, /整理/i],
-      'test': [/test/i, /テスト/i, /spec/i, /jest/i],
-      'documentation': [/docs?/i, /document/i, /readme/i, /ドキュメント/i]
+      error: [/error/i, /エラー/i, /fail/i, /exception/i],
+      debug: [/debug/i, /デバッグ/i, /console\.log/i],
+      feature: [/feature/i, /機能/i, /implement/i, /実装/i],
+      bug: [/bug/i, /バグ/i, /issue/i, /問題/i],
+      refactor: [/refactor/i, /リファクタ/i, /clean/i, /整理/i],
+      test: [/test/i, /テスト/i, /spec/i, /jest/i],
+      documentation: [/docs?/i, /document/i, /readme/i, /ドキュメント/i],
     }
 
     for (const [tag, patterns] of Object.entries(tagPatterns)) {
@@ -267,7 +283,7 @@ export class IntegrationService extends EventEmitter {
       // プロジェクトやタグが一致するセッションを検索
       const searchResults = await this.chatHistoryService.searchSessions({
         keyword: log.metadata.project,
-        tags: log.metadata.tags
+        tags: log.metadata.tags,
       })
 
       if (searchResults.sessions.length > 0) {
@@ -276,9 +292,9 @@ export class IntegrationService extends EventEmitter {
         log.metadata.projectId = parseInt(relatedSession.id) || undefined
       }
     } catch (error) {
-      await this.logger.debug('関連セッション検索エラー', { 
-        logId: log.id, 
-        error: error instanceof Error ? error.message : String(error) 
+      await this.logger.debug('関連セッション検索エラー', {
+        logId: log.id,
+        error: error instanceof Error ? error.message : String(error),
       })
     }
   }
@@ -294,21 +310,25 @@ export class IntegrationService extends EventEmitter {
     try {
       // Cursorログの監視を停止
       await this.cursorLogService.stopWatching()
-      
+
       // 定期同期の停止
       if (this.syncInterval) {
         clearInterval(this.syncInterval)
         this.syncInterval = null
       }
-      
+
       // ステータス更新
       this.cursorWatcherStatus.isActive = false
-      
+
       await this.logger.info('統合同期を停止しました')
       this.emit('syncStopped')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('同期停止エラー', error instanceof Error ? error : undefined)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        '同期停止エラー',
+        error instanceof Error ? error : undefined
+      )
       throw new Error(`Failed to stop sync: ${errorMessage}`)
     }
   }
@@ -322,45 +342,49 @@ export class IntegrationService extends EventEmitter {
     }
 
     let importCount = 0
-    
+
     try {
       const scanPath = customPath || this.config.cursor.watchPath
       await this.logger.info('Cursorログスキャンを開始', { scanPath })
 
       // 指定パスからログファイルを検索
       const logFiles = await this.findCursorLogFiles(scanPath)
-      
+
       for (const filePath of logFiles) {
         try {
           const logs = await this.processCursorLogFile(filePath)
           importCount += logs.length
-          
-          this.emit('fileProcessed', { 
-            filePath, 
-            logCount: logs.length 
+
+          this.emit('fileProcessed', {
+            filePath,
+            logCount: logs.length,
           })
         } catch (error) {
-          await this.logger.warn('ログファイル処理エラー', { 
-            filePath, 
-            error: error instanceof Error ? error.message : String(error) 
+          await this.logger.warn('ログファイル処理エラー', {
+            filePath,
+            error: error instanceof Error ? error.message : String(error),
           })
         }
       }
 
-      await this.logger.info('Cursorログスキャン完了', { 
-        scannedFiles: logFiles.length, 
-        importCount 
+      await this.logger.info('Cursorログスキャン完了', {
+        scannedFiles: logFiles.length,
+        importCount,
       })
 
-      this.emit('scanCompleted', { 
-        scannedFiles: logFiles.length, 
-        importCount 
+      this.emit('scanCompleted', {
+        scannedFiles: logFiles.length,
+        importCount,
       })
 
       return importCount
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('Cursorログスキャンエラー', error instanceof Error ? error : undefined)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        'Cursorログスキャンエラー',
+        error instanceof Error ? error : undefined
+      )
       throw new Error(`Failed to scan Cursor logs: ${errorMessage}`)
     }
   }
@@ -380,10 +404,10 @@ export class IntegrationService extends EventEmitter {
       }
 
       const entries = await fs.readdir(scanPath, { withFileTypes: true })
-      
+
       for (const entry of entries) {
         const fullPath = path.join(scanPath, entry.name)
-        
+
         if (entry.isDirectory()) {
           // 再帰的にサブディレクトリも検索
           const subFiles = await this.findCursorLogFiles(fullPath)
@@ -395,9 +419,9 @@ export class IntegrationService extends EventEmitter {
 
       return files
     } catch (error) {
-      await this.logger.error('ログファイル検索エラー', { 
-        scanPath, 
-        error: error instanceof Error ? error.message : String(error) 
+      await this.logger.error('ログファイル検索エラー', {
+        scanPath,
+        error: error instanceof Error ? error.message : String(error),
       })
       return []
     }
@@ -408,15 +432,12 @@ export class IntegrationService extends EventEmitter {
    */
   private isCursorLogFile(fileName: string): boolean {
     const logExtensions = ['.json', '.log', '.txt']
-    const cursorPatterns = [
-      /cursor/i,
-      /chat/i,
-      /session/i,
-      /conversation/i
-    ]
+    const cursorPatterns = [/cursor/i, /chat/i, /session/i, /conversation/i]
 
     const hasValidExtension = logExtensions.some(ext => fileName.endsWith(ext))
-    const matchesPattern = cursorPatterns.some(pattern => pattern.test(fileName))
+    const matchesPattern = cursorPatterns.some(pattern =>
+      pattern.test(fileName)
+    )
 
     return hasValidExtension && matchesPattern
   }
@@ -424,13 +445,15 @@ export class IntegrationService extends EventEmitter {
   /**
    * Cursorログファイルの処理
    */
-  private async processCursorLogFile(filePath: string): Promise<IntegratedLog[]> {
+  private async processCursorLogFile(
+    filePath: string
+  ): Promise<IntegratedLog[]> {
     const fs = await import('fs-extra')
     const logs: IntegratedLog[] = []
 
     try {
       const content = await fs.readFile(filePath, 'utf-8')
-      
+
       // JSON形式の場合
       if (filePath.endsWith('.json')) {
         const jsonData = JSON.parse(content)
@@ -445,9 +468,9 @@ export class IntegrationService extends EventEmitter {
 
       return logs
     } catch (error) {
-      await this.logger.warn('ログファイル読み込みエラー', { 
-        filePath, 
-        error: error instanceof Error ? error.message : String(error) 
+      await this.logger.warn('ログファイル読み込みエラー', {
+        filePath,
+        error: error instanceof Error ? error.message : String(error),
       })
       return []
     }
@@ -458,7 +481,7 @@ export class IntegrationService extends EventEmitter {
    */
   private parseJsonLogs(jsonData: any): IntegratedLog[] {
     const logs: IntegratedLog[] = []
-    
+
     try {
       // 配列の場合
       if (Array.isArray(jsonData)) {
@@ -494,8 +517,8 @@ export class IntegrationService extends EventEmitter {
           source: 'cursor',
           tags: data.tags || data.metadata?.tags || [],
           status: data.status || 'active',
-          cursorId: data.id
-        }
+          cursorId: data.id,
+        },
       }
     } catch (error) {
       return null
@@ -526,8 +549,8 @@ export class IntegrationService extends EventEmitter {
             metadata: {
               source: 'cursor',
               tags: ['text-log'],
-              status: 'active'
-            }
+              status: 'active',
+            },
           })
         }
       }
@@ -574,12 +597,12 @@ export class IntegrationService extends EventEmitter {
         this.chatHistoryService.searchSessions({
           keyword: options.query,
           startDate: options.timeRange?.start,
-          endDate: options.timeRange?.end
+          endDate: options.timeRange?.end,
         }),
         this.cursorLogService.search({
           query: options.query,
-          timeRange: options.timeRange
-        })
+          timeRange: options.timeRange,
+        }),
       ])
 
       const results: IntegratedLog[] = [
@@ -591,8 +614,8 @@ export class IntegrationService extends EventEmitter {
           metadata: {
             project: session.metadata?.project,
             source: 'chat',
-            tags: session.metadata?.tags
-          }
+            tags: session.metadata?.tags,
+          },
         })),
         ...cursorResults.map(log => ({
           id: log.id,
@@ -602,9 +625,9 @@ export class IntegrationService extends EventEmitter {
           metadata: {
             project: log.metadata?.project,
             source: 'cursor',
-            tags: log.metadata?.tags
-          }
-        }))
+            tags: log.metadata?.tags,
+          },
+        })),
       ]
 
       if (options.types) {
@@ -613,8 +636,12 @@ export class IntegrationService extends EventEmitter {
 
       return results
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('検索エラー', error instanceof Error ? error : undefined)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        '検索エラー',
+        error instanceof Error ? error : undefined
+      )
       throw new Error(`Failed to search: ${errorMessage}`)
     }
   }
@@ -630,7 +657,7 @@ export class IntegrationService extends EventEmitter {
     try {
       const [chatStats, cursorStats] = await Promise.all([
         this.chatHistoryService.getStats(),
-        this.cursorLogService.getStats()
+        this.cursorLogService.getStats(),
       ])
 
       return {
@@ -640,14 +667,18 @@ export class IntegrationService extends EventEmitter {
         storageSize: chatStats.storageSize + cursorStats.storageSize,
         logsByType: {
           chat: chatStats.totalSessions,
-          cursor: cursorStats.totalLogs
+          cursor: cursorStats.totalLogs,
         },
-        logsByProject: {},  // TODO: 実装
-        logsByTag: {}       // TODO: 実装
+        logsByProject: {}, // TODO: 実装
+        logsByTag: {}, // TODO: 実装
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('統計取得エラー', error instanceof Error ? error : undefined)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        '統計取得エラー',
+        error instanceof Error ? error : undefined
+      )
       throw new Error(`Failed to get stats: ${errorMessage}`)
     }
   }
@@ -655,7 +686,9 @@ export class IntegrationService extends EventEmitter {
   /**
    * 分析データ取得
    */
-  async getAnalytics(options: IntegrationAnalyticsRequest): Promise<IntegrationAnalytics> {
+  async getAnalytics(
+    options: IntegrationAnalyticsRequest
+  ): Promise<IntegrationAnalytics> {
     if (!this.isInitialized) {
       throw new Error('Service not initialized')
     }
@@ -671,7 +704,7 @@ export class IntegrationService extends EventEmitter {
           totalChats: stats.chatLogs,
           totalCursorLogs: stats.cursorLogs,
           uniqueProjects: Object.keys(stats.logsByProject).length,
-          uniqueTags: Object.keys(stats.logsByTag).length
+          uniqueTags: Object.keys(stats.logsByTag).length,
         },
         logsByType: stats.logsByType,
         logsByProject: stats.logsByProject,
@@ -682,13 +715,17 @@ export class IntegrationService extends EventEmitter {
         metrics: {
           messageCount: [],
           sessionCount: [],
-          timestamps: []
-        }
+          timestamps: [],
+        },
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.logger.error('分析情報取得エラー', error instanceof Error ? error : undefined)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      await this.logger.error(
+        '分析情報取得エラー',
+        error instanceof Error ? error : undefined
+      )
       throw new Error(`Failed to get analytics: ${errorMessage}`)
     }
   }
-} 
+}

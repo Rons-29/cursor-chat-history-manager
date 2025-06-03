@@ -3,34 +3,40 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Chat History Manager - 統合開発ルール
+# ChatFlow - 統合開発ルール
 
 
 ## 🎉 **開発開始時の掛け声 (毎回必須)**
 ```
-🎉 やるぞ！Chat History Manager！
+🎉 やるぞ！ChatFlow！
 - セキュリティ → 🔒 バッチリ！
 - パフォーマンス → ⚡ 最速！  
 - コード品質 → ✨ 完璧！
-今日も最高の履歴管理システムを作ります！
+今日も最高のチャットフロー管理システムを作ります！
 ```
 
 **このメッセージを毎回のチャット開始時・Command+K実行時に表示してから開発作業を開始してください。**
 
 ---
 
-Cursor AIがChat History Managerプロジェクト開発時に自動的に遵守すべき包括的なルール集
+Cursor AIがChatFlowプロジェクト開発時に自動的に遵守すべき包括的なルール集
 
 ## 🎯 プロジェクト概要
 
 ### 目的
-- Cursorチャット履歴の効率的な管理・検索・分析
+- AI開発者のための包括的なチャット履歴管理・分析プラットフォーム
+- マルチプラットフォーム統合（Cursor、Claude Dev、ChatGPT、GitHub Copilot）
 - SQLite高性能統合によるスケーラブルなデータ処理
+- インテリジェント検索とAI支援機能
 - WebUIによる直感的なユーザーエクスペリエンス
-- 開発履歴の包括的な管理と分析
+- エンタープライズセキュリティとコンプライアンス対応
 
 ### 主要機能
-- チャット履歴のインポート・エクスポート・検索
+- 統合チャット管理（マルチプラットフォーム対応）
+- インテリジェント検索（AI駆動の意味理解検索）
+- 開発分析ダッシュボード（生産性メトリクス可視化）
+- AI支援機能（プロンプト最適化・ナレッジベース）
+- エンタープライズセキュリティ（暗号化・監査ログ）
 - SQLite統合による高速検索（10-100倍高速化）
 - 増分同期によるパフォーマンス最適化（90%向上）
 - リアルタイム監視とダッシュボード
@@ -40,15 +46,16 @@ Cursor AIがChat History Managerプロジェクト開発時に自動的に遵守
 
 ### プロジェクト構造
 ```
-chat-history-manager/
+chatflow/
 ├── src/                     # CLI + バックエンド
 │   ├── cli.ts              # CLIエントリーポイント
 │   ├── services/           # ビジネスロジック
 │   │   ├── ChatHistoryService.ts    # チャット履歴管理
-│   │   ├── SqliteIndexService.ts    # SQLite高速検索
-│   │   ├── IncrementalIndexService.ts # 増分同期
+│   │   ├── AnalyticsService.ts      # 統計・分析機能
+│   │   ├── AutoSaveService.ts       # 自動保存機能
+│   │   ├── ExportService.ts         # エクスポート機能
 │   │   ├── IntegrationService.ts    # 統合管理
-│   │   └── CursorLogService.ts      # Cursorログ管理
+│   │   └── SqliteIndexService.ts    # 高速検索エンジン
 │   ├── server/             # Express サーバー
 │   │   ├── real-api-server.ts       # メインAPIサーバー
 │   │   ├── routes/         # API ルート
@@ -62,6 +69,7 @@ chat-history-manager/
 │   │   ├── hooks/          # カスタムフック
 │   │   └── api/            # API クライアント
 │   └── index.html
+├── extension/              # VS Code拡張機能
 ├── scripts/                # 運用・セキュリティスクリプト
 ├── docs/                   # ドキュメント
 └── data/                   # 個人データ（gitignore済み）
@@ -635,5 +643,5 @@ const claudeDevConfig = { ... }                 // 個別設定
 ---
 
 **最終更新**: 2025/06/02（ドキュメント更新ルール追加）  
-**適用範囲**: Chat History Manager全体  
+**適用範囲**: Chat Flow全体  
 **次回見直し**: 機能追加時または月次レビュー

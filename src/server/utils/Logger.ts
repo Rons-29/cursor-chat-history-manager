@@ -31,7 +31,7 @@ export interface LogStats {
  */
 export interface LoggerConfig {
   logDir?: string
-  logPath?: string  // 下位互換性のため追加
+  logPath?: string // 下位互換性のため追加
   maxLogFiles?: number
   maxLogSize?: number
   level?: LogLevel
@@ -49,9 +49,10 @@ export class Logger {
   private initialized: boolean = false
 
   constructor(config?: LoggerConfig) {
-    this.logDir = config?.logDir || config?.logPath || path.join(process.cwd(), 'logs')
+    this.logDir =
+      config?.logDir || config?.logPath || path.join(process.cwd(), 'logs')
     this.maxLogFiles = config?.maxLogFiles || 30
-    this.maxLogSize = config?.maxLogSize || (10 * 1024 * 1024)
+    this.maxLogSize = config?.maxLogSize || 10 * 1024 * 1024
   }
 
   /**
@@ -99,12 +100,16 @@ export class Logger {
   /**
    * ログエントリの作成
    */
-  private createLogEntry(level: LogLevel, message: string, data?: any): LogEntry {
+  private createLogEntry(
+    level: LogLevel,
+    message: string,
+    data?: any
+  ): LogEntry {
     return {
       timestamp: format(new Date(), 'yyyy-MM-dd HH:mm:ss.SSS'),
       level,
       message,
-      data
+      data,
     }
   }
 
@@ -136,7 +141,10 @@ export class Logger {
 
       // 古いログファイルの削除
       if (appLogFiles.length > this.maxLogFiles) {
-        const filesToDelete = appLogFiles.slice(0, appLogFiles.length - this.maxLogFiles)
+        const filesToDelete = appLogFiles.slice(
+          0,
+          appLogFiles.length - this.maxLogFiles
+        )
         for (const file of filesToDelete) {
           await fs.remove(path.join(this.logDir, file))
         }
@@ -199,19 +207,19 @@ export class Logger {
    */
   async error(message: string, error?: Error | any): Promise<void> {
     console.error(`[ERROR] ${message}`, error || '')
-    
+
     let logData: any = undefined
     if (error) {
       if (error instanceof Error) {
         logData = {
           error: error.message,
-          stack: error.stack
+          stack: error.stack,
         }
       } else {
         logData = error
       }
     }
-    
+
     await this.log('error', message, logData)
   }
 
@@ -256,18 +264,18 @@ export class Logger {
         for (const line of lines) {
           try {
             const entry: LogEntry = JSON.parse(line)
-            
+
             // キーワードフィルタ
             if (!entry.message.includes(keyword)) continue
-            
+
             // レベルフィルタ
             if (level && entry.level !== level) continue
-            
+
             // 日付フィルタ
             const entryDate = new Date(entry.timestamp)
             if (startDate && entryDate < startDate) continue
             if (endDate && entryDate > endDate) continue
-            
+
             results.push(line)
           } catch (parseError) {
             // JSON解析エラーは無視
@@ -288,14 +296,15 @@ export class Logger {
   async getLogStats(): Promise<LogStats> {
     try {
       const logFiles = await fs.readdir(this.logDir)
-      const appLogFiles = logFiles
-        .filter(file => file.startsWith('app-') && file.endsWith('.log'))
+      const appLogFiles = logFiles.filter(
+        file => file.startsWith('app-') && file.endsWith('.log')
+      )
 
       const levels: Record<LogLevel, number> = {
         info: 0,
         error: 0,
         warn: 0,
-        debug: 0
+        debug: 0,
       }
       let total = 0
 
@@ -320,14 +329,14 @@ export class Logger {
       return {
         total,
         levels,
-        errorRate
+        errorRate,
       }
     } catch (error) {
       console.error('ログ統計の取得に失敗しました:', error)
       return {
         total: 0,
         levels: { info: 0, error: 0, warn: 0, debug: 0 },
-        errorRate: 0
+        errorRate: 0,
       }
     }
   }
@@ -346,4 +355,4 @@ export class Logger {
   static reset(): void {
     Logger.instance = null
   }
-} 
+}

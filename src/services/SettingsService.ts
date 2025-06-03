@@ -132,6 +132,65 @@ export class SettingsService {
   }
 
   /**
+   * 一般設定の読み込み
+   */
+  async loadGeneralSettings(): Promise<Record<string, any>> {
+    const settings = await this.loadSettings()
+    return (
+      settings.general || {
+        theme: 'system',
+        language: 'ja',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        dateFormat: '24h',
+        sessionsPerPage: 25,
+        notifications: {
+          desktop: true,
+          newSession: true,
+          errors: true,
+        },
+        performance: {
+          cacheSize: 100,
+          maxConnections: 10,
+          autoUpdateInterval: 30,
+        },
+      }
+    )
+  }
+
+  /**
+   * 一般設定の保存
+   */
+  async saveGeneralSettings(
+    generalSettings: Record<string, any>
+  ): Promise<void> {
+    try {
+      // 現在の設定を読み込み
+      const currentSettings = await this.loadSettings()
+
+      // バックアップ作成
+      await this.createBackup(currentSettings)
+
+      // 新しい設定で更新
+      const updatedSettings: SettingsFile = {
+        ...currentSettings,
+        general: generalSettings,
+        lastUpdated: new Date().toISOString(),
+      }
+
+      // 保存
+      await fs.writeJson(this.settingsFile, updatedSettings, { spaces: 2 })
+
+      logger.info('General settings saved successfully', {
+        theme: generalSettings.theme,
+        language: generalSettings.language,
+      })
+    } catch (error) {
+      logger.error('Failed to save general settings:', error)
+      throw new Error('一般設定の保存に失敗しました')
+    }
+  }
+
+  /**
    * Cursor設定の保存
    */
   async saveCursorSettings(cursorSettings: CursorSettings): Promise<void> {

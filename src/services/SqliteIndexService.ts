@@ -50,19 +50,75 @@ export class SqliteIndexService {
   private createTables(): void {
     if (!this.db) throw new Error('Database not initialized')
 
-    // セッションテーブル
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL DEFAULT '',
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        message_count INTEGER NOT NULL DEFAULT 0,
-        file_checksum TEXT,
-        file_modified_at INTEGER,
-        metadata TEXT
-      )
-    `)
+    // 既存の古いスキーマをチェック・修正
+    const tableInfo = this.db.prepare("PRAGMA table_info(sessions)").all() as Array<{
+      cid: number
+      name: string
+      type: string
+      notnull: number
+      dflt_value: any
+      pk: number
+    }>
+
+    const hasContentColumn = tableInfo.some(col => col.name === 'content')
+    
+    if (hasContentColumn) {
+      this.logger.info('古いSQLiteスキーマを検出、新しいスキーマに移行中...')
+      
+      // 新しいテーブルを作成
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS sessions_new (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          message_count INTEGER NOT NULL DEFAULT 0,
+          file_checksum TEXT,
+          file_modified_at INTEGER,
+          metadata TEXT
+        )
+      `)
+
+      // 既存データを移行（contentカラムを除く）
+      this.db.exec(`
+        INSERT OR IGNORE INTO sessions_new (
+          id, title, created_at, updated_at, message_count, 
+          file_checksum, file_modified_at, metadata
+        )
+        SELECT 
+          id, 
+          COALESCE(title, '') as title,
+          COALESCE(created_at, timestamp, strftime('%s', 'now') * 1000) as created_at,
+          COALESCE(updated_at, timestamp, strftime('%s', 'now') * 1000) as updated_at,
+          COALESCE(message_count, 0) as message_count,
+          file_checksum,
+          file_modified_at,
+          metadata
+        FROM sessions
+      `)
+
+      // 古いテーブルを削除し、新しいテーブルをリネーム
+      this.db.exec(`
+        DROP TABLE sessions;
+        ALTER TABLE sessions_new RENAME TO sessions;
+      `)
+
+      this.logger.info('SQLiteスキーマ移行完了')
+    } else {
+      // 通常のテーブル作成
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          message_count INTEGER NOT NULL DEFAULT 0,
+          file_checksum TEXT,
+          file_modified_at INTEGER,
+          metadata TEXT
+        )
+      `)
+    }
 
     // タグテーブル
     this.db.exec(`

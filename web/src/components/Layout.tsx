@@ -7,7 +7,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => (
-  <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
     <Sidebar />
     <div className="lg:pl-64">
       <Header />

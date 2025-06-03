@@ -101,7 +101,7 @@ program
         messages: [],
         tags: metadata.tags || [],
         startTime: new Date(),
-        metadata
+        metadata,
       }
       const session = await historyService.createSession(sessionData)
       console.log('✅ 新しいセッションを作成しました:')
@@ -129,10 +129,10 @@ program
       const messageData = {
         role: options.role,
         content: options.content,
-        timestamp: new Date()
+        timestamp: new Date(),
       }
       await historyService.addMessage(options.session, messageData)
-      
+
       const session = await historyService.getSession(options.session)
       const message = session?.messages[session.messages.length - 1]
 
@@ -350,9 +350,13 @@ program
         outputDir: './exports',
         format: 'json' as const,
         includeMetadata: true,
-        compression: false
+        compression: false,
       }
-      const exportService = new ExportService(exportConfig, historyService, logger)
+      const exportService = new ExportService(
+        exportConfig,
+        historyService,
+        logger
+      )
 
       let sessions
 
@@ -615,17 +619,31 @@ program
 
       if (config.autoSave) {
         console.log('\n自動保存設定:')
-        console.log(`   有効: ${config.autoSave.enabled ? '✅ はい' : '❌ いいえ'}`)
+        console.log(
+          `   有効: ${config.autoSave.enabled ? '✅ はい' : '❌ いいえ'}`
+        )
         console.log(`   間隔: ${config.autoSave.interval}分`)
         console.log(`   アイドルタイムアウト: ${config.autoSave.idleTimeout}分`)
-        console.log(`   最大セッション時間: ${config.autoSave.maxSessionDuration}分`)
+        console.log(
+          `   最大セッション時間: ${config.autoSave.maxSessionDuration}分`
+        )
 
-        if (config.autoSave.watchDirectories && config.autoSave.watchDirectories.length > 0) {
-          console.log(`   監視ディレクトリ: ${config.autoSave.watchDirectories.join(', ')}`)
+        if (
+          config.autoSave.watchDirectories &&
+          config.autoSave.watchDirectories.length > 0
+        ) {
+          console.log(
+            `   監視ディレクトリ: ${config.autoSave.watchDirectories.join(', ')}`
+          )
         }
 
-        if (config.autoSave.filePatterns && config.autoSave.filePatterns.length > 0) {
-          console.log(`   ファイルパターン: ${config.autoSave.filePatterns.join(', ')}`)
+        if (
+          config.autoSave.filePatterns &&
+          config.autoSave.filePatterns.length > 0
+        ) {
+          console.log(
+            `   ファイルパターン: ${config.autoSave.filePatterns.join(', ')}`
+          )
         }
       }
     } catch (error) {
@@ -877,15 +895,18 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService({
-          enabled: config.cursor?.enabled ?? false, 
-          autoImport: config.cursor?.autoImport ?? false, 
-          watchPath: config.cursor?.watchPath ?? './cursor-data',
-          logDir: config.cursor?.logDir ?? './logs/cursor',
-          syncInterval: config.cursor?.syncInterval ?? 300,
-          batchSize: config.cursor?.batchSize ?? 100,
-          retryAttempts: config.cursor?.retryAttempts ?? 3
-        }, logger),
+        new CursorLogService(
+          {
+            enabled: config.cursor?.enabled ?? false,
+            autoImport: config.cursor?.autoImport ?? false,
+            watchPath: config.cursor?.watchPath ?? './cursor-data',
+            logDir: config.cursor?.logDir ?? './logs/cursor',
+            syncInterval: config.cursor?.syncInterval ?? 300,
+            batchSize: config.cursor?.batchSize ?? 100,
+            retryAttempts: config.cursor?.retryAttempts ?? 3,
+          },
+          logger
+        ),
         logger
       )
 
@@ -918,15 +939,18 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService({
-          enabled: config.cursor?.enabled ?? false, 
-          autoImport: config.cursor?.autoImport ?? false, 
-          watchPath: config.cursor?.watchPath ?? './cursor-data',
-          logDir: config.cursor?.logDir ?? './logs/cursor',
-          syncInterval: config.cursor?.syncInterval ?? 300,
-          batchSize: config.cursor?.batchSize ?? 100,
-          retryAttempts: config.cursor?.retryAttempts ?? 3
-        }, logger),
+        new CursorLogService(
+          {
+            enabled: config.cursor?.enabled ?? false,
+            autoImport: config.cursor?.autoImport ?? false,
+            watchPath: config.cursor?.watchPath ?? './cursor-data',
+            logDir: config.cursor?.logDir ?? './logs/cursor',
+            syncInterval: config.cursor?.syncInterval ?? 300,
+            batchSize: config.cursor?.batchSize ?? 100,
+            retryAttempts: config.cursor?.retryAttempts ?? 3,
+          },
+          logger
+        ),
         logger
       )
 
@@ -954,15 +978,18 @@ program
       const cursorService = new CursorIntegrationService(
         historyService,
         configService,
-        new CursorLogService({
-          enabled: config.cursor?.enabled ?? false, 
-          autoImport: config.cursor?.autoImport ?? false, 
-          watchPath: config.cursor?.watchPath ?? './cursor-data',
-          logDir: config.cursor?.logDir ?? './logs/cursor',
-          syncInterval: config.cursor?.syncInterval ?? 300,
-          batchSize: config.cursor?.batchSize ?? 100,
-          retryAttempts: config.cursor?.retryAttempts ?? 3
-        }, logger),
+        new CursorLogService(
+          {
+            enabled: config.cursor?.enabled ?? false,
+            autoImport: config.cursor?.autoImport ?? false,
+            watchPath: config.cursor?.watchPath ?? './cursor-data',
+            logDir: config.cursor?.logDir ?? './logs/cursor',
+            syncInterval: config.cursor?.syncInterval ?? 300,
+            batchSize: config.cursor?.batchSize ?? 100,
+            retryAttempts: config.cursor?.retryAttempts ?? 3,
+          },
+          logger
+        ),
         logger
       )
 
@@ -971,13 +998,13 @@ program
 
       console.log('\n📊 Cursor統合状態')
       console.log('='.repeat(30))
-      console.log(`Cursor統合: ${cursorConfig.cursor?.enabled ? '✅ 有効' : '❌ 無効'}`)
+      console.log(
+        `Cursor統合: ${cursorConfig.cursor?.enabled ? '✅ 有効' : '❌ 無効'}`
+      )
       console.log(
         `自動インポート: ${cursorConfig.cursor?.autoImport ? '✅ はい' : '❌ いいえ'}`
       )
-      console.log(
-        `監視パス: ${cursorConfig.cursor?.watchPath || 'デフォルト'}`
-      )
+      console.log(`監視パス: ${cursorConfig.cursor?.watchPath || 'デフォルト'}`)
     } catch (error) {
       console.error('❌ Cursor統合状態の取得に失敗しました:', error)
       process.exit(1)

@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from '@jest/globals'
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+} from '@jest/globals'
 import { ChatHistoryService } from '../../services/ChatHistoryService.js'
 import type { ChatHistoryConfig, ChatSession } from '../../types/index.js'
 import * as fs from 'fs-extra'
@@ -31,7 +38,7 @@ describe('MonitorEdgeCases', () => {
       cleanupDays: 30,
       enableSearch: true,
       enableBackup: false,
-      backupInterval: 24
+      backupInterval: 24,
     }
     service = new ChatHistoryService(config)
     await service.initialize()
@@ -40,7 +47,7 @@ describe('MonitorEdgeCases', () => {
   })
 
   afterEach(async () => {
-    if (tempDir && await fs.pathExists(tempDir)) {
+    if (tempDir && (await fs.pathExists(tempDir))) {
       await fs.remove(tempDir)
     }
   })
@@ -53,7 +60,7 @@ describe('MonitorEdgeCases', () => {
         messages: [],
         tags: [],
         startTime: new Date(),
-        metadata: {}
+        metadata: {},
       })
       expect(session).toBeDefined()
       expect(session.messages).toHaveLength(0)
@@ -66,12 +73,12 @@ describe('MonitorEdgeCases', () => {
         messages: [],
         tags: [],
         startTime: new Date(),
-        metadata: {}
+        metadata: {},
       })
       const messages = Array.from({ length: 1000 }, (_, i) => ({
         role: 'user' as const,
         content: `Message ${i}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       }))
       for (const message of messages) {
         await service.addMessage(session.id, message)
@@ -87,12 +94,12 @@ describe('MonitorEdgeCases', () => {
         messages: [],
         tags: [],
         startTime: new Date(),
-        metadata: {}
+        metadata: {},
       })
       const specialMessage = {
         role: 'user' as const,
         content: '!@#$%^&*()_+{}|:"<>?[]\\;\',./~`',
-        timestamp: new Date()
+        timestamp: new Date(),
       }
       await service.addMessage(session.id, specialMessage)
       const updated = await service.getSession(session.id)
@@ -106,12 +113,12 @@ describe('MonitorEdgeCases', () => {
         messages: [],
         tags: [],
         startTime: new Date(),
-        metadata: {}
+        metadata: {},
       })
       const longMessage = {
         role: 'user' as const,
         content: 'a'.repeat(10000),
-        timestamp: new Date()
+        timestamp: new Date(),
       }
       await service.addMessage(session.id, longMessage)
       const updated = await service.getSession(session.id)
@@ -125,7 +132,7 @@ describe('MonitorEdgeCases', () => {
         messages: [],
         tags: ['tag1', 'tag2', 'tag3'],
         startTime: new Date(),
-        metadata: {}
+        metadata: {},
       })
       expect(session.tags).toHaveLength(3)
       expect(session.tags).toContain('tag1')
@@ -142,8 +149,8 @@ describe('MonitorEdgeCases', () => {
         startTime: new Date(),
         metadata: {
           project: 'project1',
-          source: 'test'
-        }
+          source: 'test',
+        },
       }
       await service.createSession(session)
       const updated = await service.getSession(session.id)
@@ -156,11 +163,15 @@ describe('MonitorEdgeCases', () => {
   describe('異常値の処理', () => {
     it('無効なメトリクス名を登録しようとするとエラーになること', async () => {
       await expect(monitor.registerMetric('', 'counter')).rejects.toThrow()
-      await expect(monitor.registerMetric('invalid@name', 'counter')).rejects.toThrow()
+      await expect(
+        monitor.registerMetric('invalid@name', 'counter')
+      ).rejects.toThrow()
     })
 
     it('無効なメトリクスタイプを登録しようとするとエラーになること', async () => {
-      await expect(monitor.registerMetric('test', 'invalid' as any)).rejects.toThrow()
+      await expect(
+        monitor.registerMetric('test', 'invalid' as any)
+      ).rejects.toThrow()
     })
 
     it('存在しないメトリクスに値を記録しようとするとエラーになること', async () => {
@@ -182,7 +193,7 @@ describe('MonitorEdgeCases', () => {
           condition: 'invalid' as any,
           threshold: 100,
           message: 'Test alert',
-          severity: 'error'
+          severity: 'error',
         })
       ).rejects.toThrow()
     })
@@ -193,7 +204,7 @@ describe('MonitorEdgeCases', () => {
           condition: '>',
           threshold: -1,
           message: 'Test alert',
-          severity: 'error'
+          severity: 'error',
         })
       ).rejects.toThrow()
     })
@@ -204,7 +215,7 @@ describe('MonitorEdgeCases', () => {
           condition: '>',
           threshold: 100,
           message: 'Test alert',
-          severity: 'error'
+          severity: 'error',
         })
       ).rejects.toThrow()
     })
@@ -215,7 +226,7 @@ describe('MonitorEdgeCases', () => {
       await expect(
         monitor.generateReport({
           startTime: new Date('2024-01-01'),
-          endTime: new Date('2023-12-31')
+          endTime: new Date('2023-12-31'),
         })
       ).rejects.toThrow()
     })
@@ -224,7 +235,7 @@ describe('MonitorEdgeCases', () => {
       await expect(
         monitor.generateReport({
           startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-          endTime: new Date()
+          endTime: new Date(),
         })
       ).rejects.toThrow()
     })
@@ -239,13 +250,17 @@ describe('MonitorEdgeCases', () => {
       const invalidSession: Partial<ChatSession> = {
         id: 'test',
         title: '',
-        messages: []
+        messages: [],
       }
-      await expect(monitor.startSessionMonitoring('test', invalidSession as ChatSession)).rejects.toThrow()
+      await expect(
+        monitor.startSessionMonitoring('test', invalidSession as ChatSession)
+      ).rejects.toThrow()
     })
 
     it('存在しないセッションの監視を停止しようとするとエラーになること', async () => {
-      await expect(monitor.stopSessionMonitoring('nonexistent')).rejects.toThrow()
+      await expect(
+        monitor.stopSessionMonitoring('nonexistent')
+      ).rejects.toThrow()
     })
   })
 
@@ -254,7 +269,7 @@ describe('MonitorEdgeCases', () => {
       await expect(
         monitor.startMemoryMonitoring({
           threshold: -1,
-          interval: 1000
+          interval: 1000,
         })
       ).rejects.toThrow()
     })
@@ -263,7 +278,7 @@ describe('MonitorEdgeCases', () => {
       await expect(
         monitor.startMemoryMonitoring({
           threshold: 1000,
-          interval: 0
+          interval: 0,
         })
       ).rejects.toThrow()
     })
@@ -277,9 +292,7 @@ describe('MonitorEdgeCases', () => {
     })
 
     it('無効なエラーオブジェクトでログを記録しようとするとエラーになること', async () => {
-      await expect(
-        monitor.logError('test', null as any)
-      ).rejects.toThrow()
+      await expect(monitor.logError('test', null as any)).rejects.toThrow()
     })
   })
-}) 
+})

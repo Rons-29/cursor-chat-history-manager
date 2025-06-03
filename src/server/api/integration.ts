@@ -1,7 +1,10 @@
 import express from 'express'
 import { IntegrationService } from '../../services/IntegrationService.js'
 import type { IntegrationConfig } from '../../types/integration.js'
-import { IntegrationSearchRequestSchema, IntegrationAnalyticsRequestSchema } from '../../types/integration.js'
+import {
+  IntegrationSearchRequestSchema,
+  IntegrationAnalyticsRequestSchema,
+} from '../../types/integration.js'
 
 import { Logger } from '../utils/Logger.js'
 // import { z } from 'zod' // バリデーション用（後で追加）
@@ -18,7 +21,7 @@ const config: IntegrationConfig = {
     autoImport: true,
     syncInterval: 300,
     batchSize: 100,
-    retryAttempts: 3
+    retryAttempts: 3,
   },
   chatHistory: {
     storagePath: process.env.CHAT_HISTORY_PATH || '~/.chat-history',
@@ -28,13 +31,13 @@ const config: IntegrationConfig = {
     cleanupDays: 30,
     enableSearch: true,
     enableBackup: false,
-    backupInterval: 24
+    backupInterval: 24,
   },
   sync: {
     interval: 300,
     batchSize: 100,
-    retryAttempts: 3
-  }
+    retryAttempts: 3,
+  },
 }
 const integrationService = new IntegrationService(config, logger)
 
@@ -48,17 +51,17 @@ router.post('/search', async (req, res) => {
         ...validatedData,
         timeRange: {
           start: new Date(validatedData.timeRange.start),
-          end: new Date(validatedData.timeRange.end)
-        }
+          end: new Date(validatedData.timeRange.end),
+        },
       }
     }
     const results = await integrationService.search(options)
     res.json({ results })
   } catch (error) {
     logger.error('Search error:', error)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Search failed',
-      message: error instanceof Error ? error.message : 'Internal server error'
+      message: error instanceof Error ? error.message : 'Internal server error',
     })
   }
 })
@@ -71,11 +74,11 @@ router.get('/analytics', async (req, res) => {
     res.json(results)
   } catch (error) {
     logger.error('Analytics error:', error)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Analytics failed',
-      message: error instanceof Error ? error.message : 'Internal server error'
+      message: error instanceof Error ? error.message : 'Internal server error',
     })
   }
 })
 
-export default router 
+export default router

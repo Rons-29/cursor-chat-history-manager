@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import ThemeToggle from './ThemeToggle'
 
 const Header: React.FC = () => {
   return (
@@ -35,6 +36,9 @@ const Header: React.FC = () => {
 
           {/* 右側のユーティリティ */}
           <div className="flex items-center space-x-4">
+            {/* テーマ切り替え */}
+            <ThemeToggle />
+
             {/* 検索ボタン */}
             <Link
               to="/search"

@@ -17,6 +17,7 @@ import integrationRoutes from './routes/integration.js'
 import settingsRoutes from './routes/settings.js'
 import claudeDevRoutes, { setClaudeDevService } from './routes/claude-dev.js'
 import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
+import enhancedSessionRoutes from './routes/enhanced-sessions.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -1134,6 +1135,7 @@ app.use('/api/v1', apiRoutes) // 旧APIは /v1 に移動
 app.use('/api/integration', integrationRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/claude-dev', claudeDevRoutes) // 専用機能のみ残す
+app.use('/api', enhancedSessionRoutes) // 強化されたセッションAPI
 
 // エラーハンドリング
 app.use(

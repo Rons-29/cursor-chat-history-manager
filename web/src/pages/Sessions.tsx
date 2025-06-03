@@ -18,20 +18,27 @@ const Sessions: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [limit, setLimit] = useState(50)
 
-  // セッション一覧取得
+  // セッション一覧取得（API側ページネーション活用）
   const {
     data: sessionsData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: queryKeys.sessions({ page: currentPage, limit, keyword }),
+    queryKey: queryKeys.sessions({ 
+      page: currentPage, 
+      limit, 
+      keyword: keyword || undefined,
+      sort: sortOrder 
+    }),
     queryFn: () =>
       apiClient.getSessions({
         page: currentPage,
         limit,
         keyword: keyword || undefined,
+        // sortOrder: sortOrder,  // API側ソート対応時に有効化
       }),
     refetchInterval: 60000, // 1分ごとに更新
+    staleTime: 30000, // 30秒間はキャッシュ有効
   })
 
   // データ手動更新
@@ -69,35 +76,27 @@ const Sessions: React.FC = () => {
     }
   }
 
-  // フィルタリングされたセッション
-  const filteredSessions =
-    sessionsData?.sessions?.filter(session => {
-      if (!keyword) return true
-      const searchText =
-        `${session.title || ''} ${session.metadata.tags?.join(' ') || ''}`.toLowerCase()
-      return searchText.includes(keyword.toLowerCase())
-    }) || []
-
-  // ソートされたセッション
-  const sortedSessions = [...filteredSessions].sort((a, b) => {
-    switch (sortOrder) {
-      case 'newest':
-        return new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-      case 'oldest':
-        return new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-      case 'messages':
-        return b.metadata.totalMessages - a.metadata.totalMessages
-      default:
-        return 0
-    }
+  // API側のページネーションデータを直接使用（効率的）
+  const sessions = sessionsData?.sessions || []
+  const totalSessions = sessionsData?.pagination?.total || 0
+  const totalPages = sessionsData?.pagination?.totalPages || 1
+  const currentLimit = sessionsData?.pagination?.limit || limit
+  const hasMore = sessionsData?.pagination?.hasMore || false
+  
+  // 表示情報の計算
+  const startIndex = (currentPage - 1) * currentLimit + 1
+  const endIndex = Math.min(currentPage * currentLimit, totalSessions)
+  
+  console.log('📊 Sessions pagination info:', {
+    currentPage,
+    limit,
+    totalSessions,
+    totalPages,
+    hasMore,
+    startIndex,
+    endIndex,
+    sessionsCount: sessions.length
   })
-
-  // APIから返される実際の総数を使用
-  const totalSessions = sessionsData?.pagination?.total || sessionsData?.sessions?.length || 0
-  const totalPages = sessionsData?.pagination?.totalPages || Math.ceil(sortedSessions.length / limit)
-  const startIndex = (currentPage - 1) * limit
-  const endIndex = startIndex + limit
-  const paginatedSessions = sortedSessions.slice(startIndex, endIndex)
 
   // キーワード変更時の処理
   const handleKeywordChange = (value: string) => {
@@ -116,9 +115,9 @@ const Sessions: React.FC = () => {
       {/* ページヘッダー */}
       <div className="flex justify-between items-center border-b border-gray-200 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">セッション一覧</h1>
+          <h1 className="text-2xl font-bold text-gray-900">AI対話記録一覧</h1>
           <p className="text-gray-600">
-            {isLoading ? '読み込み中...' : `全 ${totalSessions} 件のセッション`}
+            {isLoading ? '読み込み中...' : `全 ${totalSessions} 件のAI対話記録`}
           </p>
         </div>
         <button
@@ -147,14 +146,14 @@ const Sessions: React.FC = () => {
 
       {/* フィルター・検索 */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               キーワード検索
             </label>
             <input
               type="text"
-              placeholder="セッションを検索..."
+              placeholder="AI対話記録のタイトルやタグで検索..."
               className="input-field"
               value={keyword}
               onChange={e => handleKeywordChange(e.target.value)}
@@ -162,7 +161,7 @@ const Sessions: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              ソート
+              ソート順
             </label>
             <select
               className="input-field"
@@ -174,24 +173,6 @@ const Sessions: React.FC = () => {
               <option value="newest">最新順</option>
               <option value="oldest">古い順</option>
               <option value="messages">メッセージ数順</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              表示件数
-            </label>
-            <select
-              className="input-field"
-              value={limit}
-              onChange={e => {
-                setLimit(parseInt(e.target.value))
-                setCurrentPage(1) // ページを1にリセット
-              }}
-            >
-              <option value={10}>10件</option>
-              <option value={25}>25件</option>
-              <option value={50}>50件</option>
-              <option value={100}>100件</option>
             </select>
           </div>
         </div>
@@ -241,8 +222,8 @@ const Sessions: React.FC = () => {
               </div>
             </div>
           ))
-        ) : paginatedSessions.length > 0 ? (
-          paginatedSessions.map(session => (
+        ) : sessions.length > 0 ? (
+          sessions.map(session => (
             <SessionCard
               key={session.id}
               session={session}
@@ -266,48 +247,134 @@ const Sessions: React.FC = () => {
               />
             </svg>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              セッションが見つかりません
+              AI対話記録が見つかりません
             </h3>
             <p className="text-gray-500">
               {keyword
-                ? '検索条件に一致するセッションがありません'
-                : 'セッションデータがありません'}
+                ? '検索条件に一致するAI対話記録がありません'
+                : 'AI対話記録データがありません'}
             </p>
+            {keyword && (
+              <button
+                onClick={() => handleKeywordChange('')}
+                className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                検索をクリア
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* ページネーション */}
-      {!isLoading && sortedSessions.length > limit && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            <span className="font-medium">{startIndex + 1}</span> -
-            <span className="font-medium">
-              {Math.min(endIndex, sortedSessions.length)}
-            </span>{' '}
-            件 / 全 <span className="font-medium">{sortedSessions.length}</span>{' '}
-            件{keyword && ` (検索結果: ${filteredSessions.length} 件)`}
-          </p>
-          <div className="flex items-center space-x-2">
-            <button
-              className="btn-secondary"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            >
-              前へ
-            </button>
-            <span className="text-sm text-gray-600">
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              className="btn-secondary"
-              disabled={currentPage === totalPages}
-              onClick={() =>
-                setCurrentPage(prev => Math.min(totalPages, prev + 1))
-              }
-            >
-              次へ
-            </button>
+      {!isLoading && totalPages > 1 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">{startIndex.toLocaleString()}</span> -
+                <span className="font-medium">{endIndex.toLocaleString()}</span> 件 / 
+                全 <span className="font-medium">{totalSessions.toLocaleString()}</span> 件
+                {keyword && <span className="text-blue-600 ml-2">(検索中)</span>}
+              </p>
+              <div className="text-sm text-gray-500">
+                ページ <span className="font-medium">{currentPage}</span> / <span className="font-medium">{totalPages}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {/* 最初のページ */}
+              <button
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+              >
+                最初
+              </button>
+              
+              {/* 前のページ */}
+              <button
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              >
+                ← 前
+              </button>
+              
+              {/* ページ番号表示 */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  
+                  const isCurrentPage = pageNum === currentPage
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        isCurrentPage
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+              </div>
+              
+              {/* 次のページ */}
+              <button
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPage === totalPages || !hasMore}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              >
+                次 →
+              </button>
+              
+              {/* 最後のページ */}
+              <button
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                最後
+              </button>
+            </div>
+          </div>
+          
+          {/* ページサイズ選択 */}
+          <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">表示件数:</span>
+              <select
+                className="text-sm border border-gray-300 rounded px-2 py-1"
+                value={limit}
+                onChange={e => {
+                  setLimit(parseInt(e.target.value))
+                  setCurrentPage(1)
+                }}
+              >
+                <option value={10}>10件</option>
+                <option value={25}>25件</option>
+                <option value={50}>50件</option>
+                <option value={100}>100件</option>
+              </select>
+            </div>
+            
+            <div className="text-xs text-gray-500">
+              {hasMore ? `他にも ${totalSessions - endIndex} 件のAI対話記録があります` : 'すべてのページを表示中'}
+            </div>
           </div>
         </div>
       )}

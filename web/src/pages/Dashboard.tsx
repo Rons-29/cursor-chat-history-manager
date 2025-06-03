@@ -37,6 +37,17 @@ const Dashboard: React.FC = () => {
     refetchInterval: 30000, // 30秒ごとに更新
   })
 
+  // 統計データ取得（セッション数確保のため）
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useQuery({
+    queryKey: ['stats'],
+    queryFn: () => apiClient.getStats(),
+    refetchInterval: 60000, // 1分ごとに更新
+  })
+
   // 手動更新機能
   const handleManualRefresh = async () => {
     setIsRefreshing(true)
@@ -45,8 +56,10 @@ const Dashboard: React.FC = () => {
       await Promise.all([
         refetchSessions(),
         refetchHealth(),
+        refetchStats(),
         queryClient.invalidateQueries({ queryKey: ['sessions'] }),
-        queryClient.invalidateQueries({ queryKey: ['health'] })
+        queryClient.invalidateQueries({ queryKey: ['health'] }),
+        queryClient.invalidateQueries({ queryKey: ['stats'] })
       ])
     } catch (error) {
       console.error('Manual refresh error:', error)
@@ -71,6 +84,8 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     console.log('📊 Dashboard Debug Info:', {
       sessionsData,
+      'sessionsData?.pagination': sessionsData?.pagination,
+      'sessionsData?.pagination?.total': sessionsData?.pagination?.total,
       sessionsLoading,
       sessionsError,
       healthData,
@@ -106,7 +121,31 @@ const Dashboard: React.FC = () => {
     )
   }
 
-  const totalSessions = sessionsData?.pagination?.total || 0
+  // セッション数計算 - 複数ソースから最も信頼できる値を取得
+  const totalSessions = (() => {
+    // 1. 統計APIからの値を優先（より確実）
+    if (statsData?.totalSessions && !statsLoading) {
+      console.log('📊 Using stats API for total sessions:', statsData.totalSessions)
+      return statsData.totalSessions
+    }
+    
+    // 2. セッションAPIのpaginationから取得
+    if (sessionsData?.pagination?.total && !sessionsLoading) {
+      console.log('📊 Using sessions pagination for total sessions:', sessionsData.pagination.total)
+      return sessionsData.pagination.total
+    }
+    
+    // 3. ローディング中の場合
+    if (sessionsLoading || statsLoading) {
+      console.log('📊 Loading sessions data...')
+      return '...'
+    }
+    
+    // 4. フォールバック
+    console.warn('📊 No session count available, falling back to 0')
+    return 0
+  })()
+  
   const recentSessions = sessionsData?.sessions?.slice(0, 3) || []
 
   return (
@@ -165,13 +204,13 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              総セッション数
+              総AI対話記録数
             </h3>
             <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-              {sessionsLoading ? '...' : totalSessions.toLocaleString()}
+              {typeof totalSessions === 'string' ? totalSessions : totalSessions.toLocaleString()}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Cursorチャット履歴
+              AI開発支援記録
             </p>
             {/* デバッグ情報 */}
             {sessionsError && (
@@ -198,7 +237,7 @@ const Dashboard: React.FC = () => {
               最新活動
             </h3>
             <p className="text-lg font-medium text-gray-900 dark:text-white">
-              {recentSessions.length > 0 ? '最近のセッション' : 'データなし'}
+              {recentSessions.length > 0 ? '最近のAI対話記録' : 'データなし'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {recentSessions.length} 件表示中
@@ -214,7 +253,7 @@ const Dashboard: React.FC = () => {
                 to="/sessions"
                 className="block text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
               >
-                → セッション一覧
+                → AI対話記録一覧
               </Link>
               <Link
                 to="/search"
@@ -243,7 +282,7 @@ const Dashboard: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              最近のセッション
+              最近のAI対話記録
             </h2>
             <Link
               to="/sessions"
@@ -267,7 +306,7 @@ const Dashboard: React.FC = () => {
             ) : sessionsError ? (
               <div className="text-center py-8">
                 <ExclamationTriangleIcon className="w-12 h-12 text-red-400 mx-auto mb-4" />
-                <p className="text-gray-500">セッションデータの読み込みに失敗しました</p>
+                <p className="text-gray-500">AI対話記録データの読み込みに失敗しました</p>
                 <p className="text-sm text-gray-400 mt-1">{sessionsError.message}</p>
                 <button
                   onClick={handleManualRefresh}
@@ -312,7 +351,7 @@ const Dashboard: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  セッションデータがありません
+                  AI対話記録データがありません
                 </h3>
                 <p className="text-gray-500 mb-4">
                   Cursorチャット履歴をインポートしてください

@@ -1,14 +1,7 @@
 // Jest テストセットアップファイル
-import '@testing-library/jest-dom'
-import { jest } from '@jest/globals'
-import { TextEncoder } from 'util'
-import fs from 'fs-extra'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-// ESM環境での__dirnameの代替
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+require('@testing-library/jest-dom')
+const fs = require('fs-extra')
+const path = require('path')
 
 // テスト用の一時ディレクトリを作成
 const testDir = path.join(__dirname, 'test-storage')
@@ -31,10 +24,6 @@ global.console = {
   debug: jest.fn(),
 }
 
-// グローバル変数の設定
-global.__dirname = __dirname
-global.__filename = __filename
-
 // テスト環境の設定
 process.env.NODE_ENV = 'test'
 
@@ -46,16 +35,17 @@ afterEach(() => {
 // テストのタイムアウト設定
 jest.setTimeout(30000)
 
-// TextEncoder polyfill
+// TextEncoder polyfill (Node.js環境でのみ)
 if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder } = require('util')
   global.TextEncoder = TextEncoder
 }
 
-// ResizeObserverのモック
-class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+// ResizeObserverのモック (DOM APIが利用できない場合のみ)
+if (typeof global.ResizeObserver === 'undefined') {
+  global.ResizeObserver = class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
 }
-
-global.ResizeObserver = ResizeObserver

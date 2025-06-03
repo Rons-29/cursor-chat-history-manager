@@ -1,21 +1,25 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
-export default {
-  preset: 'ts-jest/presets/default-esm',
+module.exports = {
+  preset: 'ts-jest',
   testEnvironment: 'node',
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      useESM: true,
-      isolatedModules: true,
-      tsconfig: 'tsconfig.json'
+      isolatedModules: false,
+      tsconfig: {
+        module: 'CommonJS',
+        moduleResolution: 'node',
+        target: 'ES2020',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true
+      }
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(uuid|@testing-library)/)'
+    'node_modules/(?!(uuid|@testing-library|better-sqlite3)/)'
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   testMatch: [
     '**/__tests__/**/*.test.ts?(x)', 
@@ -44,11 +48,6 @@ export default {
       lines: 70,
       statements: 70,
     },
-  },
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
   },
   testTimeout: 30000
 } 

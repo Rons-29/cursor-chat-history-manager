@@ -8,6 +8,7 @@ import { ConfigService } from '../services/ConfigService.js'
 import { IncrementalIndexService } from '../services/IncrementalIndexService.js'
 import { SqliteIndexService } from '../services/SqliteIndexService.js'
 // Claude Dev統合サービスは動的インポートで作成
+import serviceRegistry from '../services/ServiceRegistry.js'
 import { Logger } from './utils/Logger.js'
 
 // ルートインポート
@@ -148,7 +149,7 @@ async function initializeServices() {
     )
     await integrationService.initialize()
 
-    // Claude Dev統合サービス初期化（直接インポート使用）
+    // Claude Dev統合サービス初期化（SQLiteIndexServiceのDB接続を共有）
     try {
       console.log('Claude Dev統合サービス初期化開始...')
       const { default: ClaudeDevIntegrationService } = await import(
@@ -159,13 +160,31 @@ async function initializeServices() {
       console.log(
         `Claude Dev統合サービス: 統一データベースパス: ${unifiedDbPath}`
       )
-      claudeDevService = new ClaudeDevIntegrationService(unifiedDbPath)
+
+      // SQLiteIndexServiceが初期化されている場合、その接続を共有
+      let sharedDb = undefined
+      if (sqliteIndexService && sqliteIndexService.isInitialized()) {
+        const dbInstance = sqliteIndexService.getDatabase()
+        if (dbInstance) {
+          sharedDb = dbInstance
+          console.log(
+            'Claude Dev統合: SQLiteIndexServiceのデータベース接続を共有します'
+          )
+        }
+      }
+
+      claudeDevService = new ClaudeDevIntegrationService(
+        unifiedDbPath,
+        sharedDb
+      )
       await claudeDevService.initialize()
 
       logger.info('Claude Dev統合サービスが初期化されました')
       console.log('Claude Dev統合サービス初期化完了!')
 
-      // Claude Devルートにサービスを設定
+      // ServiceRegistryにサービスを登録
+      serviceRegistry.setClaudeDevService(claudeDevService)
+      // 従来のルート設定も維持（互換性のため）
       setClaudeDevService(claudeDevService)
     } catch (error) {
       logger.error('Claude Dev統合サービスの初期化に失敗:', error)
@@ -190,6 +209,7 @@ async function initializeServices() {
 
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
+  const serviceStatus = serviceRegistry.getServiceStatus()
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -198,8 +218,9 @@ app.get('/api/health', (req, res) => {
       chatHistory: !!chatHistoryService,
       integration: !!integrationService,
       cursorLog: !!cursorLogService,
-      claudeDev: !!claudeDevService,
+      claudeDev: serviceStatus.claudeDev,
     },
+    debug: serviceRegistry.getDebugInfo(),
   })
 })
 
@@ -226,7 +247,7 @@ app.get('/api/sessions', async (req, res) => {
         startDate: filter.startDate,
         endDate: filter.endDate,
       })
-      
+
       // SQLite形式からChatHistoryService形式に変換
       result = {
         sessions: sqliteResult.sessions.map(session => ({
@@ -236,7 +257,7 @@ app.get('/api/sessions', async (req, res) => {
           updatedAt: session.updatedAt,
           messages: [], // メッセージは必要に応じて別途取得
           tags: session.tags,
-          metadata: { source: 'sqlite', summary: '', description: '' }
+          metadata: { source: 'sqlite', summary: '', description: '' },
         })),
         currentPage: filter.page,
         pageSize: filter.pageSize,
@@ -870,7 +891,7 @@ app.post('/api/integration/sqlite-migrate', async (req, res) => {
             tags: session.tags || [],
             metadata: session.metadata || {},
             createdAt: session.createdAt || new Date(),
-            updatedAt: session.updatedAt || new Date()
+            updatedAt: session.updatedAt || new Date(),
           }
 
           // メッセージの検証
@@ -880,7 +901,7 @@ app.post('/api/integration/sqlite-migrate', async (req, res) => {
               content: msg.content || '', // 空のcontentをデフォルト値で置換
               role: msg.role || 'user',
               timestamp: msg.timestamp || new Date(),
-              id: msg.id || `msg-${Date.now()}-${Math.random()}`
+              id: msg.id || `msg-${Date.now()}-${Math.random()}`,
             }))
           }
 
@@ -888,19 +909,20 @@ app.post('/api/integration/sqlite-migrate', async (req, res) => {
           totalMigrated++
         } catch (error) {
           totalErrors++
-          const errorMessage = error instanceof Error ? error.message : String(error)
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
           errors.push(`セッション ${session.id} の移行エラー: ${errorMessage}`)
-          
-                     // エラーログを詳細出力（デバッグ用）
-           logger.error(`SQLite移行エラー [${session.id}]:`, {
-             error: errorMessage,
-             sessionData: {
-               id: session.id,
-               title: session.title,
-               messagesCount: session.messages?.length || 0,
-               messagesSample: session.messages?.slice(0, 2)
-             }
-           })
+
+          // エラーログを詳細出力（デバッグ用）
+          logger.error(`SQLite移行エラー [${session.id}]:`, {
+            error: errorMessage,
+            sessionData: {
+              id: session.id,
+              title: session.title,
+              messagesCount: session.messages?.length || 0,
+              messagesSample: session.messages?.slice(0, 2),
+            },
+          })
         }
 
         // プログレス制限を緩和

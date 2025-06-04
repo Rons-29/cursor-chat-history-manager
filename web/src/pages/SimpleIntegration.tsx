@@ -6,7 +6,7 @@ const SimpleIntegration: React.FC = () => {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
         Cursor統合機能（シンプル版）
       </h1>
-      <div className="bg-white dark:bg-slate-800 shadow rounded-lg p-6 transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-800 shadow rounded-lg p-6 border dark:border-slate-700 transition-colors duration-300">
         <p className="text-gray-600 dark:text-gray-400">
           統合機能のシンプルページです。このページが表示されれば、基本的なルーティングは正常に動作しています。
         </p>
@@ -22,9 +22,9 @@ const SimpleIntegration: React.FC = () => {
               <p className="text-green-700 dark:text-green-300">監視: 停止中</p>
               <p className="text-green-700 dark:text-green-300">最終スキャン: 未実行</p>
             </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border dark:border-yellow-800 p-4 rounded-lg transition-colors duration-300">
-              <h3 className="font-semibold text-yellow-900 dark:text-yellow-200">操作</h3>
-              <button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200">
+            <div className="bg-orange-50 dark:bg-orange-900/20 border dark:border-orange-800 p-4 rounded-lg transition-colors duration-300">
+              <h3 className="font-semibold text-orange-900 dark:text-orange-200">操作</h3>
+              <button className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white px-3 py-1 rounded text-sm transition-colors duration-200 shadow-sm hover:shadow-md">
                 スキャン実行
               </button>
             </div>

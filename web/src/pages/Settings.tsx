@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { apiClient, CursorSettings } from '../api/client'
 import { GeneralSettings, SecuritySettings, BackupSettings, defaultGeneralSettings, defaultSecuritySettings, defaultBackupSettings } from '../types/settings'
 import { useTheme } from '../contexts/ThemeContext'
-import { ModernCard, SettingSection, SettingField } from '../components/ModernCard'
+import { ModernCard, SettingField } from '../components/ModernCard'
 import { ModernSelect, ModernInput, ModernCheckbox, ModernRange } from '../components/ModernInput'
 
 // インポート直後のAPIクライアント確認

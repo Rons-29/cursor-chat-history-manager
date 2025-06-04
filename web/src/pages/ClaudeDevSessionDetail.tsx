@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
-  ClockIcon,
+
   ChatBubbleLeftIcon,
   UserIcon,
   CpuChipIcon,
@@ -134,7 +134,7 @@ const ClaudeDevSessionDetail: React.FC = () => {
   };
 
   // 安全なメタデータ取得
-  const getMetadataValue = (key: string, defaultValue: any = '不明') => {
+  const getMetadataValue = (key: keyof ClaudeDevSession['metadata'], defaultValue: any = '不明') => {
     try {
       return session?.metadata?.[key] ?? defaultValue;
     } catch {
@@ -433,7 +433,7 @@ const ClaudeDevSessionDetail: React.FC = () => {
                       {message.role === 'user' ? (
                         <UserIcon className={`h-5 w-5 ${message.role === 'user' ? 'text-blue-600' : 'text-purple-600'}`} />
                       ) : (
-                        <CpuChipIcon className={`h-5 w-5 ${message.role === 'user' ? 'text-blue-600' : 'text-purple-600'}`} />
+                        <CpuChipIcon className={`h-5 w-5 text-purple-600`} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

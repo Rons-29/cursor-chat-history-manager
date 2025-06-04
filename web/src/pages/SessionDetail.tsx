@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient, queryKeys } from '../api/client.js'
-import type { ApiSession, ApiMessage } from '../api/client.js'
+// import type { ApiSession, ApiMessage } from '../api/client.js'
 
 const SessionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +32,7 @@ const SessionDetail: React.FC = () => {
   // メッセージ編集ミューテーション
   const editMessageMutation = useMutation({
     mutationFn: async ({ messageId, content }: { messageId: string; content: string }) => {
+      console.log('Updating message:', messageId, content)
       // 実際のAPIエンドポイントが実装されるまでのモック
       return { success: true }
     },
@@ -45,6 +46,7 @@ const SessionDetail: React.FC = () => {
   // メッセージ削除ミューテーション
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: string) => {
+      console.log('Deleting message:', messageId)
       // 実際のAPIエンドポイントが実装されるまでのモック
       return { success: true }
     },

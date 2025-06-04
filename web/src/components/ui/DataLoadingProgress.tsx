@@ -12,7 +12,6 @@ import {
   ServerIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ClockIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline'
 import { InlineLoading } from './LoadingOverlay'
@@ -241,7 +240,7 @@ export const DataLoadingProgress: React.FC<DataLoadingProgressProps> = ({
       {/* ステップ一覧 */}
       {showStepProgress && (
         <div className="space-y-3">
-          {steps.map((step, index) => (
+          {steps.map((step) => (
             <div 
               key={step.id}
               className={`p-4 rounded-lg border transition-all duration-200 ${

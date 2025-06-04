@@ -46,7 +46,7 @@ export const useProgressTracking = (
   const {
     enableTimeEstimation = true,
     enableWebSocket = false,
-    pollingInterval = 1000,
+    // pollingInterval = 1000,
     estimationSampleSize = 10,
     onStepChange,
     onComplete,
@@ -106,7 +106,7 @@ export const useProgressTracking = (
       return
     }
 
-    const now = Date.now()
+    // const now = Date.now()
     const recentHistory = progressHistory.slice(-Math.min(5, progressHistory.length))
     
     if (recentHistory.length < 2) return

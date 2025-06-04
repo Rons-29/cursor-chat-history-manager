@@ -39,7 +39,9 @@
     "integration:monitor": "watch -n 60 'npm run check:integration'",
     "stats": "npm run check:integration && echo '📈 統計情報更新完了'",
     "docs:check": "./scripts/docs-quality-check.sh",
-    "docs:quality": "npm run docs:check && echo '📚 ドキュメント品質チェック完了'"
+    "docs:quality": "npm run docs:check && echo '📚 ドキュメント品質チェック完了'",
+    "ports:check": "./scripts/port-check.sh",
+    "ports:clean": "./scripts/port-check.sh --clean"
   },
   "keywords": [
     "chatflow",

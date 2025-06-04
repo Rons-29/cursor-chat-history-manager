@@ -89,7 +89,7 @@ const EnhancedSearchPage: React.FC = () => {
 
   // デバッグ出力
   React.useEffect(() => {
-    console.log('🔍 EnhancedSearchPage Debug:', {
+    console.log('🔍 EnhancedSearchPage Debug (Optimized):', {
       query,
       activeFiltersCount,
       isSearchMode,
@@ -110,9 +110,9 @@ const EnhancedSearchPage: React.FC = () => {
       <div className="border-b border-gray-200 dark:border-gray-600 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🔍 統合検索</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🔍 統合検索 v2.0</h1>
             <p className="text-gray-600 dark:text-gray-400">
-              AI対話記録から高速検索 - Discord風リアルタイム + Notion風フィルタリング
+              AI対話記録から高速検索 - 最適化された統合検索システム
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -163,16 +163,9 @@ const EnhancedSearchPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Discord風検索バー */}
+      {/* 🚀 統合検索バー - 最適化版 */}
       <div className="card">
-        <EnhancedSearchComponent
-          onResultSelect={handleResultClick}
-          placeholder="AI対話記録を検索... (例: React TypeScript エラー)"
-          className="w-full"
-        />
-        
-        {/* ページレベル検索入力 */}
-        <div className="mt-4 relative">
+        <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -180,16 +173,57 @@ const EnhancedSearchPage: React.FC = () => {
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                       bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+            className="block w-full pl-10 pr-12 py-4 border border-gray-300 dark:border-gray-600 rounded-lg 
+                       bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-lg
                        placeholder-gray-500 dark:placeholder-gray-400
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                       transition-colors duration-200"
-            placeholder="ページレベル検索 - 結果は下の一覧に表示されます"
+                       transition-all duration-200"
+            placeholder="AI対話記録を検索... (例: React TypeScript エラー)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {query && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <button
+                onClick={clearSearch}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
+        
+        {/* 検索履歴 - 非検索時のみ表示 */}
+        {!query && recentSearches.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">最近の検索</span>
+              <button
+                onClick={clearSearchHistory}
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                クリア
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recentSearches.slice(0, 5).map((search, index) => (
+                <button
+                  key={index}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  onClick={() => setQuery(search)}
+                >
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                  {search}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 🔍 検索のコツセクション（非検索時のみ表示） */}
@@ -497,35 +531,6 @@ const EnhancedSearchPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* 検索履歴セクション（非検索時のみ） */}
-      {!isSearchMode && recentSearches.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">🕒 最近の検索</h3>
-            <button
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              onClick={clearSearchHistory}
-            >
-              履歴をクリア
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {recentSearches.map((search, index) => (
-              <button
-                key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                onClick={() => setQuery(search)}
-              >
-                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                {search}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

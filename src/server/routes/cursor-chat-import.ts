@@ -135,7 +135,7 @@ router.get(
 
 /**
  * GET /api/cursor-chat-import/files
- * エクスポートディレクトリ内のファイル一覧
+ * エクスポートディレクトリ内の待機中ファイル一覧（処理済みファイルを除外）
  */
 router.get(
   '/files',
@@ -143,6 +143,11 @@ router.get(
     try {
       const fs = await import('fs-extra')
       const exportsDir = path.join(process.cwd(), 'exports')
+      const processedDir = path.join(exportsDir, 'processed')
+
+      // exportsディレクトリの存在確認
+      await fs.default.ensureDir(exportsDir)
+      await fs.default.ensureDir(processedDir)
 
       const files = await fs.default.readdir(exportsDir)
       const chatFiles = files.filter(
@@ -152,22 +157,31 @@ router.get(
       const fileStats = await Promise.all(
         chatFiles.map(async file => {
           const filePath = path.join(exportsDir, file)
-          const stat = await fs.default.stat(filePath)
-          return {
-            name: file,
-            size: stat.size,
-            modified: stat.mtime,
-            extension: path.extname(file),
+          try {
+            const stat = await fs.default.stat(filePath)
+            return {
+              name: file,
+              size: stat.size,
+              modified: stat.mtime,
+              extension: path.extname(file),
+            }
+          } catch (error) {
+            // ファイルが存在しない場合はスキップ
+            return null
           }
         })
       )
+
+      // nullを除外し、待機中のファイルのみを返す
+      const validFiles = fileStats.filter(file => file !== null)
 
       res.json({
         success: true,
         data: {
           directory: exportsDir,
-          totalFiles: fileStats.length,
-          files: fileStats.sort(
+          processedDirectory: processedDir,
+          totalFiles: validFiles.length,
+          files: validFiles.sort(
             (a, b) => b.modified.getTime() - a.modified.getTime()
           ),
         },

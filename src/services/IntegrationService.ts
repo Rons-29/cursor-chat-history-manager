@@ -543,7 +543,7 @@ export class IntegrationService extends EventEmitter {
 
       const logsByTag = logs.reduce(
         (acc, log) => {
-          (log.metadata.tags || []).forEach(tag => {
+          ;(log.metadata.tags || []).forEach(tag => {
             acc[tag] = (acc[tag] || 0) + 1
           })
           return acc

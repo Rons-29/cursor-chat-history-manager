@@ -106,202 +106,51 @@ export class CursorChatImportService {
     const fileName = path.basename(filePath)
     const ext = path.extname(filePath).toLowerCase()
 
-    // 事前にファイル内容を読み込んでセッション情報を取得
-    const content = await fs.readFile(filePath, 'utf-8')
+    // 既にインポート済みかチェック
     const fileHash = await this.calculateFileHash(filePath)
+    const searchResult = await this.chatHistoryService.searchSessions({
+      keyword: fileHash, // fileHashをキーワードとして検索
+      pageSize: 1,
+      page: 1,
+    })
 
-    // 仮のセッションデータを作成して重複チェック用のメタデータを取得
-    let tempChatData: CursorChatExport | null = null
+    if (searchResult.sessions.length > 0) {
+      // より厳密にfileHashをチェック
+      const existing = searchResult.sessions.find(
+        s => s.metadata?.fileHash === fileHash
+      )
+      if (existing) {
+        console.log(`スキップ: ${fileName} (既にインポート済み)`)
+        return false
+      }
+    }
+
+    const content = await fs.readFile(filePath, 'utf-8')
+    let chatData: CursorChatExport | null = null
 
     switch (ext) {
       case '.md':
-        tempChatData = await this.parseMarkdownExport(
-          content,
-          fileName,
-          fileHash
-        )
+        chatData = await this.parseMarkdownExport(content, fileName, fileHash)
         break
       case '.txt':
-        tempChatData = await this.parseTextExport(content, fileName, fileHash)
+        chatData = await this.parseTextExport(content, fileName, fileHash)
         break
       case '.json':
-        tempChatData = await this.parseJsonExport(content, fileName, fileHash)
+        chatData = await this.parseJsonExport(content, fileName, fileHash)
         break
       default:
         throw new Error(`Unsupported file format: ${ext}`)
     }
 
-    if (!tempChatData) {
-      return false
-    }
-
-    // 直接セッション検索による重複チェック
-    console.log(
-      `🔍 重複チェック開始: ${fileName} (タイトル: "${tempChatData.title}")`
-    )
-    try {
-      const searchResults = await this.chatHistoryService.searchSessions({
-        keyword: tempChatData.title,
-        page: 1,
-        pageSize: 20,
-      })
-
+    if (chatData) {
+      await this.storeChatData(chatData, fileHash)
       console.log(
-        `📊 検索結果: ${searchResults.sessions.length}件のセッションが見つかりました`
+        `✅ インポート完了: ${fileName} (${chatData.messages.length}メッセージ)`
       )
-
-      // より詳細な重複チェック
-      for (const existingSession of searchResults.sessions) {
-        console.log(
-          `🔍 セッション比較中: ${existingSession.id} - "${existingSession.title}"`
-        )
-        if (await this.isDuplicateSession(existingSession, tempChatData)) {
-          console.log(
-            `⏭️  スキップ: ${fileName} (重複セッション検出 - 既存ID: ${existingSession.id})`
-          )
-          return false
-        }
-      }
-      console.log(`✅ 重複なし: ${fileName} をインポートします`)
-    } catch (error) {
-      console.warn(`検索による重複チェックに失敗: ${error}`)
-      // フォールバック: ファイルハッシュベースの従来の方式
-      const sessionId = `cursor-chat-${fileHash}`
-      console.log(`🔄 フォールバック重複チェック: ID=${sessionId}`)
-      try {
-        const existingSession =
-          await this.chatHistoryService.getSession(sessionId)
-        if (existingSession) {
-          console.log(
-            `⏭️  スキップ: ${fileName} (既にインポート済み - ID: ${sessionId})`
-          )
-          return false
-        }
-      } catch (fallbackError) {
-        // セッションが見つからない場合はインポート可能
-        console.log(`✅ フォールバック確認完了: ${fileName} をインポートします`)
-      }
+      return true
     }
 
-    // 重複なしの場合はインポート実行
-    await this.storeChatData(tempChatData, fileHash)
-    console.log(
-      `✅ インポート完了: ${fileName} (${tempChatData.messages.length}メッセージ)`
-    )
-    return true
-  }
-
-  /**
-   * セッション重複判定（詳細比較）
-   */
-  private async isDuplicateSession(
-    existingSession: any,
-    newChatData: CursorChatExport
-  ): Promise<boolean> {
-    console.log(
-      `🔎 重複判定詳細: 既存="${existingSession.title}" vs 新規="${newChatData.title}"`
-    )
-
-    // 1. タイトルの完全一致チェック
-    if (existingSession.title === newChatData.title) {
-      console.log(`✅ タイトル一致: "${existingSession.title}"`)
-      // 2. メッセージ数の一致チェック
-      const existingMsgCount = existingSession.messages?.length || 0
-      const newMsgCount = newChatData.messages.length
-      console.log(
-        `📊 メッセージ数比較: 既存=${existingMsgCount} vs 新規=${newMsgCount}`
-      )
-
-      if (existingMsgCount === newMsgCount) {
-        console.log(`✅ メッセージ数一致: ${existingMsgCount}件`)
-        // 3. 最初と最後のメッセージ内容の一致チェック（高速化のため）
-        if (existingMsgCount > 0 && newMsgCount > 0) {
-          const existingFirst = existingSession.messages[0]?.content || ''
-          const existingLast =
-            existingSession.messages[existingMsgCount - 1]?.content || ''
-          const newFirst = newChatData.messages[0]?.content || ''
-          const newLast = newChatData.messages[newMsgCount - 1]?.content || ''
-
-          console.log(
-            `🔤 内容比較 - 最初: "${existingFirst.slice(0, 50)}..." vs "${newFirst.slice(0, 50)}..."`
-          )
-          console.log(
-            `🔤 内容比較 - 最後: "${existingLast.slice(0, 50)}..." vs "${newLast.slice(0, 50)}..."`
-          )
-
-          if (existingFirst === newFirst && existingLast === newLast) {
-            console.log(`🚨 重複検出: タイトル・メッセージ数・内容が一致`)
-            return true // 重複と判定
-          }
-        }
-      }
-    }
-
-    // 4. メタデータベースの重複チェック
-    if (existingSession.metadata?.source === 'cursor-chat-export') {
-      console.log(`🏷️ メタデータソース一致: cursor-chat-export`)
-      if (
-        existingSession.metadata?.messageCount ===
-        newChatData.metadata.messageCount
-      ) {
-        console.log(
-          `📊 メタデータメッセージ数一致: ${existingSession.metadata.messageCount}`
-        )
-        // メッセージ数が同じかつソースが同じ場合、内容の類似度をチェック
-        const similarity = this.calculateContentSimilarity(
-          existingSession,
-          newChatData
-        )
-        console.log(`📈 内容類似度: ${(similarity * 100).toFixed(1)}%`)
-        if (similarity > 0.9) {
-          console.log(`🚨 重複検出: 類似度90%超え`)
-          return true
-        }
-      }
-    }
-
-    console.log(`✅ 重複なし: 異なるセッションです`)
-    return false // 重複ではない
-  }
-
-  /**
-   * セッション内容の類似度計算（簡易版）
-   */
-  private calculateContentSimilarity(
-    existingSession: any,
-    newChatData: CursorChatExport
-  ): number {
-    if (!existingSession.messages || !newChatData.messages) {
-      return 0
-    }
-
-    const existingContent = existingSession.messages
-      .map((msg: any) => msg.content || '')
-      .join(' ')
-      .toLowerCase()
-
-    const newContent = newChatData.messages
-      .map(msg => msg.content)
-      .join(' ')
-      .toLowerCase()
-
-    // 簡易的な類似度計算（共通部分の割合）
-    const existingWords = existingContent
-      .split(/\s+/)
-      .filter((word: string) => word.trim().length > 0)
-    const newWords = newContent
-      .split(/\s+/)
-      .filter((word: string) => word.trim().length > 0)
-
-    const existingSet = new Set(existingWords)
-    const newSet = new Set(newWords)
-
-    const intersection = existingWords.filter((word: string) =>
-      newSet.has(word)
-    )
-    const union = [...new Set([...existingWords, ...newWords])]
-
-    return union.length > 0 ? intersection.length / union.length : 0
+    return false
   }
 
   /**
@@ -381,7 +230,7 @@ export class CursorChatImportService {
     }
 
     return {
-      id: `cursor-chat-${fileHash}`,
+      id: `cursor-chat-${Date.now()}-${fileHash.substring(0, 8)}`,
       title,
       timestamp: new Date(),
       messages,
@@ -432,7 +281,7 @@ export class CursorChatImportService {
     }
 
     return {
-      id: `cursor-chat-${fileHash}`,
+      id: `cursor-chat-${Date.now()}-${fileHash.substring(0, 8)}`,
       title: fileName.replace(/\.(md|txt|json)$/, ''),
       timestamp: new Date(),
       messages,
@@ -465,7 +314,7 @@ export class CursorChatImportService {
     )
 
     return {
-      id: `cursor-chat-${fileHash}`,
+      id: `cursor-chat-${Date.now()}-${fileHash.substring(0, 8)}`,
       title: data.title || fileName.replace(/\.json$/, ''),
       timestamp: new Date(),
       messages,

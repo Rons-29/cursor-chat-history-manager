@@ -20,8 +20,10 @@ import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
 import enhancedSessionRoutes from './routes/enhanced-sessions.js'
 import cursorChatImportRoutes from './routes/cursor-chat-import.js'
 
+import { PORTS } from '../../config/ports.js'
+
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || PORTS.api
 
 // 最もシンプルなCORS設定
 app.use((req, res, next) => {

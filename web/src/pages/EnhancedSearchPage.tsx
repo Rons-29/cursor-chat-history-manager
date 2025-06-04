@@ -20,7 +20,9 @@ const EnhancedSearchPage: React.FC = () => {
 
   const {
     query,
+    setQuery,
     setFilters,
+    results,
     isLoading: searchLoading,
     error: searchError,
     recentSearches,
@@ -84,6 +86,23 @@ const EnhancedSearchPage: React.FC = () => {
   const isLoading = isSearchMode ? searchLoading : dialoguesLoading
   const error = isSearchMode ? searchError : dialoguesError
   const displayItems = isSearchMode ? filteredResults : dialoguesList
+
+  // デバッグ出力
+  React.useEffect(() => {
+    console.log('🔍 EnhancedSearchPage Debug:', {
+      query,
+      activeFiltersCount,
+      isSearchMode,
+      searchLoading,
+      dialoguesLoading,
+      resultsCount: results.length,
+      filteredResultsCount: filteredResults.length,
+      dialoguesListCount: dialoguesList.length,
+      displayItemsCount: displayItems.length,
+      totalResults,
+      results: results.slice(0, 2) // 最初の2件だけ表示
+    })
+  }, [query, activeFiltersCount, isSearchMode, searchLoading, dialoguesLoading, results.length, filteredResults.length, dialoguesList.length, displayItems.length, totalResults, results])
 
   return (
     <div className="space-y-6">
@@ -151,6 +170,26 @@ const EnhancedSearchPage: React.FC = () => {
           placeholder="AI対話記録を検索... (例: React TypeScript エラー)"
           className="w-full"
         />
+        
+        {/* ページレベル検索入力 */}
+        <div className="mt-4 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+                       bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                       placeholder-gray-500 dark:placeholder-gray-400
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                       transition-colors duration-200"
+            placeholder="ページレベル検索 - 結果は下の一覧に表示されます"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* 🔍 検索のコツセクション（非検索時のみ表示） */}
@@ -292,27 +331,25 @@ const EnhancedSearchPage: React.FC = () => {
         {/* 結果なし状態 */}
         {!isLoading && !error && displayItems.length === 0 && (
           <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-              {isSearchMode ? '検索結果なし' : 'AI対話記録なし'}
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              {isSearchMode ? '検索結果が見つかりませんでした' : 'AI対話記録が見つかりませんでした'}
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
               {isSearchMode 
-                ? `「${query}」に一致する結果が見つかりませんでした`
-                : 'まだAI対話記録が作成されていません'
+                ? `「${query}」に一致する結果がありません。キーワードを変更するか、フィルターを調整してください。`
+                : 'データが見つかりません。先にCursorチャット履歴をインポートしてください。'
               }
             </p>
             {isSearchMode && (
-              <div className="mt-6">
-                <button
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  onClick={() => setShowFilters(true)}
-                >
-                  フィルターを調整
-                </button>
-              </div>
+              <button
+                className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                onClick={clearSearch}
+              >
+                検索をクリア
+              </button>
             )}
           </div>
         )}
@@ -478,7 +515,7 @@ const EnhancedSearchPage: React.FC = () => {
               <button
                 key={index}
                 className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                onClick={() => executeSearch(search)}
+                onClick={() => setQuery(search)}
               >
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />

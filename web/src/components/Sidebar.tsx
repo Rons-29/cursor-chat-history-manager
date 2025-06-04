@@ -70,7 +70,7 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: '検索',
+      name: '🔍 統合検索',
       href: '/search',
       icon: (
         <svg
@@ -84,6 +84,12 @@ const Sidebar: React.FC = () => {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1}
+            d="M3 7l4 4m0 0l4-4m-4 4V3"
           />
         </svg>
       ),

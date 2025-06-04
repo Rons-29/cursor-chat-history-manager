@@ -251,6 +251,7 @@ export const queryKeys = {
     session: (id) => ['sessions', id],
     stats: () => ['stats'],
     search: (keyword, filters) => ['search', keyword, filters],
+    enhancedSearch: (query, filters) => ['enhanced-search', query, JSON.stringify(filters)],
     integrationStats: () => ['integration', 'stats'],
     integrationSettings: () => ['integration', 'settings'],
     integrationLogs: (params) => ['integration', 'logs', params],

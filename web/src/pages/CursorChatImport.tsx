@@ -24,10 +24,11 @@ interface ImportResult {
 
 const CursorChatImport: React.FC = () => {
   const [showGuide, setShowGuide] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const queryClient = useQueryClient()
 
   // ファイル一覧取得
-  const { data: filesData, isLoading: filesLoading } = useQuery({
+  const { data: filesData, isLoading: filesLoading, refetch: refetchFiles } = useQuery({
     queryKey: ['cursor-chat-files'],
     queryFn: async () => {
       const response = await fetch('/api/cursor-chat-import/files')
@@ -37,7 +38,7 @@ const CursorChatImport: React.FC = () => {
   })
 
   // 統計情報取得
-  const { data: statsData } = useQuery({
+  const { data: statsData, refetch: refetchStats } = useQuery({
     queryKey: ['cursor-chat-stats'],
     queryFn: async () => {
       const response = await fetch('/api/cursor-chat-import/stats')
@@ -57,6 +58,21 @@ const CursorChatImport: React.FC = () => {
     enabled: showGuide
   })
 
+  // 手動リフレッシュ機能
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        refetchFiles(),
+        refetchStats(),
+        queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+        queryClient.invalidateQueries({ queryKey: ['claude-dev-sessions'] })
+      ])
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   // インポート実行
   const importMutation = useMutation({
     mutationFn: async () => {
@@ -67,10 +83,17 @@ const CursorChatImport: React.FC = () => {
       return response.json()
     },
     onSuccess: () => {
+      // インポート成功後、すべての関連データを更新
       queryClient.invalidateQueries({ queryKey: ['cursor-chat-stats'] })
       queryClient.invalidateQueries({ queryKey: ['cursor-chat-files'] })
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
       queryClient.invalidateQueries({ queryKey: ['claude-dev-sessions'] })
+      queryClient.invalidateQueries({ queryKey: ['enhanced-stats'] })
+      
+      // 少し遅延してから再度リフレッシュ（ファイル移動の完了を待つ）
+      setTimeout(() => {
+        handleRefresh()
+      }, 1000)
     }
   })
 
@@ -97,6 +120,13 @@ const CursorChatImport: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">Cursorからエクスポートしたチャットファイルを統合データベースに取り込みます</p>
         </div>
         <div className="flex space-x-3">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="btn-secondary"
+          >
+            {isRefreshing ? '🔄 更新中...' : '🔄 リフレッシュ'}
+          </button>
           <button
             onClick={() => setShowGuide(!showGuide)}
             className="btn-secondary"

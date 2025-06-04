@@ -384,10 +384,12 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { keyword, filters = {}, options = {} } = req.body
 
-    if (!keyword) {
+    // フィルターのみの検索も許可
+    const hasFilters = filters && Object.keys(filters).length > 0
+    if (!keyword && !hasFilters) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'キーワードが必要です',
+        message: 'キーワードまたはフィルターが必要です',
       })
       return
     }

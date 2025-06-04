@@ -111,6 +111,15 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
     }
   }, [])
 
+  // アクティブフィルター数の計算（先に定義）
+  const activeFiltersCount = useMemo(() => {
+    return filters.sources.length +
+           filters.tags.length +
+           filters.messageTypes.length +
+           (filters.dateRange.start || filters.dateRange.end ? 1 : 0) +
+           (filters.scorRange[0] > 0 || filters.scorRange[1] < 100 ? 1 : 0)
+  }, [filters])
+
   // デバウンス処理
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -131,7 +140,11 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
     }
   }, [query, debounceMs])
 
-  // メイン検索クエリ
+  // 検索条件判定（useQuery外で定義）
+  const hasActiveFilters = activeFiltersCount > 0
+  const hasValidQuery = debouncedQuery.trim() && debouncedQuery.length >= 2
+
+  // メイン検索クエリ（フィルターのみでも実行可能）
   const {
     data: searchResults = [],
     isLoading,
@@ -139,15 +152,17 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
   } = useQuery({
     queryKey: (queryKeys as any).enhancedSearch(debouncedQuery, filters),
     queryFn: async (): Promise<SearchResult[]> => {
-      if (!debouncedQuery.trim() || debouncedQuery.length < 2) return []
+      // フィルターのみの場合も検索実行
+      if (!hasValidQuery && !hasActiveFilters) return []
 
       try {
         // SQLite検索を優先使用
         try {
-                     const sqliteResponse = await (apiClient as any).sqliteSearch(debouncedQuery, {
+          const sqliteResponse = await (apiClient as any).sqliteSearch(hasValidQuery ? debouncedQuery : '', {
             page: 1,
             pageSize: maxResults,
-            filters: enableFilters ? filters : undefined
+            filters: enableFilters ? filters : undefined,
+            filterOnly: !hasValidQuery // フィルターのみモード
           })
           
           if (sqliteResponse.success && sqliteResponse.results) {
@@ -171,8 +186,15 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
           console.log('SQLite検索が利用できません、フォールバック検索を使用:', sqliteError)
         }
 
-        // フォールバック: 通常の検索API
-        const response = await apiClient.search(debouncedQuery)
+        // フォールバック: 通常の検索API（フィルターのみでも対応）
+        if (!hasValidQuery && !hasActiveFilters) {
+          return []
+        }
+        
+        const response = await apiClient.search(hasValidQuery ? debouncedQuery : ' ', { 
+          ...filters,
+          filterOnly: !hasValidQuery
+        })
         const results: SearchResult[] = []
 
         if (response.results && Array.isArray(response.results)) {
@@ -211,7 +233,7 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
         return []
       }
     },
-    enabled: debouncedQuery.length >= 2,
+    enabled: hasValidQuery || hasActiveFilters, // フィルターのみでも有効
     staleTime: enableCache ? 1000 * 60 * 5 : 0, // 5分間キャッシュ
     retry: 1,
   })
@@ -248,14 +270,7 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
     })
   }, [searchResults, filters, enableFilters])
 
-  // アクティブフィルター数の計算
-  const activeFiltersCount = useMemo(() => {
-    return filters.sources.length +
-           filters.tags.length +
-           filters.messageTypes.length +
-           (filters.dateRange.start || filters.dateRange.end ? 1 : 0) +
-           (filters.scorRange[0] > 0 || filters.scorRange[1] < 100 ? 1 : 0)
-  }, [filters])
+
 
   // 検索実行
   const executeSearch = (searchQuery?: string) => {
@@ -322,7 +337,7 @@ export const useEnhancedSearch = (options: UseEnhancedSearchOptions = {}): UseEn
     setFilters,
     
     // 検索結果
-    results: searchResults,
+    results: filteredResults,
     isLoading,
     error,
     

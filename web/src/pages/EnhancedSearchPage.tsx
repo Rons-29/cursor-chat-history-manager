@@ -109,12 +109,55 @@ const EnhancedSearchPage: React.FC = () => {
       {/* ページヘッダー */}
       <div className="border-b border-gray-200 dark:border-gray-600 pb-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🔍 統合検索 v2.0</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              AI対話記録から高速検索 - 最適化された統合検索システム
-            </p>
+          <div className="flex items-center space-x-3">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🔍 統合検索 v2.0</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                AI対話記録から高速検索 - 最適化された統合検索システム
+              </p>
+            </div>
+            
+            {/* 検索のコツ - インフォアイコン */}
+            <div className="relative group">
+              <div className="p-2 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 cursor-help transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              
+              {/* ホバー時のツールチップ */}
+              <div className="absolute left-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">🔍 検索のコツ</h3>
+                <div className="grid grid-cols-1 gap-3 text-xs">
+                  <div>
+                    <div className="font-medium text-gray-800 dark:text-gray-200 mb-1">キーワード検索:</div>
+                    <ul className="text-gray-600 dark:text-gray-400 space-y-1 pl-2">
+                      <li>• 「React エラー」「TypeScript 型」</li>
+                      <li>• 複数キーワードでAND検索</li>
+                      <li>• 部分一致で幅広く検索</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800 dark:text-gray-200 mb-1">検索対象:</div>
+                    <ul className="text-gray-600 dark:text-gray-400 space-y-1 pl-2">
+                      <li>• チャット履歴の全メッセージ内容</li>
+                      <li>• セッションタイトル・メタデータ</li>
+                      <li>• SQLite高速検索 + JSONフォールバック</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800 dark:text-gray-200 mb-1">フィルター活用:</div>
+                    <ul className="text-gray-600 dark:text-gray-400 space-y-1 pl-2">
+                      <li>• ソース別（Cursor、Claude Dev等）</li>
+                      <li>• 日付範囲で期間絞り込み</li>
+                      <li>• タグでカテゴリ検索</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+          
           <div className="flex items-center space-x-3">
             {/* 表示モード切り替え */}
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -162,6 +205,22 @@ const EnhancedSearchPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Notion風フィルターセクション - 検索バーの上に移動 */}
+      {showFilters && (
+        <div className="card">
+          <div className="border-b border-gray-200 dark:border-gray-600 pb-3 mb-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">🎯 検索フィルター</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              検索結果をより詳細に絞り込むことができます
+            </p>
+          </div>
+          <SearchFilters
+            onFiltersChange={setFilters}
+            className="space-y-4"
+          />
+        </div>
+      )}
 
       {/* 🚀 統合検索バー - 最適化版 */}
       <div className="card">
@@ -225,57 +284,6 @@ const EnhancedSearchPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* 🔍 検索のコツセクション（非検索時のみ表示） */}
-      {!isSearchMode && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-700">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0">
-              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100 mb-3">🔍 検索のコツ</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex items-center text-blue-800 dark:text-blue-200">
-                    <span className="font-medium">キーワード検索:</span>
-                  </div>
-                  <ul className="space-y-1 text-blue-700 dark:text-blue-300 pl-4">
-                    <li>• 「React エラー」「TypeScript 型」</li>
-                    <li>• 複数キーワードでAND検索</li>
-                    <li>• 部分一致で幅広く検索</li>
-                  </ul>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center text-blue-800 dark:text-blue-200">
-                    <span className="font-medium">フィルター活用:</span>
-                  </div>
-                  <ul className="space-y-1 text-blue-700 dark:text-blue-300 pl-4">
-                    <li>• ソース別（Cursor、Claude Dev等）</li>
-                    <li>• 日付範囲で期間絞り込み</li>
-                    <li>• タグでカテゴリ検索</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Notion風フィルターセクション */}
-      {showFilters && (
-        <div className="card">
-          <div className="border-b border-gray-200 dark:border-gray-600 pb-3 mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">検索フィルター</h3>
-          </div>
-          <SearchFilters
-            onFiltersChange={setFilters}
-            className="space-y-4"
-          />
-        </div>
-      )}
 
       {/* 検索統計・状態表示 */}
       {isSearchMode && (

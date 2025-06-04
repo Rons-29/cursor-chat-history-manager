@@ -17,10 +17,9 @@ import integrationRoutes, {
 } from './routes/integration.js'
 import { Logger } from './utils/Logger.js'
 import { IntegrationService } from './services/IntegrationService.js'
-import { PORTS, getWebBaseUrl } from '../../config/ports.js'
 
 const app = express()
-const PORT = process.env.PORT || PORTS.api
+const PORT = process.env.PORT || 3001
 
 // セキュリティとパフォーマンスのミドルウェア
 app.use(
@@ -31,13 +30,13 @@ app.use(
 app.use(compression())
 app.use(morgan('combined'))
 
-// CORS設定（統一ポート設定使用）
+// CORS設定
 app.use(
   cors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL || `http://localhost:${PORTS.web.prod}`
-        : [getWebBaseUrl()],
+        ? process.env.FRONTEND_URL
+        : ['http://localhost:3000', 'http://localhost:5173'],
     credentials: true,
   })
 )

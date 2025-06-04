@@ -1,0 +1,300 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 🎨 ChatFlow UI/UX設計ルール
+
+**適用範囲**: フロントエンド開発・UI/UX設計・ドキュメント作成時  
+**目的**: 「技術者専用ツール」→「誰でも使えるプロダクト」への進化  
+**重要度**: 最高（ユーザー体験の根幹）
+
+---
+
+## 🎯 **強制適用：UI/UX設計原則**
+
+### **🔤 用語統一の強制**
+```typescript
+// ✅ 必須：ユーザーフレンドリーな用語使用
+interface MandatoryTerminology {
+  UI表示: {
+    "セッション" → "AI対話"           // 技術用語→直感的用語
+    "統合" → "連携"                 // 曖昧→具体的動作
+    "メタデータ" → "詳細情報"         // 専門用語→一般用語
+    "強化版" → "詳細"               // 不明→機能明示
+    "統合検索" → "横断検索"          // 曖昧→動作明確
+  }
+  
+  技術実装: {
+    // API・DB・コードは変更禁止（リスク回避）
+    "ChatSession" // そのまま維持
+    "/api/sessions" // そのまま維持
+    "metadata" // そのまま維持
+  }
+}
+
+// ❌ 禁止：技術用語の新規UI使用
+const PROHIBITED_TERMS = [
+  "セッション", "統合", "メタデータ", "強化版",
+  "オプティマイゼーション", "インスタンス", "レスポンス"
+]
+```
+
+### **🎨 視覚設計の強制統一**
+```css
+/* ✅ 必須：機能別統一色使用 */
+:root {
+  --ai-dialogue-color: #3B82F6;    /* Blue = AI対話系 */
+  --integration-color: #10B981;     /* Green = 連携系 */
+  --analysis-color: #8B5CF6;       /* Purple = 詳細分析 */
+  --settings-color: #6B7280;       /* Gray = 設定系 */
+  
+  --status-connected: #10B981;      /* 緑 = 正常動作 */
+  --status-error: #EF4444;          /* 赤 = 注意喚起 */
+  --status-processing: #F59E0B;     /* 橙 = 進行中 */
+}
+
+/* ✅ 必須：情報階層の統一 */
+.primary-term {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--primary-900);
+}
+
+.secondary-term {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--gray-700);
+}
+
+/* ❌ 禁止：インラインスタイル・独自色定義 */
+```
+
+### **🏗️ コンポーネント設計の強制原則**
+```typescript
+// ✅ 必須：ユーザー中心設計パターン
+interface MandatoryComponentPattern {
+  props: {
+    // 直感的なprop名使用
+    dialogue: Session        // session → dialogue
+    connectionStatus: string // integration → connection
+    detailInfo: Metadata     // metadata → detailInfo
+  }
+  
+  accessibility: {
+    "aria-label": "必須"     // スクリーンリーダー対応
+    "role": "必須"          // セマンティック対応
+    "tabIndex": "必須"      // キーボード対応
+  }
+  
+  errorHandling: {
+    "エラー時の建設的メッセージ": "必須"
+    "ローディング状態の明確表示": "必須"
+    "操作結果の即座フィードバック": "必須"
+  }
+}
+```
+
+---
+
+## 📚 **ドキュメント参照の強制**
+
+### **🎯 設計・実装時の必須参照**
+```bash
+# UI/UX作業開始時の必須チェック
+ui_ux_check() {
+  echo "🎨 UI/UX設計ルール確認中..."
+  
+  # 1. 全体方針確認
+  echo "📋 docs/ui-ux-design/README.md で全体方針確認"
+  
+  # 2. 用語統一確認
+  echo "🔤 docs/ui-ux-design/terminology/ で用語整合性確認"
+  
+  # 3. 視覚設計確認
+  echo "🎨 docs/ui-ux-design/visual-design/ で視覚統一確認"
+  
+  # 4. 実装ガイド確認
+  echo "🛠️ docs/ui-ux-design/implementation-guides/ で実装方法確認"
+}
+```
+
+### **📂 ドキュメント構造マップ**
+```typescript
+interface UIUXDocumentationMap {
+  "設計検討時": {
+    全体方針: "docs/ui-ux-design/README.md"
+    最終目標: "docs/ui-ux-design/design-goals/UI_DESIGN_GOAL.md"
+    用語確認: "docs/ui-ux-design/terminology/README.md"
+  }
+  
+  "実装時": {
+    実装ガイド: "docs/ui-ux-design/implementation-guides/README.md"
+    視覚仕様: "docs/ui-ux-design/visual-design/README.md"
+    用語正確性: "docs/ui-ux-design/terminology/alternative-terminology-analysis.md"
+  }
+  
+  "レビュー時": {
+    品質基準: "docs/ui-ux-design/reference/README.md"
+    UX指標: "docs/ui-ux-design/user-experience/README.md"
+    一貫性: "docs/ui-ux-design/visual-design/visual-hierarchy-improvement.md"
+  }
+}
+```
+
+---
+
+## 🚀 **実装強制ルール**
+
+### **🔤 用語実装の段階的強制**
+```typescript
+// Phase 1: 即座実装必須（最優先）
+interface Phase1TerminologyChanges {
+  urgency: "最高"
+  scope: "認知負荷削減"
+  changes: {
+    "セッション → AI対話": "最大のUX改善効果"
+    "統合 → 連携": "ビジネス用語で親しみやすく"
+    "メタデータ → 詳細情報": "技術用語を一般用語に"
+  }
+  
+  implementation: {
+    method: "UI表示のみ変更（技術層は維持）"
+    risk: "最小（文字列変更のみ）"
+    testing: "表示確認のみで十分"
+  }
+}
+
+// Phase 2: 2週間以内実装推奨
+interface Phase2VisualImprovements {
+  urgency: "高"
+  scope: "視覚階層改善"
+  changes: {
+    "アイコン統一": "機能と直結した直感的アイコン"
+    "色彩統一": "機能別・状態別の一貫した配色"
+    "タイポグラフィ": "情報階層に応じた文字階層"
+  }
+}
+```
+
+### **🎨 品質チェックの自動化**
+```bash
+# コミット前UI/UXチェック（必須）
+ui_ux_quality_check() {
+  echo "🎨 UI/UX品質チェック実行中..."
+  
+  # 1. 禁止用語チェック
+  grep -r "セッション\|統合\|メタデータ" web/src/ --include="*.tsx" && {
+    echo "❌ 禁止用語発見：UI表示で技術用語使用"
+    echo "📖 参考：docs/ui-ux-design/terminology/README.md"
+    return 1
+  }
+  
+  # 2. インラインスタイルチェック
+  grep -r "style=" web/src/ --include="*.tsx" && {
+    echo "❌ インラインスタイル発見：CSS統一に反します"
+    echo "📖 参考：docs/ui-ux-design/visual-design/README.md"
+    return 1
+  }
+  
+  # 3. アクセシビリティチェック
+  grep -r "onClick" web/src/ --include="*.tsx" | grep -v "onKeyDown" && {
+    echo "⚠️ キーボード対応不足の可能性"
+    echo "📖 参考：docs/ui-ux-design/reference/README.md"
+  }
+  
+  echo "✅ UI/UX品質チェック完了"
+}
+```
+
+---
+
+## 📈 **効果測定の強制**
+
+### **🎯 必須KPI追跡**
+```typescript
+interface MandatoryUXMetrics {
+  認知負荷改善: {
+    目標: "学習時間 67%削減 (15分 → 5分)"
+    測定: "新規ユーザーの操作習得時間"
+    頻度: "月次測定必須"
+  }
+  
+  操作効率改善: {
+    目標: "クリック数 67%削減 (3クリック → 1クリック)"
+    測定: "主要タスクの操作ステップ数"
+    頻度: "機能変更時必須"
+  }
+  
+  エラー削減: {
+    目標: "操作エラー 67%削減 (12% → 4%)"
+    測定: "誤操作・混乱の発生率"
+    頻度: "リリース後必須"
+  }
+}
+```
+
+### **📊 品質評価の必須基準**
+```typescript
+interface QualityGatesCriteria {
+  リリース前必須チェック: {
+    用語統一: "100%（技術用語のUI残存ゼロ）"
+    視覚一貫性: "100%（色・アイコン・レイアウト統一）"
+    アクセシビリティ: "WCAG 2.1 AA準拠"
+    パフォーマンス: "Lighthouse 90+スコア"
+  }
+  
+  月次品質評価: {
+    ユーザビリティ: "Nielsen 10原則準拠度"
+    満足度: "ユーザーフィードバック分析"
+    改善効果: "KPI達成度評価"
+  }
+}
+```
+
+---
+
+## 🎯 **利用開始方法（自動参照）**
+
+### **設計・改善作業時**
+1. **`docs/ui-ux-design/README.md`** で全体方針確認
+2. **該当カテゴリのREADME** で詳細ガイド確認  
+3. **具体的ドキュメント** で実装・判断
+
+### **学習・研究時**
+1. **`reference/README.md`** で業界基準確認
+2. **`design-goals/`** で目標・ビジョン理解
+3. **各カテゴリ** で段階的知識習得
+
+### **緊急時参照**
+```bash
+# 迷った時の即座参照コマンド
+quick_ui_ux_help() {
+  echo "🆘 UI/UX設計ヘルプ"
+  echo "📋 全体方針：docs/ui-ux-design/README.md"
+  echo "🔤 用語確認：docs/ui-ux-design/terminology/README.md"
+  echo "🎨 視覚仕様：docs/ui-ux-design/visual-design/README.md"
+  echo "🛠️ 実装方法：docs/ui-ux-design/implementation-guides/README.md"
+}
+```
+
+---
+
+## 🔗 **他ルールとの連携**
+
+### **メインルールとの統合**
+- **セキュリティ重視**: `.cursor/rules/hostory-maneger.mdc` と整合
+- **探索型開発**: `.cursor/rules/exploration-driven-development.mdc` 適用時も継続
+- **品質保証**: 既存の品質基準＋UI/UX品質基準
+
+### **自動適用の優先順位**
+1. **セキュリティ**: 最優先（機密情報保護）
+2. **UI/UX**: 高優先（ユーザー体験）
+3. **パフォーマンス**: 高優先（使用感）
+4. **コード品質**: 中優先（保守性）
+
+---
+
+**📍 このルールの価値**: ChatFlowの全てのUI/UX改善に必要な知識・ガイドライン・参考資料が**自動的に参照**され、一貫した高品質なユーザー体験を確保
+
+**🎯 最終目標**: 世界最高レベルのAI対話管理プラットフォーム（技術品質+UX品質の両立）

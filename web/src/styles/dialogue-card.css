@@ -1,0 +1,204 @@
+/* 🎨 DialogueCard スタイル - UI/UXルール準拠 */
+
+/* ✅ 必須：機能別統一色使用 */
+:root {
+  --ai-dialogue-color: #3B82F6;    /* Blue = AI対話系 */
+  --integration-color: #10B981;     /* Green = 連携系 */
+  --analysis-color: #8B5CF6;       /* Purple = 詳細分析 */
+  --settings-color: #6B7280;       /* Gray = 設定系 */
+  
+  --status-connected: #10B981;      /* 緑 = 正常動作 */
+  --status-error: #EF4444;          /* 赤 = 注意喚起 */
+  --status-processing: #F59E0B;     /* 橙 = 進行中 */
+  
+  /* カード背景・境界線 */
+  --card-background: #FFFFFF;
+  --card-border: #E5E7EB;
+  --card-border-hover: var(--ai-dialogue-color);
+  
+  /* 間隔・サイズ */
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --border-radius: 0.5rem;
+  --border-radius-sm: 0.25rem;
+  
+  /* アニメーション */
+  --transition-smooth: all 0.2s ease-in-out;
+  
+  /* フォーカス */
+  --focus-color: var(--ai-dialogue-color);
+  --focus-ring: 0 0 0 2px var(--focus-color);
+}
+
+/* ✅ 必須：情報階層の統一 */
+.primary-term {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--gray-900);
+  line-height: 1.25;
+}
+
+.secondary-term {
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  line-height: 1.25;
+}
+
+/* ✅ 対話カード：通常モード */
+.dialogue-card {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  
+  /* アクセシビリティ：フォーカス対応 */
+  &:focus {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-color: var(--focus-color);
+  }
+  
+  /* ホバー効果 */
+  &:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+  
+  /* アクティブ状態 */
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* ✅ 対話カード：コンパクトモード */
+.dialogue-card-compact {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  
+  /* アクセシビリティ：フォーカス対応 */
+  &:focus {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-color: var(--focus-color);
+  }
+  
+  /* ホバー効果（軽量） */
+  &:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .primary-term {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .secondary-term {
+    font-size: 0.6875rem;
+  }
+}
+
+/* ✅ 連携バッジ */
+.connection-badge {
+  background: var(--integration-color);
+  color: white;
+  padding: var(--spacing-sm) calc(var(--spacing-sm) * 1.5);
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  
+  /* 高コントラスト対応 */
+  @media (prefers-contrast: high) {
+    border: 1px solid var(--integration-color);
+    background: white;
+    color: var(--integration-color);
+  }
+}
+
+/* ✅ タグアイテム */
+.tag-item {
+  display: inline-block;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: var(--spacing-sm) calc(var(--spacing-sm) * 1.5);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-smooth);
+  
+  &:hover {
+    background: var(--gray-200);
+    color: var(--gray-800);
+  }
+}
+
+/* ✅ ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-background: #1F2937;
+    --card-border: #374151;
+    --gray-900: #F9FAFB;
+    --gray-600: #D1D5DB;
+    --gray-100: #374151;
+    --gray-700: #D1D5DB;
+    --gray-200: #4B5563;
+    --gray-800: #F3F4F6;
+  }
+}
+
+/* ✅ 高コントラストモード対応 */
+@media (prefers-contrast: high) {
+  .dialogue-card,
+  .dialogue-card-compact {
+    border-width: 2px;
+  }
+  
+  .primary-term {
+    font-weight: 700;
+  }
+  
+  .secondary-term {
+    font-weight: 600;
+  }
+}
+
+/* ✅ 減色モード対応 */
+@media (prefers-reduced-motion: reduce) {
+  .dialogue-card,
+  .dialogue-card-compact,
+  .connection-badge,
+  .tag-item {
+    transition: none;
+  }
+  
+  .dialogue-card:hover {
+    transform: none;
+  }
+}
+
+/* ✅ 印刷対応 */
+@media print {
+  .dialogue-card,
+  .dialogue-card-compact {
+    border: 1px solid #000;
+    box-shadow: none;
+    background: white;
+    break-inside: avoid;
+  }
+  
+  .connection-badge {
+    background: white;
+    color: black;
+    border: 1px solid black;
+  }
+} 

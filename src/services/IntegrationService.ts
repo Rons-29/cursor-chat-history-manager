@@ -6,6 +6,7 @@ import { ChatHistoryService } from './ChatHistoryService.js'
 import { CursorLogService } from './CursorLogService.js'
 import { CursorWatcherService } from './CursorWatcherService.js'
 import { ConfigService } from './ConfigService.js'
+
 import type {
   IntegrationConfig,
   IntegratedLog,
@@ -28,6 +29,7 @@ export class IntegrationService extends EventEmitter {
   private cursorLogService: CursorLogService
   private cursorWatcherService: CursorWatcherService
   private configService: ConfigService
+
   private logger: Logger
   private isInitialized: boolean = false
   private syncInterval: NodeJS.Timeout | null = null
@@ -108,6 +110,8 @@ export class IntegrationService extends EventEmitter {
       await this.chatHistoryService.initialize()
       await this.cursorLogService.initialize()
       await this.cursorWatcherService.initialize()
+
+
 
       this.isInitialized = true
       this.logger.info('IntegrationServiceを初期化しました')
@@ -790,4 +794,6 @@ export class IntegrationService extends EventEmitter {
       lastScan: cursorWatcherStatus?.lastScan,
     }
   }
+
+
 }

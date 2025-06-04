@@ -20,10 +20,8 @@ import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
 import enhancedSessionRoutes from './routes/enhanced-sessions.js'
 import cursorChatImportRoutes from './routes/cursor-chat-import.js'
 
-import { PORTS } from '../../config/ports.js'
-
 const app = express()
-const PORT = process.env.PORT || PORTS.api
+const PORT = process.env.PORT || 3001
 
 // 最もシンプルなCORS設定
 app.use((req, res, next) => {
@@ -362,10 +360,12 @@ const searchSessions: RequestHandler = async (req, res) => {
   try {
     const { keyword, filters = {} } = req.body
 
-    if (!keyword) {
+    // フィルターのみの検索も許可
+    const hasFilters = filters && Object.keys(filters).length > 0
+    if (!keyword && !hasFilters) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'キーワードが必要です',
+        message: 'キーワードまたはフィルターが必要です',
       })
       return
     }
@@ -982,19 +982,34 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
     }
 
     const { keyword, options = {} } = req.body
+    const { filterOnly = false } = options
 
-    if (!keyword) {
+    // フィルターのみモードの場合、キーワード不要
+    if (!keyword && !filterOnly) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'キーワードが必要です',
+        message: 'キーワードまたはフィルターが必要です',
       })
       return
     }
 
+    // フィルター情報を取得
+    const filters = options.filters || {}
+    
+    console.log('🔍 SQLite検索:', {
+      keyword: keyword || '(フィルターのみ)',
+      filters,
+      filterOnly,
+      page: options.page || 1,
+      pageSize: options.pageSize || 50
+    })
+
     const result = await sqliteIndexService.getSessions({
-      keyword,
+      keyword: keyword || undefined, // 空文字列をundefinedに変換
       page: options.page || 1,
       pageSize: options.pageSize || 50,
+      filters, // フィルターを追加
+      filterOnly, // フィルターのみモードを追加
     })
 
     res.json({
@@ -1004,6 +1019,8 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
       results: result.sessions,
       total: result.total,
       hasMore: result.hasMore,
+      success: true, // フロントエンドで期待されるフィールド
+      source: 'real-api-server' // 実装元を明示
     })
   } catch (error) {
     logger.error('SQLite検索エラー:', error)
@@ -1011,6 +1028,7 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
       error: 'Internal Server Error',
       message:
         error instanceof Error ? error.message : 'SQLite検索に失敗しました',
+      success: false,
     })
   }
 })

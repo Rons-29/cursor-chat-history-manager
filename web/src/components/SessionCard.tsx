@@ -1,37 +1,38 @@
 import React from 'react'
 import { Session, Message } from '../types/Session'
 
-interface SessionCardProps {
-  readonly session: Session
+interface DialogueCardProps {
+  readonly dialogue: Session // session → dialogue (AI対話)
   readonly onSelect: (id: string) => void
   readonly showPreview?: boolean
   readonly compact?: boolean
 }
 
 /**
- * 改善されたセッションカードコンポーネント
+ * 改善されたAI対話カードコンポーネント
  * - 意味のあるタイトル表示
- * - セッション要約
+ * - AI対話の要約
  * - 視覚的な改善
  * - コンパクトモード対応
+ * - アクセシビリティ対応
  */
-export const SessionCard: React.FC<SessionCardProps> = ({ 
-  session, 
+export const DialogueCard: React.FC<DialogueCardProps> = ({ 
+  dialogue, 
   onSelect, 
   showPreview = true,
   compact = false
 }) => {
   // タイトル生成（簡易版）
-  const generateTitle = (session: Session): string => {
-    if (session.title && session.title !== 'Cursor Prompt') {
-      return session.title
+  const generateTitle = (dialogue: Session): string => {
+    if (dialogue.title && dialogue.title !== 'Cursor Prompt') {
+      return dialogue.title
     }
 
-    const firstMessage = session.messages?.[0]?.content || ''
-    if (!firstMessage) return 'セッション'
+    const firstExchange = dialogue.messages?.[0]?.content || ''
+    if (!firstExchange) return 'AI対話'
 
     // 基本クリーニング
-    const cleaned = firstMessage.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
+    const cleaned = firstExchange.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
     
     // キーワード抽出
     const words = cleaned
@@ -71,21 +72,21 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   }
 
   // 要約生成
-  const generateSummary = (session: Session): string => {
-    const messageCount = session.messages?.length || 0
-    if (messageCount === 0) return '空のセッション'
+  const generateSummary = (dialogue: Session): string => {
+    const exchangeCount = dialogue.messages?.length || 0
+    if (exchangeCount === 0) return '空のAI対話'
     
-    const firstMessage = session.messages?.[0]?.content || ''
-    if (messageCount === 1) {
-      return firstMessage.length > 100 
-        ? firstMessage.substring(0, 100) + '...'
-        : firstMessage
+    const firstExchange = dialogue.messages?.[0]?.content || ''
+    if (exchangeCount === 1) {
+      return firstExchange.length > 100 
+        ? firstExchange.substring(0, 100) + '...'
+        : firstExchange
     }
 
-    // 複数メッセージの場合
-    const topics = extractTopics(session.messages || [])
+    // 複数やりとりの場合
+    const topics = extractTopics(dialogue.messages || [])
     if (topics.length === 0) {
-      return `${messageCount}件のメッセージを含む会話`
+      return `${exchangeCount}回のやりとりを含む対話`
     }
     
     if (topics.length === 1) {
@@ -126,45 +127,46 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   }
 
   // 推定時間計算
-  const getEstimatedDuration = (messageCount: number): string => {
-    if (messageCount <= 2) return '短時間'
-    if (messageCount <= 5) return '5-10分'
-    if (messageCount <= 10) return '10-20分'
+  const getEstimatedDuration = (exchangeCount: number): string => {
+    if (exchangeCount <= 2) return '短時間'
+    if (exchangeCount <= 5) return '5-10分'
+    if (exchangeCount <= 10) return '10-20分'
     return '20分以上'
   }
 
-  const title = generateTitle(session)
-  const summary = generateSummary(session)
-  const messageCount = session.messages?.length || 0
+  const title = generateTitle(dialogue)
+  const summary = generateSummary(dialogue)
+  const exchangeCount = dialogue.messages?.length || 0
   const categoryIcon = getCategoryIcon(title)
-  const duration = getEstimatedDuration(messageCount)
-  const lastActivity = session.timestamp ? new Date(session.timestamp) : new Date()
+  const duration = getEstimatedDuration(exchangeCount)
+  const lastActivity = dialogue.timestamp ? new Date(dialogue.timestamp) : new Date()
 
   // コンパクトモード
   if (compact) {
     return (
       <div 
-        className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all duration-200 cursor-pointer p-3"
-        onClick={() => onSelect(session.id)}
+        className="dialogue-card-compact"
+        onClick={() => onSelect(dialogue.id)}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && onSelect(session.id)}
+        onKeyDown={(e) => e.key === 'Enter' && onSelect(dialogue.id)}
+        aria-label={`AI対話「${title}」を開く`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 flex-1 min-w-0">
-            <span className="text-sm">{categoryIcon}</span>
+            <span className="text-sm" aria-hidden="true">{categoryIcon}</span>
             <div className="min-w-0 flex-1">
-              <h3 className="font-medium text-gray-900 text-sm truncate">
+              <h3 className="primary-term truncate">
                 {title}
               </h3>
-              <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
-                <span>{messageCount}メッセージ</span>
+              <div className="flex items-center space-x-2 secondary-term mt-1">
+                <span>{exchangeCount}回のやりとり</span>
                 <span>•</span>
                 <span>{duration}</span>
               </div>
             </div>
           </div>
-          <div className="text-xs text-gray-400 text-right ml-2">
+          <div className="secondary-term text-right ml-2">
             <div>{lastActivity.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}</div>
             <div>{lastActivity.toLocaleTimeString('ja-JP', { 
               hour: '2-digit', 
@@ -179,22 +181,23 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   // 通常モード
   return (
     <div 
-      className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer p-4"
-      onClick={() => onSelect(session.id)}
+      className="dialogue-card"
+      onClick={() => onSelect(dialogue.id)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onSelect(session.id)}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect(dialogue.id)}
+      aria-label={`AI対話「${title}」を開く`}
     >
       {/* ヘッダー */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center space-x-2 flex-1">
-          <span className="text-lg">{categoryIcon}</span>
-          <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+          <span className="text-lg" aria-hidden="true">{categoryIcon}</span>
+          <h3 className="primary-term leading-tight">
             {title}
           </h3>
         </div>
-        <div className="flex items-center space-x-1 text-xs text-gray-500">
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+        <div className="flex items-center space-x-1 secondary-term">
+          <span className="connection-badge">
             cursor-import
           </span>
         </div>
@@ -203,21 +206,21 @@ export const SessionCard: React.FC<SessionCardProps> = ({
       {/* 要約 */}
       {showPreview && (
         <div className="mb-3">
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="secondary-term leading-relaxed">
             {summary}
           </p>
         </div>
       )}
 
-      {/* メタ情報 */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      {/* 詳細情報 */}
+      <div className="flex items-center justify-between secondary-term">
         <div className="flex items-center space-x-3">
           <span className="flex items-center space-x-1">
-            <span>📊</span>
-            <span>{messageCount}メッセージ</span>
+            <span aria-hidden="true">📊</span>
+            <span>{exchangeCount}回のやりとり</span>
           </span>
           <span className="flex items-center space-x-1">
-            <span>⏱️</span>
+            <span aria-hidden="true">⏱️</span>
             <span>{duration}</span>
           </span>
         </div>
@@ -231,12 +234,12 @@ export const SessionCard: React.FC<SessionCardProps> = ({
       </div>
 
       {/* タグ（将来的な拡張） */}
-      {session.metadata?.tags && session.metadata.tags.length > 0 && (
+      {dialogue.metadata?.tags && dialogue.metadata.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {session.metadata.tags.slice(0, 3).map((tag: string, index: number) => (
+          {dialogue.metadata.tags.slice(0, 3).map((tag: string, index: number) => (
             <span 
               key={index}
-              className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
+              className="tag-item"
             >
               #{tag}
             </span>
@@ -246,3 +249,6 @@ export const SessionCard: React.FC<SessionCardProps> = ({
     </div>
   )
 }
+
+// 旧名前でのエクスポート（後方互換性のため段階的移行）
+export const SessionCard = DialogueCard

@@ -460,6 +460,38 @@ export const apiClient = {
       console.error('❌ 統合ログ取得エラー:', error)
       return []
     }
+  },
+
+  // SQLite高速検索
+  sqliteSearch: async (
+    keyword: string,
+    options: {
+      page?: number
+      pageSize?: number
+      filters?: any
+      filterOnly?: boolean
+    } = {}
+  ): Promise<{
+    keyword: string
+    method: string
+    performance: string
+    results: any[]
+    total: number
+    hasMore: boolean
+    success: boolean
+  }> => {
+    return request<{
+      keyword: string
+      method: string
+      performance: string
+      results: any[]
+      total: number
+      hasMore: boolean
+      success: boolean
+    }>('/integration/sqlite-search', {
+      method: 'POST',
+      body: JSON.stringify({ keyword, options }),
+    })
   }
 }
 
@@ -514,6 +546,7 @@ export const queryKeys = {
   integrationLogs: (params?: any) => ['integration', 'logs', params] as const,
   integrationSettings: () => ['integration', 'settings'] as const,
   cursorStatus: () => ['integration', 'cursor', 'status'] as const,
+  sqliteSearch: (keyword: string, options?: any) => ['integration', 'sqlite-search', keyword, options] as const,
   // 設定関連のクエリキー
   cursorSettings: () => ['settings', 'cursor'] as const,
   generalSettings: () => ['settings', 'general'] as const,

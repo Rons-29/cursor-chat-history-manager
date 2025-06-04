@@ -278,6 +278,17 @@ export class SqliteIndexService {
       tags?: string[]
       startDate?: Date
       endDate?: Date
+      filterOnly?: boolean
+      filters?: {
+        dateRange?: {
+          start?: string
+          end?: string
+        }
+        sources?: string[]
+        tags?: string[]
+        messageTypes?: string[]
+        scorRange?: [number, number]
+      }
     } = {}
   ): Promise<{
     sessions: Array<{
@@ -287,6 +298,13 @@ export class SqliteIndexService {
       updatedAt: Date
       messageCount: number
       tags: string[]
+      session_id?: string
+      session_title?: string
+      content?: string
+      timestamp?: string
+      score?: number
+      source?: string
+      message_type?: string
     }>
     total: number
     hasMore: boolean
@@ -300,6 +318,8 @@ export class SqliteIndexService {
       tags,
       startDate,
       endDate,
+      filters,
+      filterOnly = false,
     } = options
 
     const offset = (page - 1) * pageSize
@@ -315,6 +335,7 @@ export class SqliteIndexService {
       params.push(`%${keyword}%`, keyword)
     }
 
+    // 従来のフィルター処理
     if (startDate) {
       whereClause += ' AND s.created_at >= ?'
       params.push(startDate.getTime())
@@ -335,6 +356,42 @@ export class SqliteIndexService {
         HAVING COUNT(*) = ?
       )`
       params.push(...tags, tags.length)
+    }
+
+    // 新しいフィルター処理
+    if (filters) {
+      console.log('📊 SQLiteフィルター適用:', filters)
+      
+      // 日付範囲フィルター
+      if (filters.dateRange?.start) {
+        const startTimestamp = new Date(filters.dateRange.start).getTime()
+        whereClause += ' AND s.created_at >= ?'
+        params.push(startTimestamp)
+      }
+      
+      if (filters.dateRange?.end) {
+        const endTimestamp = new Date(filters.dateRange.end + 'T23:59:59').getTime()
+        whereClause += ' AND s.created_at <= ?'
+        params.push(endTimestamp)
+      }
+      
+      // ソースフィルター（セッションメタデータから）
+      if (filters.sources && filters.sources.length > 0) {
+        const sourcePlaceholders = filters.sources.map(() => '?').join(',')
+        whereClause += ` AND s.source IN (${sourcePlaceholders})`
+        params.push(...filters.sources)
+      }
+      
+      // タグフィルター
+      if (filters.tags && filters.tags.length > 0) {
+        const filterTagPlaceholders = filters.tags.map(() => '?').join(',')
+        whereClause += ` AND s.id IN (
+          SELECT st.session_id FROM session_tags st
+          JOIN tags t ON st.tag_id = t.id
+          WHERE t.name IN (${filterTagPlaceholders})
+        )`
+        params.push(...filters.tags)
+      }
     }
 
     // 総数取得
@@ -370,6 +427,45 @@ export class SqliteIndexService {
       tag_names: string | null
     }>
 
+    // フロントエンド用のメッセージ検索形式に変換
+    if (keyword || filterOnly) {
+      // キーワード検索またはフィルターのみの場合は、メッセージレベルの結果を返す
+      if (filterOnly && !keyword) {
+        // フィルターのみの場合：最新メッセージを日付順で取得
+        return await this.getFilteredMessages(filters, { limit: pageSize, offset })
+      } else {
+        // キーワード検索の場合
+        const messageResults = await this.searchMessages(keyword!, {
+          limit: pageSize,
+          offset,
+          filters, // フィルターを渡す
+        })
+        
+        const formattedResults = messageResults.messages.map(msg => ({
+          id: msg.id,
+          title: msg.sessionTitle,
+          createdAt: msg.timestamp,
+          updatedAt: msg.timestamp,
+          messageCount: 1,
+          tags: [],
+          // フロントエンド期待形式
+          session_id: msg.sessionId,
+          session_title: msg.sessionTitle,
+          content: msg.content,
+          timestamp: msg.timestamp.toISOString(),
+          score: 1,
+          source: 'sqlite',
+          message_type: msg.role,
+        }))
+        
+        return {
+          sessions: formattedResults,
+          total: messageResults.total,
+          hasMore: messageResults.hasMore,
+        }
+      }
+    }
+
     const sessions = sessionResults.map(row => ({
       id: row.id,
       title: row.title,
@@ -396,6 +492,16 @@ export class SqliteIndexService {
       offset?: number
       sessionId?: string
       role?: string
+      filters?: {
+        dateRange?: {
+          start?: string
+          end?: string
+        }
+        sources?: string[]
+        tags?: string[]
+        messageTypes?: string[]
+        scorRange?: [number, number]
+      }
     } = {}
   ): Promise<{
     messages: Array<{
@@ -411,7 +517,7 @@ export class SqliteIndexService {
   }> {
     if (!this.db) throw new Error('Database not initialized')
 
-    const { limit = 50, offset = 0, sessionId, role } = options
+    const { limit = 50, offset = 0, sessionId, role, filters } = options
 
     let whereClause = 'messages_fts MATCH ?'
     const params: any[] = [query]
@@ -424,6 +530,31 @@ export class SqliteIndexService {
     if (role) {
       whereClause += ' AND m.role = ?'
       params.push(role)
+    }
+
+    // フィルター処理
+    if (filters) {
+      console.log('📊 SQLiteメッセージフィルター適用:', filters)
+      
+      // 日付範囲フィルター
+      if (filters.dateRange?.start) {
+        const startTimestamp = new Date(filters.dateRange.start).getTime()
+        whereClause += ' AND m.timestamp >= ?'
+        params.push(startTimestamp)
+      }
+      
+      if (filters.dateRange?.end) {
+        const endTimestamp = new Date(filters.dateRange.end + 'T23:59:59').getTime()
+        whereClause += ' AND m.timestamp <= ?'
+        params.push(endTimestamp)
+      }
+      
+      // メッセージタイプフィルター
+      if (filters.messageTypes && filters.messageTypes.length > 0) {
+        const typePlaceholders = filters.messageTypes.map(() => '?').join(',')
+        whereClause += ` AND m.role IN (${typePlaceholders})`
+        params.push(...filters.messageTypes)
+      }
     }
 
     // 総数取得
@@ -466,6 +597,124 @@ export class SqliteIndexService {
 
     return {
       messages,
+      total,
+      hasMore: offset + limit < total,
+    }
+  }
+
+  /**
+   * フィルターのみでメッセージ取得
+   */
+  async getFilteredMessages(
+    filters: {
+      dateRange?: {
+        start?: string
+        end?: string
+      }
+      sources?: string[]
+      tags?: string[]
+      messageTypes?: string[]
+      scorRange?: [number, number]
+    } = {},
+    options: {
+      limit?: number
+      offset?: number
+    } = {}
+  ): Promise<{
+    sessions: Array<{
+      id: string
+      title: string
+      createdAt: Date
+      updatedAt: Date
+      messageCount: number
+      tags: string[]
+      session_id?: string
+      session_title?: string
+      content?: string
+      timestamp?: string
+      score?: number
+      source?: string
+      message_type?: string
+    }>
+    total: number
+    hasMore: boolean
+  }> {
+    if (!this.db) throw new Error('Database not initialized')
+
+    const { limit = 50, offset = 0 } = options
+
+    let whereClause = '1=1'
+    const params: any[] = []
+
+    console.log('📊 SQLiteフィルターのみ検索:', filters)
+    
+    // 日付範囲フィルター
+    if (filters.dateRange?.start) {
+      const startTimestamp = new Date(filters.dateRange.start).getTime()
+      whereClause += ' AND m.timestamp >= ?'
+      params.push(startTimestamp)
+    }
+    
+    if (filters.dateRange?.end) {
+      const endTimestamp = new Date(filters.dateRange.end + 'T23:59:59').getTime()
+      whereClause += ' AND m.timestamp <= ?'
+      params.push(endTimestamp)
+    }
+    
+    // メッセージタイプフィルター
+    if (filters.messageTypes && filters.messageTypes.length > 0) {
+      const typePlaceholders = filters.messageTypes.map(() => '?').join(',')
+      whereClause += ` AND m.role IN (${typePlaceholders})`
+      params.push(...filters.messageTypes)
+    }
+
+    // 総数取得
+    const countStmt = this.db.prepare(`
+      SELECT COUNT(*) as total
+      FROM messages m
+      JOIN sessions s ON m.session_id = s.id
+      WHERE ${whereClause}
+    `)
+    const { total } = countStmt.get(...params) as { total: number }
+
+    // メッセージ取得
+    const messageStmt = this.db.prepare(`
+      SELECT m.*, s.title as session_title
+      FROM messages m
+      JOIN sessions s ON m.session_id = s.id
+      WHERE ${whereClause}
+      ORDER BY m.timestamp DESC
+      LIMIT ? OFFSET ?
+    `)
+
+    const messageResults = messageStmt.all(...params, limit, offset) as Array<{
+      id: string
+      session_id: string
+      role: string
+      content: string
+      timestamp: number
+      session_title: string
+    }>
+
+    const formattedResults = messageResults.map(msg => ({
+      id: msg.id,
+      title: msg.session_title,
+      createdAt: new Date(msg.timestamp),
+      updatedAt: new Date(msg.timestamp),
+      messageCount: 1,
+      tags: [],
+      // フロントエンド期待形式
+      session_id: msg.session_id,
+      session_title: msg.session_title,
+      content: msg.content,
+      timestamp: new Date(msg.timestamp).toISOString(),
+      score: 1,
+      source: 'sqlite',
+      message_type: msg.role,
+    }))
+
+    return {
+      sessions: formattedResults,
       total,
       hasMore: offset + limit < total,
     }

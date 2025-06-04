@@ -98,25 +98,30 @@ class ApiClient {
                 throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
             }
 
-            // ストリーミング対応（将来のWebSocket代替）
-            const reader = response.body?.getReader();
-            if (reader && onProgress) {
+            // ストリーミング処理を安全に実行
+            if (response.body && onProgress) {
+                const reader = response.body.getReader();
                 let result = '';
                 let progress = 0;
                 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        result += new TextDecoder().decode(value);
+                        progress = Math.min(progress + 10, 90); // 仮の進捗計算
+                        onProgress({ progress, message: '処理中...' });
+                    }
                     
-                    result += new TextDecoder().decode(value);
-                    progress = Math.min(progress + 10, 90); // 仮の進捗計算
-                    onProgress({ progress, message: '処理中...' });
+                    onProgress({ progress: 100, message: '完了' });
+                    return JSON.parse(result);
+                } finally {
+                    reader.releaseLock();
                 }
-                
-                onProgress({ progress: 100, message: '完了' });
-                return JSON.parse(result);
             }
 
+            // 通常の JSON レスポンス処理（ストリーム未使用時）
             return await response.json();
         }
         catch (error) {

@@ -49,7 +49,7 @@ const EnhancedSearchPage: React.FC = () => {
   } = useQuery({
     queryKey: ['ai-dialogues', 'recent'],
     queryFn: async () => {
-      const response = await apiClient.getSessions({ page: 1, pageSize: 20 })
+      const response = await apiClient.getSessions({ page: 1, limit: 20 })
       return response.sessions || []
     },
     enabled: !query && activeFiltersCount === 0, // 検索・フィルターなしの時のみ実行
@@ -66,11 +66,6 @@ const EnhancedSearchPage: React.FC = () => {
 
   const handleDialogueClick = (sessionId: string) => {
     navigate(`/sessions/${sessionId}`)
-  }
-
-  const truncateText = (text: string, maxLength: number = 200) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
   }
 
   // より読みやすいテキストプレビュー
@@ -325,7 +320,7 @@ const EnhancedSearchPage: React.FC = () => {
         {/* 結果表示 - 改善版レイアウト */}
         {!isLoading && !error && displayItems.length > 0 && (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
-            {displayItems.map((item, index) => {
+            {displayItems.map((item) => {
               // 検索結果の場合
               if (isSearchMode && 'messageIndex' in item) {
                 const result = item
@@ -385,9 +380,9 @@ const EnhancedSearchPage: React.FC = () => {
               } 
               // AI対話記録一覧の場合 - 改善版
               else {
-                const dialogue = item
+                const dialogue = item as any // 型安全性のため一時的にany使用
                 const firstMessage = dialogue.messages?.[0]
-                const lastMessage = dialogue.messages?.[dialogue.messages.length - 1]
+                const lastMessage = dialogue.messages?.[dialogue.messages?.length - 1]
                 
                 return (
                   <div
@@ -404,12 +399,12 @@ const EnhancedSearchPage: React.FC = () => {
                         <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                           <span>{dialogue.messages?.length || 0} メッセージ</span>
                           <span>•</span>
-                          <span>{formatTime(dialogue.createdAt)}</span>
+                          <span>{formatTime(dialogue.createdAt || dialogue.created_at)}</span>
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-3">
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-                          {new Date(dialogue.createdAt).toLocaleDateString()}
+                          {new Date(dialogue.createdAt || dialogue.created_at).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -440,7 +435,7 @@ const EnhancedSearchPage: React.FC = () => {
                         )}
                         {dialogue.metadata?.tags && dialogue.metadata.tags.length > 0 && (
                           <div className="flex space-x-1">
-                            {dialogue.metadata.tags.slice(0, 2).map(tag => (
+                            {dialogue.metadata.tags.slice(0, 2).map((tag: string) => (
                               <span
                                 key={tag}
                                 className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200"

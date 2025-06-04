@@ -64,9 +64,9 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   }, [isActive, startTime])
 
   // 現在のステップインデックス
-  const currentStepIndex = currentStepId 
-    ? steps.findIndex(step => step.id === currentStepId)
-    : -1
+    // const currentStepIndex = currentStepId
+  //   ? steps.findIndex(step => step.id === currentStepId)
+  //   : -1
 
   // 完了したステップ数
   const completedSteps = steps.filter(step => step.status === 'completed').length
@@ -241,7 +241,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-900">処理ステップ</h4>
             <div className="space-y-2">
-              {steps.map((step, index) => (
+              {steps.map((step) => (
                 <div 
                   key={step.id}
                   className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${

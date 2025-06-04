@@ -8,7 +8,7 @@ import { ProgressIndicator, ProgressStep } from '../components/ui/ProgressIndica
 import { LoadingOverlay } from '../components/ui/LoadingOverlay'
 import { DataLoadingProgress, DataLoadingStep } from '../components/ui/DataLoadingProgress'
 import { useProgressTracking, useSimpleProgress } from '../hooks/useProgressTracking'
-import { PlayIcon, StopIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { PlayIcon, StopIcon } from '@heroicons/react/24/outline'
 
 export const ProgressDemoPage: React.FC = () => {
   const [activeDemo, setActiveDemo] = useState<string | null>(null)

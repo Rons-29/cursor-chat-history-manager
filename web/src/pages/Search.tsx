@@ -296,7 +296,7 @@ const Search: React.FC = () => {
             </div>
           ) : searchResults && searchResults.length > 0 ? (
             <div className="space-y-4">
-              {searchResults.map((result, index) => (
+              {searchResults.map((result) => (
                 <div
                   key={`${result.sessionId}-${result.messageIndex}`}
                   className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:bg-primary-50 transition-colors cursor-pointer"

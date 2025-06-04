@@ -294,7 +294,7 @@ export const useIntegration = () => {
   }
 
   // API接続チェック付きスキャン
-  const scan = async (options: any = {}) => {
+  const scan = async () => {
     try {
       setIsOperating(true)
       setScanError(null)

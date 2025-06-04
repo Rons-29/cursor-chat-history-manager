@@ -60,12 +60,12 @@ interface IntegrationResult {
   totalProcessed: number;
 }
 
-interface ClaudeDevTask {
-  taskId: string;
-  timestamp: Date;
-  conversations: any[];
-  metadata?: any;
-}
+// interface ClaudeDevTask {
+//   taskId: string;
+//   timestamp: Date;
+//   conversations: any[];
+//   metadata?: any;
+// }
 
 const ClaudeDevIntegration: React.FC = () => {
   const [stats, setStats] = useState<ClaudeDevStats | null>(null);
@@ -282,7 +282,7 @@ const ClaudeDevIntegration: React.FC = () => {
   };
 
   // 安全なメタデータ取得関数
-  const getMetadataValue = (session: ClaudeDevSession, key: string, defaultValue: any = '不明') => {
+  const getMetadataValue = (session: ClaudeDevSession, key: keyof ClaudeDevSession['metadata'], defaultValue: any = '不明') => {
     try {
       return session.metadata?.[key] ?? defaultValue;
     } catch (error) {
@@ -550,7 +550,7 @@ const ClaudeDevIntegration: React.FC = () => {
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                               {(() => {
                                 const timestamp = getSessionTimestamp(session);
-                                const date = new Date(typeof timestamp === 'string' ? timestamp : timestamp);
+                                const date = new Date(typeof timestamp === 'string' ? timestamp : timestamp || 0);
                                 const now = new Date();
                                 const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
                                 

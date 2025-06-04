@@ -3,7 +3,7 @@
  * 白画面問題のデバッグ用
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 // シンプルなCursor設定型定義
 interface SimpleCursorSettings {

@@ -6,16 +6,13 @@
 import React, { useState, useEffect } from 'react'
 import { 
   CogIcon,
-  FolderIcon,
   ClockIcon,
   ShieldCheckIcon,
   DocumentDuplicateIcon,
-  CheckCircleIcon,
-  XMarkIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import { LoadingOverlay } from '../ui/LoadingOverlay'
-import { ProgressIndicator, ProgressStep } from '../ui/ProgressIndicator'
+import { ProgressStep } from '../ui/ProgressIndicator'
 import { useProgressTracking } from '../../hooks/useProgressTracking'
 
 interface IntegrationSettings {

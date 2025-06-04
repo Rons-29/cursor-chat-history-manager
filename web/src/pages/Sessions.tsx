@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, queryKeys } from '../api/client.js'
-import { Session } from '../types/Session'
+// import { Session } from '../types/Session'
 import { SessionCard } from '../components/SessionCard'
 
 const Sessions: React.FC = () => {
@@ -54,20 +54,20 @@ const Sessions: React.FC = () => {
   }
 
   // 時間フォーマット
-  const formatTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return '不明'
-    }
-  }
+  // const formatTime = (dateString: string) => {
+  //   try {
+  //     const date = new Date(dateString)
+  //     return date.toLocaleString('ja-JP', {
+  //       year: 'numeric',
+  //       month: '2-digit',
+  //       day: '2-digit',
+  //       hour: '2-digit',
+  //       minute: '2-digit',
+  //     })
+  //   } catch {
+  //     return '不明'
+  //   }
+  // }
 
   // フィルタリングされたセッション
   const filteredSessions =

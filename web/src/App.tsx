@@ -3,6 +3,7 @@ import Layout from './components/Layout.tsx'
 import UnifiedDashboard from './pages/UnifiedDashboard.tsx'
 import UnifiedSearch from './pages/UnifiedSearch.tsx'
 import UnifiedIntegrations from './pages/UnifiedIntegrations.tsx'
+import Statistics from './pages/Statistics.tsx'
 // import EnhancedSessions from './pages/EnhancedSessions'
 // import UnifiedSessions from './pages/UnifiedSessions.tsx'
 import UnifiedSessionsPage from './pages/UnifiedSessionsPage.tsx'
@@ -35,6 +36,9 @@ function App() {
         */}
         
         <Route path="/unified-integrations" element={<UnifiedIntegrations />} />
+        
+        {/* === 統計・アチーブメント === */}
+        <Route path="/statistics" element={<Statistics />} />
         
         {/* === 詳細表示・サブページ === */}
         <Route path="/sessions/:id" element={<SessionDetail />} />

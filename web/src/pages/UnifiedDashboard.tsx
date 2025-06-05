@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { apiClient, queryKeys } from '../api/client'
-import { BadgeGrid, AnimatedNumber, EnhancedProgressBar } from '../components/ui'
+import { BadgeGrid, BadgePreviewCard, AnimatedNumber, EnhancedProgressBar } from '../components/ui'
 import { useBadgeSystem } from '../hooks/useBadgeSystem'
+import AchievementNotificationManager from '../components/AchievementNotificationManager'
 import CrossDataSourceSearch from '../components/CrossDataSourceSearch'
 import TaskCompletionReport from '../components/ui/TaskCompletionReport'
 
@@ -170,9 +171,28 @@ const UnifiedDashboard: React.FC = () => {
   const lastUpdated = statsData?.lastUpdated || null
   const recentSessions = sessionsData?.sessions?.slice(0, 3) || []
 
+  // 最近獲得したバッジ（1週間以内）
+  const recentBadges = badges.filter(badge => 
+    badge.earned && 
+    badge.earnedDate && 
+    new Date().getTime() - new Date(badge.earnedDate).getTime() < 7 * 24 * 60 * 60 * 1000
+  ).slice(0, 4)
+
+  // 進行中のバッジ（プログレスがあるもの）
+  const progressBadges = badges.filter(badge => 
+    !badge.earned && 
+    badge.progress && 
+    badge.progress > 0
+  ).sort((a, b) => {
+    const aProgress = ((a.progress || 0) / (a.maxProgress || 1)) * 100
+    const bProgress = ((b.progress || 0) / (b.maxProgress || 1)) * 100
+    return bProgress - aProgress
+  }).slice(0, 4)
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* === 不要要素を削除：デバッグ表示・重複テーマボタン === */}
+      {/* アチーブメント通知マネージャー */}
+      <AchievementNotificationManager />
       
       <div className="max-w-full px-3 sm:px-4 lg:px-6 py-6">
         {/* 統合ヘッダー */}
@@ -393,6 +413,44 @@ const UnifiedDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* バッジプレビューセクション */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* 最近の成果 */}
+          {recentBadges.length > 0 && (
+            <BadgePreviewCard
+              badges={recentBadges}
+              title="最近の成果"
+              maxDisplay={4}
+              showProgress={false}
+              onViewAll={() => window.location.href = '/statistics'}
+            />
+          )}
+          
+          {/* 進行中の目標 */}
+          {progressBadges.length > 0 && (
+            <BadgePreviewCard
+              badges={progressBadges}
+              title="進行中の目標"
+              maxDisplay={4}
+              showProgress={true}
+              onViewAll={() => window.location.href = '/statistics'}
+            />
+          )}
+          
+          {/* バッジがない場合の表示 */}
+          {recentBadges.length === 0 && progressBadges.length === 0 && (
+            <div className="lg:col-span-2">
+              <BadgePreviewCard
+                badges={badges.slice(0, 4)}
+                title="アチーブメント"
+                maxDisplay={4}
+                showProgress={true}
+                onViewAll={() => window.location.href = '/statistics'}
+              />
+            </div>
+          )}
         </div>
 
         {/* 次の目標セクション（アチーブメント） */}

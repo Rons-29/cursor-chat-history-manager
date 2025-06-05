@@ -224,7 +224,7 @@ const SessionDetail: React.FC = () => {
                   onClick={() => navigate('/sessions')}
                   className="btn-secondary text-sm ml-2"
                 >
-                  セッション一覧に戻る
+                  AI対話一覧に戻る
                 </button>
               </div>
             </div>
@@ -252,10 +252,10 @@ const SessionDetail: React.FC = () => {
             />
           </svg>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            セッションが見つかりません
+            AI対話が見つかりません
           </h3>
           <p className="text-gray-500 mb-4">
-            指定されたセッションは存在しないか、削除された可能性があります。
+            指定されたAI対話は存在しないか、削除された可能性があります。
           </p>
           <button
             onClick={() => navigate('/sessions')}
@@ -309,7 +309,7 @@ const SessionDetail: React.FC = () => {
               onClick={() => setShowMetadata(!showMetadata)}
               className="btn-secondary"
             >
-              {showMetadata ? 'メタデータを隠す' : 'メタデータを表示'}
+                              {showMetadata ? '詳細情報を隠す' : '詳細情報を表示'}
             </button>
             <button
               onClick={scrollToBottom}
@@ -324,10 +324,10 @@ const SessionDetail: React.FC = () => {
       {/* メタデータ表示 */}
       {showMetadata && (
         <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">セッションメタデータ</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">AI対話詳細情報</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">セッションID</label>
+                              <label className="block text-sm font-medium text-gray-700">AI対話ID</label>
               <p className="mt-1 text-sm text-gray-900 font-mono">{session.id}</p>
             </div>
             <div>
@@ -440,7 +440,7 @@ const SessionDetail: React.FC = () => {
                 {message.metadata && Object.keys(message.metadata).length > 0 && (
                   <details className="mt-3">
                     <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                      メッセージメタデータ
+                      メッセージ詳細情報
                     </summary>
                     <pre className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded overflow-x-auto">
                       {JSON.stringify(message.metadata, null, 2)}

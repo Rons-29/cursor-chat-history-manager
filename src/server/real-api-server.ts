@@ -995,13 +995,13 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
 
     // フィルター情報を取得
     const filters = options.filters || {}
-    
+
     console.log('🔍 SQLite検索:', {
       keyword: keyword || '(フィルターのみ)',
       filters,
       filterOnly,
       page: options.page || 1,
-      pageSize: options.pageSize || 50
+      pageSize: options.pageSize || 50,
     })
 
     const result = await sqliteIndexService.getSessions({
@@ -1020,7 +1020,7 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
       total: result.total,
       hasMore: result.hasMore,
       success: true, // フロントエンドで期待されるフィールド
-      source: 'real-api-server' // 実装元を明示
+      source: 'real-api-server', // 実装元を明示
     })
   } catch (error) {
     logger.error('SQLite検索エラー:', error)

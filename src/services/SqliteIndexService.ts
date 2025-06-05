@@ -361,27 +361,29 @@ export class SqliteIndexService {
     // 新しいフィルター処理
     if (filters) {
       console.log('📊 SQLiteフィルター適用:', filters)
-      
+
       // 日付範囲フィルター
       if (filters.dateRange?.start) {
         const startTimestamp = new Date(filters.dateRange.start).getTime()
         whereClause += ' AND s.created_at >= ?'
         params.push(startTimestamp)
       }
-      
+
       if (filters.dateRange?.end) {
-        const endTimestamp = new Date(filters.dateRange.end + 'T23:59:59').getTime()
+        const endTimestamp = new Date(
+          filters.dateRange.end + 'T23:59:59'
+        ).getTime()
         whereClause += ' AND s.created_at <= ?'
         params.push(endTimestamp)
       }
-      
+
       // ソースフィルター（セッションメタデータから）
       if (filters.sources && filters.sources.length > 0) {
         const sourcePlaceholders = filters.sources.map(() => '?').join(',')
         whereClause += ` AND s.source IN (${sourcePlaceholders})`
         params.push(...filters.sources)
       }
-      
+
       // タグフィルター
       if (filters.tags && filters.tags.length > 0) {
         const filterTagPlaceholders = filters.tags.map(() => '?').join(',')
@@ -432,7 +434,10 @@ export class SqliteIndexService {
       // キーワード検索またはフィルターのみの場合は、メッセージレベルの結果を返す
       if (filterOnly && !keyword) {
         // フィルターのみの場合：最新メッセージを日付順で取得
-        return await this.getFilteredMessages(filters, { limit: pageSize, offset })
+        return await this.getFilteredMessages(filters, {
+          limit: pageSize,
+          offset,
+        })
       } else {
         // キーワード検索の場合
         const messageResults = await this.searchMessages(keyword!, {
@@ -440,7 +445,7 @@ export class SqliteIndexService {
           offset,
           filters, // フィルターを渡す
         })
-        
+
         const formattedResults = messageResults.messages.map(msg => ({
           id: msg.id,
           title: msg.sessionTitle,
@@ -457,7 +462,7 @@ export class SqliteIndexService {
           source: 'sqlite',
           message_type: msg.role,
         }))
-        
+
         return {
           sessions: formattedResults,
           total: messageResults.total,
@@ -535,20 +540,22 @@ export class SqliteIndexService {
     // フィルター処理
     if (filters) {
       console.log('📊 SQLiteメッセージフィルター適用:', filters)
-      
+
       // 日付範囲フィルター
       if (filters.dateRange?.start) {
         const startTimestamp = new Date(filters.dateRange.start).getTime()
         whereClause += ' AND m.timestamp >= ?'
         params.push(startTimestamp)
       }
-      
+
       if (filters.dateRange?.end) {
-        const endTimestamp = new Date(filters.dateRange.end + 'T23:59:59').getTime()
+        const endTimestamp = new Date(
+          filters.dateRange.end + 'T23:59:59'
+        ).getTime()
         whereClause += ' AND m.timestamp <= ?'
         params.push(endTimestamp)
       }
-      
+
       // メッセージタイプフィルター
       if (filters.messageTypes && filters.messageTypes.length > 0) {
         const typePlaceholders = filters.messageTypes.map(() => '?').join(',')
@@ -647,20 +654,22 @@ export class SqliteIndexService {
     const params: any[] = []
 
     console.log('📊 SQLiteフィルターのみ検索:', filters)
-    
+
     // 日付範囲フィルター
     if (filters.dateRange?.start) {
       const startTimestamp = new Date(filters.dateRange.start).getTime()
       whereClause += ' AND m.timestamp >= ?'
       params.push(startTimestamp)
     }
-    
+
     if (filters.dateRange?.end) {
-      const endTimestamp = new Date(filters.dateRange.end + 'T23:59:59').getTime()
+      const endTimestamp = new Date(
+        filters.dateRange.end + 'T23:59:59'
+      ).getTime()
       whereClause += ' AND m.timestamp <= ?'
       params.push(endTimestamp)
     }
-    
+
     // メッセージタイプフィルター
     if (filters.messageTypes && filters.messageTypes.length > 0) {
       const typePlaceholders = filters.messageTypes.map(() => '?').join(',')

@@ -1,0 +1,224 @@
+/* 🔍 ChatFlow統一検索システム - CSS */
+
+/* ベース検索バー */
+.unified-search-bar {
+  @apply w-full mx-auto relative;
+  max-width: 42rem; /* max-w-2xl equivalent */
+}
+
+/* 検索入力フィールド */
+.unified-search-input {
+  @apply w-full px-4 py-3 pl-12 pr-20 
+         border border-gray-300 rounded-lg
+         bg-white shadow-sm
+         focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+         transition-all duration-200
+         placeholder:text-gray-400;
+}
+
+.unified-search-input:focus {
+  @apply shadow-md;
+}
+
+/* 検索アイコン */
+.unified-search-icon {
+  @apply absolute left-4 top-1/2 transform -translate-y-1/2 
+         text-gray-400 w-5 h-5;
+}
+
+/* 検索結果ドロップダウン */
+.unified-search-results-dropdown {
+  @apply absolute left-0 right-0 mt-2 
+         bg-white border border-gray-200 rounded-lg shadow-lg
+         max-h-96 overflow-y-auto;
+  top: 100%; /* 検索バーの下に確実に配置 */
+  z-index: 9999; /* 最高優先度 */
+}
+
+/* モード別調整 */
+
+/* ヘッダーモード: コンパクト */
+.search-bar-header {
+  max-width: 28rem; /* max-w-md equivalent */
+}
+
+.search-bar-header .unified-search-input {
+  @apply py-2 text-sm;
+}
+
+.search-bar-header .unified-search-results-dropdown {
+  @apply mt-1 shadow-xl;
+  top: 100% !important; /* ヘッダー内での確実な下配置 */
+  z-index: 10000 !important; /* ヘッダーより上位 */
+}
+
+/* ページトップモード: 幅広 */
+.search-bar-page-top {
+  max-width: 56rem; /* max-w-4xl equivalent */
+}
+
+.search-bar-page-top .unified-search-input {
+  @apply py-4 text-lg;
+}
+
+.search-bar-page-top .unified-search-results-dropdown {
+  @apply mt-3;
+}
+
+/* インラインモード: 全幅 */
+.search-bar-inline {
+  max-width: 100%; /* max-w-full equivalent */
+}
+
+.search-bar-inline .unified-search-input {
+  @apply py-3;
+}
+
+/* ページ別カスタマイズ */
+
+/* ダッシュボード専用 */
+.search-context-dashboard .unified-search-input {
+  @apply border-blue-200 focus:ring-blue-400;
+}
+
+/* セッション一覧専用 */
+.search-context-sessions .unified-search-input {
+  @apply border-green-200 focus:ring-green-400;
+}
+
+/* 統合検索ページ専用 */
+.search-context-unified-search .unified-search-input {
+  @apply border-purple-200 focus:ring-purple-400;
+}
+
+/* 設定ページ専用 */
+.search-context-settings .unified-search-input {
+  @apply border-gray-200 focus:ring-gray-400;
+}
+
+/* 検索結果ドロップダウン内スタイル */
+
+/* 結果項目ホバー効果 */
+.search-result-item {
+  @apply hover:bg-gray-50 transition-colors duration-150;
+}
+
+.search-result-item:hover {
+  @apply bg-gradient-to-r from-blue-50 to-transparent;
+}
+
+/* キーワードハイライト */
+.search-keyword-highlight {
+  @apply bg-yellow-200 text-yellow-800 rounded px-1 font-medium;
+}
+
+/* アクションボタン */
+.search-action-button {
+  @apply w-full px-3 py-2 text-left text-sm rounded-md 
+         transition-colors duration-150
+         flex items-center justify-between;
+}
+
+.search-action-button.primary {
+  @apply text-blue-600 hover:bg-blue-50;
+}
+
+.search-action-button.secondary {
+  @apply text-green-600 hover:bg-green-50;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .search-bar-header {
+    @apply max-w-full;
+  }
+  
+  .search-bar-page-top {
+    @apply max-w-full;
+  }
+  
+  .unified-search-input {
+    @apply text-base; /* iOSでのズーム防止 */
+  }
+  
+  .unified-search-results-dropdown {
+    @apply max-h-80; /* モバイルでは高さを制限 */
+  }
+}
+
+/* ダークモード対応 (将来用) */
+@media (prefers-color-scheme: dark) {
+  .unified-search-input {
+    @apply bg-gray-800 border-gray-600 text-white placeholder:text-gray-400;
+  }
+  
+  .unified-search-input:focus {
+    @apply border-blue-400 ring-blue-400;
+  }
+  
+  .unified-search-results-dropdown {
+    @apply bg-gray-800 border-gray-600;
+  }
+  
+  .search-result-item:hover {
+    @apply bg-gray-700;
+  }
+}
+
+/* アニメーション */
+.unified-search-results-dropdown {
+  animation: searchDropdownSlideIn 0.2s ease-out;
+}
+
+@keyframes searchDropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 検索中のローディングスピナー */
+.search-loading-spinner {
+  @apply animate-spin h-4 w-4 text-gray-400;
+}
+
+/* フォーカス時の強調効果 */
+.unified-search-bar:focus-within {
+  @apply ring-2 ring-blue-500 ring-opacity-20 rounded-lg;
+}
+
+/* アクセシビリティ強化 */
+.unified-search-input:focus {
+  outline: none; /* Tailwind のフォーカスリングを使用 */
+}
+
+/* キーボードナビゲーション */
+.search-result-item[aria-selected="true"] {
+  @apply bg-blue-100 border-l-4 border-blue-500;
+}
+
+/* 検索統計表示 */
+.search-stats {
+  @apply text-xs text-gray-500 px-3 py-2 border-b border-gray-100;
+}
+
+/* 検索カテゴリタブ */
+.search-category-tabs {
+  @apply flex border-b border-gray-200 px-3 py-2;
+}
+
+.search-category-tab {
+  @apply px-3 py-1 text-sm rounded-md mr-2 transition-colors;
+}
+
+.search-category-tab.active {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.search-category-tab:not(.active) {
+  @apply text-gray-600 hover:bg-gray-100;
+} 

@@ -8,6 +8,7 @@ import { useBadgeSystem } from '../hooks/useBadgeSystem'
 import CrossDataSourceSearch from '../components/CrossDataSourceSearch'
 import TaskCompletionReport from '../components/ui/TaskCompletionReport'
 
+
 /**
  * 🏠 統合ダッシュボード
  * 
@@ -178,7 +179,7 @@ const UnifiedDashboard: React.FC = () => {
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              🏠 ChatFlow 統合ダッシュボード
+              🏠 ChatFlow 連携ダッシュボード
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">
               AI開発支援プラットフォーム - 統計・アチーブメント・システム管理
@@ -544,7 +545,7 @@ const UnifiedDashboard: React.FC = () => {
                 <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                      {session.title || 'AI対話セッション'}
+                      {session.title || 'AI対話'}
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(session.startTime).toLocaleString('ja-JP')}

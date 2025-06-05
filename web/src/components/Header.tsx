@@ -1,6 +1,8 @@
 import React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
+import { UnifiedGlobalSearchBar } from './UnifiedSearchSystem/UnifiedGlobalSearchBar'
+import { useUnifiedSearch } from './UnifiedSearchSystem/useUnifiedSearch'
 import '../styles/header.css'
 
 interface HeaderProps {
@@ -29,6 +31,20 @@ const Header: React.FC<HeaderProps> = ({
   isMobileMenuOpen = false 
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  // 現在のページを特定
+  const getCurrentPage = () => {
+    const path = location.pathname
+    if (path === '/') return 'dashboard'
+    if (path.startsWith('/sessions')) return 'sessions'
+    if (path.startsWith('/unified-search')) return 'unified-search'
+    if (path.startsWith('/unified-integrations')) return 'settings'
+    return 'dashboard'
+  }
+  
+  // 統一検索フック
+  const { handleGlobalSearch } = useUnifiedSearch(getCurrentPage())
 
   /**
    * キーボードナビゲーション処理
@@ -139,6 +155,18 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
               </Link>
             </div>
+          </div>
+
+          {/* === 統一検索バー === */}
+          <div className="flex-1 max-w-3xl mx-6" style={{ position: 'relative', zIndex: 52 }}>
+            <UnifiedGlobalSearchBar
+              mode="header"
+              currentPage={getCurrentPage()}
+              onSearch={handleGlobalSearch}
+              placeholder="プロジェクト、AI対話、メッセージを検索... (⌘K)"
+              showDropdown={true}
+              className="search-context-header"
+            />
           </div>
 
           {/* === メインナビゲーション・アクションツールバー === */}

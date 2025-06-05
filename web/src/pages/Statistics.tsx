@@ -90,7 +90,7 @@ const Statistics: React.FC = () => {
 
       {/* 主要統計カード */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* 総セッション数 */}
+        {/* 総AI対話数 */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow p-6 border border-blue-200 dark:border-blue-800">
           <div className="flex items-center">
             <div className="flex-shrink-0">

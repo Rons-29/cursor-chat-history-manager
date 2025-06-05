@@ -25,7 +25,7 @@ router.get('/test', (req, res) => {
   res.json({
     success: true,
     message: 'Manual Import router is working!',
-    timestamp: new Date()
+    timestamp: new Date(),
   })
 })
 
@@ -48,26 +48,26 @@ const storage = multer.diskStorage({
     const randomString = crypto.randomBytes(8).toString('hex')
     const ext = path.extname(file.originalname)
     cb(null, `manual-import-${timestamp}-${randomString}${ext}`)
-  }
+  },
 })
 
 const upload = multer({
   storage,
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB制限
-    files: 10 // 最大10ファイル同時
+    files: 10, // 最大10ファイル同時
   },
   fileFilter: (req, file, cb) => {
     // サポートされるファイル形式をチェック
     const allowedExtensions = ['.json', '.md', '.txt', '.csv']
     const ext = path.extname(file.originalname).toLowerCase()
-    
+
     if (allowedExtensions.includes(ext)) {
       cb(null, true)
     } else {
       cb(new Error(`サポートされていないファイル形式: ${ext}`))
     }
-  }
+  },
 })
 
 // インポートジョブの状態管理
@@ -122,19 +122,19 @@ router.post(
   asyncHandler(async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[]
-      
+
       if (!files || files.length === 0) {
         res.status(400).json({
           success: false,
           error: 'アップロードされたファイルがありません',
-          timestamp: new Date()
+          timestamp: new Date(),
         })
         return
       }
 
       // ジョブIDを生成
       const jobId = crypto.randomUUID()
-      
+
       // ジョブを作成
       const job: ImportJob = {
         id: jobId,
@@ -143,16 +143,16 @@ router.post(
           originalName: file.originalname,
           fileName: file.filename,
           size: file.size,
-          processed: false
+          processed: false,
         })),
         progress: {
           total: files.length,
           processed: 0,
-          errors: 0
+          errors: 0,
         },
-        startTime: new Date()
+        startTime: new Date(),
       }
-      
+
       importJobs.set(jobId, job)
 
       res.json({
@@ -162,18 +162,19 @@ router.post(
           message: `${files.length}個のファイルをアップロードしました`,
           files: job.files.map(f => ({
             originalName: f.originalName,
-            size: f.size
-          }))
+            size: f.size,
+          })),
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     } catch (error) {
       console.error('Manual import upload error:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       res.status(500).json({
         success: false,
         error: errorMessage,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     }
   })
@@ -189,21 +190,21 @@ router.post(
     try {
       const { jobId } = req.params
       const job = importJobs.get(jobId)
-      
+
       if (!job) {
         res.status(404).json({
           success: false,
           error: 'ジョブが見つかりません',
-          timestamp: new Date()
+          timestamp: new Date(),
         })
         return
       }
-      
+
       if (job.status !== 'pending') {
         res.status(400).json({
           success: false,
           error: 'このジョブは既に処理中または完了済みです',
-          timestamp: new Date()
+          timestamp: new Date(),
         })
         return
       }
@@ -228,17 +229,18 @@ router.post(
         data: {
           jobId,
           status: 'processing',
-          message: 'インポート処理を開始しました'
+          message: 'インポート処理を開始しました',
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     } catch (error) {
       console.error('Manual import process error:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       res.status(500).json({
         success: false,
         error: errorMessage,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     }
   })
@@ -254,12 +256,12 @@ router.get(
     try {
       const { jobId } = req.params
       const job = importJobs.get(jobId)
-      
+
       if (!job) {
         res.status(404).json({
           success: false,
           error: 'ジョブが見つかりません',
-          timestamp: new Date()
+          timestamp: new Date(),
         })
         return
       }
@@ -277,18 +279,19 @@ router.get(
             originalName: f.originalName,
             size: f.size,
             processed: f.processed,
-            error: f.error
-          }))
+            error: f.error,
+          })),
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     } catch (error) {
       console.error('Manual import status error:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       res.status(500).json({
         success: false,
         error: errorMessage,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     }
   })
@@ -304,21 +307,21 @@ router.delete(
     try {
       const { jobId } = req.params
       const job = importJobs.get(jobId)
-      
+
       if (!job) {
         res.status(404).json({
           success: false,
           error: 'ジョブが見つかりません',
-          timestamp: new Date()
+          timestamp: new Date(),
         })
         return
       }
-      
+
       if (job.status === 'completed') {
         res.status(400).json({
           success: false,
           error: '完了したジョブはキャンセルできません',
-          timestamp: new Date()
+          timestamp: new Date(),
         })
         return
       }
@@ -332,23 +335,24 @@ router.delete(
           console.warn(`Failed to delete file ${file.fileName}:`, error)
         }
       }
-      
+
       importJobs.delete(jobId)
 
       res.json({
         success: true,
         data: {
-          message: 'ジョブをキャンセルしました'
+          message: 'ジョブをキャンセルしました',
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     } catch (error) {
       console.error('Manual import cancel error:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       res.status(500).json({
         success: false,
         error: errorMessage,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     }
   })
@@ -376,18 +380,19 @@ router.get(
             progress: job.progress,
             startTime: job.startTime,
             endTime: job.endTime,
-            fileCount: job.files.length
-          }))
+            fileCount: job.files.length,
+          })),
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     } catch (error) {
       console.error('Manual import jobs error:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       res.status(500).json({
         success: false,
         error: errorMessage,
-        timestamp: new Date()
+        timestamp: new Date(),
       })
     }
   })
@@ -405,14 +410,14 @@ async function processImportJob(jobId: string): Promise<void> {
     const importResults = {
       imported: 0,
       skipped: 0,
-      errors: [] as string[]
+      errors: [] as string[],
     }
 
     // 各ファイルを順次処理
     for (const file of job.files) {
       try {
         const filePath = path.join(uploadDir, file.fileName)
-        
+
         // ファイル形式に応じて処理
         const ext = path.extname(file.originalName).toLowerCase()
         let result
@@ -439,7 +444,6 @@ async function processImportJob(jobId: string): Promise<void> {
         const processedDir = path.join(uploadDir, 'processed')
         await fs.ensureDir(processedDir)
         await fs.move(filePath, path.join(processedDir, file.fileName))
-
       } catch (error) {
         file.error = error instanceof Error ? error.message : String(error)
         job.progress.errors++
@@ -452,17 +456,16 @@ async function processImportJob(jobId: string): Promise<void> {
     job.endTime = new Date()
     job.results = importResults
     importJobs.set(jobId, job)
-
   } catch (error) {
     job.status = 'failed'
     job.endTime = new Date()
     job.results = {
       imported: 0,
       skipped: 0,
-      errors: [error instanceof Error ? error.message : String(error)]
+      errors: [error instanceof Error ? error.message : String(error)],
     }
     importJobs.set(jobId, job)
   }
 }
 
-export default router 
+export default router

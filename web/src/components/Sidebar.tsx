@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     {
       name: '💬 対話管理',
       href: '/sessions',
-      description: '基本+AI強化表示の統合管理',
+              description: '基本+AI強化表示の連携管理',
       icon: (
         <svg
           className="sidebar-nav-icon"
@@ -81,7 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       ),
     },
     {
-      name: '🌐 全データ統合',
+      name: '🌐 全データ連携',
       href: '/unified-sessions',
       description: '横断検索統合・全データソース表示',
       icon: (
@@ -101,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
       ),
     },
     {
-      name: '🔧 プラットフォーム統合',
+      name: '🔧 プラットフォーム連携',
       href: '/unified-integrations',
       description: '全統合機能の管理ハブ',
       icon: (

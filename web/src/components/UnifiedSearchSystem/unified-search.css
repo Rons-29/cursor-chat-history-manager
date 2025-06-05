@@ -1,0 +1,283 @@
+/* ========================================
+   ChatFlow 統一検索システム CSS
+   ======================================== */
+
+/* ベース検索バー */
+.unified-search-bar {
+  position: relative;
+  width: 100%;
+}
+
+/* 検索入力フィールド */
+.unified-search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.unified-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.unified-search-input::placeholder {
+  color: #9ca3af;
+}
+
+/* 検索アイコン */
+.unified-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+/* モード別スタイル */
+.search-bar-header {
+  max-width: 28rem; /* max-w-md の代替 */
+}
+
+.search-bar-page-top {
+  max-width: 56rem; /* max-w-4xl の代替 */
+}
+
+.search-bar-inline {
+  max-width: 100%;
+}
+
+/* ========================================
+   検索結果ドロップダウン
+   ======================================== */
+
+.unified-search-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 51; /* ヘッダーのz-index(50)より高く設定 */
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ドロップダウンの確実な表示 */
+.unified-search-results-dropdown {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* ヘッダー内の検索バー専用スタイル */
+.search-context-header {
+  position: relative;
+  z-index: 52;
+}
+
+.search-context-header .unified-search-results-dropdown {
+  z-index: 53 !important;
+  position: fixed !important; /* absolute から fixed に変更 */
+  top: calc(var(--header-height, 4rem) + 4px) !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  max-width: 48rem !important; /* max-w-3xl相当 */
+}
+
+/* 検索結果アイテム */
+.search-result-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.search-result-item:hover {
+  background-color: #f9fafb;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+/* 検索結果タイトル */
+.search-result-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+/* 検索結果コンテンツ */
+.search-result-content {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+/* 検索結果メタデータ */
+.search-result-metadata {
+  font-size: 11px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ハイライト */
+.search-highlight {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* アクションボタン */
+.search-action-button {
+  width: 100%;
+  padding: 8px 16px;
+  text-align: left;
+  font-size: 13px;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-action-button:hover {
+  background-color: #eff6ff;
+}
+
+.search-action-button.green {
+  color: #059669;
+}
+
+.search-action-button.green:hover {
+  background-color: #ecfdf5;
+}
+
+/* アクションボタンセクション */
+.search-actions {
+  border-top: 1px solid #e5e7eb;
+  padding: 8px;
+}
+
+/* ローディング状態 */
+.search-loading {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 検索結果なし */
+.search-no-results {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* ========================================
+   レスポンシブ対応
+   ======================================== */
+
+@media (max-width: 768px) {
+  .search-bar-header {
+    max-width: 100%;
+  }
+  
+  .unified-search-results-dropdown {
+    max-height: 300px;
+  }
+  
+  .search-result-item {
+    padding: 10px 12px;
+  }
+  
+  .search-result-title {
+    font-size: 13px;
+  }
+  
+  .search-result-content {
+    font-size: 11px;
+  }
+}
+
+/* ========================================
+   アクセシビリティ
+   ======================================== */
+
+.unified-search-input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.search-result-item:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  background-color: #eff6ff;
+}
+
+.search-action-button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  background-color: #eff6ff;
+}
+
+/* ========================================
+   ダークモード対応 (将来用)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  .unified-search-input {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .unified-search-input::placeholder {
+    color: #9ca3af;
+  }
+  
+  .unified-search-results-dropdown {
+    background-color: #374151;
+    border-color: #4b5563;
+  }
+  
+  .search-result-item:hover {
+    background-color: #4b5563;
+  }
+  
+  .search-result-title {
+    color: #f9fafb;
+  }
+  
+  .search-result-content {
+    color: #d1d5db;
+  }
+  
+  .search-result-metadata {
+    color: #9ca3af;
+  }
+} 

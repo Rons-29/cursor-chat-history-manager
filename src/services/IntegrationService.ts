@@ -111,8 +111,6 @@ export class IntegrationService extends EventEmitter {
       await this.cursorLogService.initialize()
       await this.cursorWatcherService.initialize()
 
-
-
       this.isInitialized = true
       this.logger.info('IntegrationServiceを初期化しました')
     } catch (error) {
@@ -794,6 +792,4 @@ export class IntegrationService extends EventEmitter {
       lastScan: cursorWatcherStatus?.lastScan,
     }
   }
-
-
 }

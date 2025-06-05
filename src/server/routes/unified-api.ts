@@ -42,7 +42,7 @@ export function setServices(services: {
   if (services.chatHistory) chatHistoryService = services.chatHistory
   if (services.claudeDev) claudeDevService = services.claudeDev
   if (services.integration) integrationService = services.integration
-  
+
   console.log('🔧 unified-api: サービス設定完了', {
     chatHistory: !!chatHistoryService,
     claudeDev: !!claudeDevService,
@@ -65,7 +65,7 @@ router.get(
         chatHistory: !!chatHistoryService,
         claudeDev: !!claudeDevService,
         integration: !!integrationService,
-      }
+      },
     })
   })
 )
@@ -271,20 +271,14 @@ router.get(
 /**
  * GET /api/all-sessions
  * 🔥 横断検索統合 - 全データソースから並列取得・統合
- * 
+ *
  * 問題解決: 4,017セッション(39%)のみ表示 → 10,226セッション(100%)表示
  * 効果: 2.5倍のデータ可視化、61%の隠れたデータを表示
  */
 router.get(
   '/all-sessions',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const {
-      page = 1,
-      limit = 50,
-      keyword,
-      startDate,
-      endDate,
-    } = req.query
+    const { page = 1, limit = 50, keyword, startDate, endDate } = req.query
 
     const filter = {
       page: parseInt(page as string),
@@ -296,28 +290,32 @@ router.get(
 
     try {
       // 🚀 全データソースから並列取得
-      const [chatHistoryResult, claudeDevSessions, integrationStats] = await Promise.allSettled([
-        // 1. Chat History Service (Traditional + Incremental + SQLite)
-        chatHistoryService ? chatHistoryService.searchSessions({
-          ...filter,
-          page: 1,
-          pageSize: 10000, // 全件取得して後でページング
-        }) : Promise.resolve({ sessions: [], totalCount: 0 }),
-        
-        // 2. Claude Dev Service
-        claudeDevService ? claudeDevService.searchClaudeDevSessions(
-          filter.keyword || '',
-          {
-            limit: 10000, // 全件取得
-            offset: 0,
-            sortBy: 'timestamp',
-            sortOrder: 'desc',
-          }
-        ) : Promise.resolve([]),
-        
-        // 3. Integration Service Stats (追加データソース情報)
-        integrationService ? integrationService.getStats() : Promise.resolve(null),
-      ])
+      const [chatHistoryResult, claudeDevSessions, integrationStats] =
+        await Promise.allSettled([
+          // 1. Chat History Service (Traditional + Incremental + SQLite)
+          chatHistoryService
+            ? chatHistoryService.searchSessions({
+                ...filter,
+                page: 1,
+                pageSize: 10000, // 全件取得して後でページング
+              })
+            : Promise.resolve({ sessions: [], totalCount: 0 }),
+
+          // 2. Claude Dev Service
+          claudeDevService
+            ? claudeDevService.searchClaudeDevSessions(filter.keyword || '', {
+                limit: 10000, // 全件取得
+                offset: 0,
+                sortBy: 'timestamp',
+                sortOrder: 'desc',
+              })
+            : Promise.resolve([]),
+
+          // 3. Integration Service Stats (追加データソース情報)
+          integrationService
+            ? integrationService.getStats()
+            : Promise.resolve(null),
+        ])
 
       // 📊 データソース別結果処理
       const sources = {
@@ -332,32 +330,40 @@ router.get(
       // Chat History結果処理
       console.log('🔍 Chat History Result Status:', chatHistoryResult.status)
       if (chatHistoryResult.status === 'fulfilled' && chatHistoryResult.value) {
-        console.log('📊 Chat History Sessions Count:', chatHistoryResult.value.sessions.length)
-        console.log('📊 Chat History Total Count:', chatHistoryResult.value.totalCount)
-        const chatSessions = chatHistoryResult.value.sessions.map((session: any) => ({
-          id: session.id,
-          title: session.title,
-          startTime: session.createdAt.toISOString(),
-          endTime: session.updatedAt.toISOString(),
-          metadata: {
-            totalMessages: session.messages.length,
-            tags: session.tags || [],
-            description: session.metadata?.summary || '',
-            source: session.metadata?.source || 'traditional',
-            dataSource: session.metadata?.source || 'traditional', // データソース識別
-          },
-          messages: session.messages.map((msg: any) => ({
-            id: msg.id,
-            timestamp: msg.timestamp.toISOString(),
-            role: msg.role,
-            content: msg.content,
-            metadata: msg.metadata || {},
-          })),
-        }))
-        
+        console.log(
+          '📊 Chat History Sessions Count:',
+          chatHistoryResult.value.sessions.length
+        )
+        console.log(
+          '📊 Chat History Total Count:',
+          chatHistoryResult.value.totalCount
+        )
+        const chatSessions = chatHistoryResult.value.sessions.map(
+          (session: any) => ({
+            id: session.id,
+            title: session.title,
+            startTime: session.createdAt.toISOString(),
+            endTime: session.updatedAt.toISOString(),
+            metadata: {
+              totalMessages: session.messages.length,
+              tags: session.tags || [],
+              description: session.metadata?.summary || '',
+              source: session.metadata?.source || 'traditional',
+              dataSource: session.metadata?.source || 'traditional', // データソース識別
+            },
+            messages: session.messages.map((msg: any) => ({
+              id: msg.id,
+              timestamp: msg.timestamp.toISOString(),
+              role: msg.role,
+              content: msg.content,
+              metadata: msg.metadata || {},
+            })),
+          })
+        )
+
         allSessions.push(...chatSessions)
         console.log('📊 Chat Sessions Added:', chatSessions.length)
-        
+
         // データソース別カウント
         chatSessions.forEach((session: any) => {
           const source = session.metadata.source
@@ -371,12 +377,16 @@ router.get(
       // Claude Dev結果処理
       console.log('🔍 Claude Dev Result Status:', claudeDevSessions.status)
       if (claudeDevSessions.status === 'fulfilled' && claudeDevSessions.value) {
-        console.log('📊 Claude Dev Sessions Count:', claudeDevSessions.value.length)
+        console.log(
+          '📊 Claude Dev Sessions Count:',
+          claudeDevSessions.value.length
+        )
         const claudeSessions = claudeDevSessions.value.map((session: any) => ({
           id: session.id,
           title: session.title || session.description || `Claude Dev Task`,
           startTime: session.createdAt || new Date().toISOString(),
-          endTime: session.updatedAt || session.createdAt || new Date().toISOString(),
+          endTime:
+            session.updatedAt || session.createdAt || new Date().toISOString(),
           metadata: {
             totalMessages: session.messages?.length || 1,
             tags: session.tags || ['claude-dev'],
@@ -386,7 +396,7 @@ router.get(
           },
           messages: session.messages || [],
         }))
-        
+
         allSessions.push(...claudeSessions)
         sources.claudeDev = claudeSessions.length
       }
@@ -400,10 +410,13 @@ router.get(
       let filteredSessions = uniqueSessions
       if (filter.keyword) {
         const keyword = filter.keyword.toLowerCase()
-        filteredSessions = uniqueSessions.filter(session => 
-          session.title.toLowerCase().includes(keyword) ||
-          session.metadata.description.toLowerCase().includes(keyword) ||
-          session.metadata.tags.some((tag: string) => tag.toLowerCase().includes(keyword))
+        filteredSessions = uniqueSessions.filter(
+          session =>
+            session.title.toLowerCase().includes(keyword) ||
+            session.metadata.description.toLowerCase().includes(keyword) ||
+            session.metadata.tags.some((tag: string) =>
+              tag.toLowerCase().includes(keyword)
+            )
         )
       }
 
@@ -418,8 +431,9 @@ router.get(
       }
 
       // 📈 ソート（最新順）
-      filteredSessions.sort((a, b) => 
-        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      filteredSessions.sort(
+        (a, b) =>
+          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
       )
 
       // 📄 ページング
@@ -454,9 +468,8 @@ router.get(
             claudeDevService ? 'claude-dev' : null,
             integrationService ? 'integration' : null,
           ].filter(Boolean),
-        }
+        },
       })
-
     } catch (error) {
       console.error('横断検索統合エラー:', error)
       res.status(500).json({
@@ -730,23 +743,24 @@ router.post(
       // 全データソースでキーワード検索実行
       const searchResults = await Promise.allSettled([
         // Chat History検索
-        chatHistoryService ? chatHistoryService.searchSessions({
-          keyword,
-          page: 1,
-          pageSize: filters.limit || 100,
-          ...filters,
-        }) : Promise.resolve({ sessions: [], totalCount: 0 }),
+        chatHistoryService
+          ? chatHistoryService.searchSessions({
+              keyword,
+              page: 1,
+              pageSize: filters.limit || 100,
+              ...filters,
+            })
+          : Promise.resolve({ sessions: [], totalCount: 0 }),
 
         // Claude Dev検索
-        claudeDevService ? claudeDevService.searchClaudeDevSessions(
-          keyword,
-          {
-            limit: filters.limit || 100,
-            offset: 0,
-            sortBy: 'relevance',
-            sortOrder: 'desc',
-          }
-        ) : Promise.resolve([]),
+        claudeDevService
+          ? claudeDevService.searchClaudeDevSessions(keyword, {
+              limit: filters.limit || 100,
+              offset: 0,
+              sortBy: 'relevance',
+              sortOrder: 'desc',
+            })
+          : Promise.resolve([]),
       ])
 
       // 検索結果統合
@@ -755,11 +769,13 @@ router.post(
 
       // Chat History結果
       if (searchResults[0].status === 'fulfilled') {
-        const chatResults = searchResults[0].value.sessions.map((session: any) => ({
-          ...session,
-          metadata: { ...session.metadata, source: 'chat-history' },
-          relevanceScore: calculateRelevanceScore(session, keyword),
-        }))
+        const chatResults = searchResults[0].value.sessions.map(
+          (session: any) => ({
+            ...session,
+            metadata: { ...session.metadata, source: 'chat-history' },
+            relevanceScore: calculateRelevanceScore(session, keyword),
+          })
+        )
         allResults.push(...chatResults)
         totalCount += searchResults[0].value.totalCount
       }
@@ -776,7 +792,9 @@ router.post(
       }
 
       // 関連度ソート
-      allResults.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+      allResults.sort(
+        (a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0)
+      )
 
       // 重複除去
       const uniqueResults = removeDuplicateSessions(allResults)
@@ -792,7 +810,10 @@ router.post(
             if (result.status === 'fulfilled') {
               if (index === 0) {
                 // Chat History結果
-                const chatResult = result.value as { sessions: any[]; totalCount: number }
+                const chatResult = result.value as {
+                  sessions: any[]
+                  totalCount: number
+                }
                 return {
                   source: 'chat-history',
                   status: result.status,
@@ -817,7 +838,6 @@ router.post(
           }),
         },
       })
-
     } catch (error) {
       console.error('横断検索エラー:', error)
       res.status(500).json({
@@ -847,14 +867,19 @@ function calculateRelevanceScore(session: any, keyword: string): number {
   }
 
   // タグマッチ（中スコア）
-  if (session.metadata.tags?.some((tag: string) => 
-    tag.toLowerCase().includes(normalizedKeyword))) {
+  if (
+    session.metadata.tags?.some((tag: string) =>
+      tag.toLowerCase().includes(normalizedKeyword)
+    )
+  ) {
     score += 5
   }
 
   // メッセージ内容マッチ（低スコア、但し頻度重視）
-  const messageMatches = session.messages?.filter((msg: any) => 
-    msg.content.toLowerCase().includes(normalizedKeyword)).length || 0
+  const messageMatches =
+    session.messages?.filter((msg: any) =>
+      msg.content.toLowerCase().includes(normalizedKeyword)
+    ).length || 0
   score += Math.min(messageMatches * 0.5, 5) // 最大5点
 
   return score

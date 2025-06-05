@@ -195,7 +195,10 @@ export class CursorChatImportService {
    * 単一ファイルの処理（public メソッド）
    * manual-import APIから呼び出されるメソッド
    */
-  async processSingleFile(filePath: string, format: 'json' | 'markdown' | 'text'): Promise<{
+  async processSingleFile(
+    filePath: string,
+    format: 'json' | 'markdown' | 'text'
+  ): Promise<{
     imported: number
     skipped: number
     errors: string[]
@@ -203,7 +206,7 @@ export class CursorChatImportService {
     const result = {
       imported: 0,
       skipped: 0,
-      errors: [] as string[]
+      errors: [] as string[],
     }
 
     try {
@@ -214,7 +217,8 @@ export class CursorChatImportService {
         result.skipped = 1
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       result.errors.push(`${path.basename(filePath)}: ${errorMessage}`)
     }
 

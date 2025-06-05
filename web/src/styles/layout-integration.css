@@ -1,0 +1,145 @@
+/* 🎨 ChatFlow 統合レイアウトシステム - 簡潔版 */
+/* 作成日: 2025年06月04日 */
+/* 目的: ヘッダー・サイドバーUI重複問題の完全解決 */
+
+/* === ヘッダー修正（最重要） === */
+.header-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 4rem !important;
+  z-index: 50 !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1) !important;
+}
+
+.dark .header-container {
+  background: #0f172a !important;
+  border-bottom-color: #334155 !important;
+}
+
+/* === サイドバー修正（重要） === */
+.sidebar-container {
+  position: fixed !important;
+  top: 4rem !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 16rem !important;
+  z-index: 40 !important;
+  background: #ffffff !important;
+  border-right: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1) !important;
+}
+
+.dark .sidebar-container {
+  background: #0f172a !important;
+  border-right-color: #334155 !important;
+}
+
+/* === メインコンテンツ修正 === */
+.layout-main-container {
+  margin-left: 16rem !important;
+  padding-top: 4rem !important;
+  min-height: 100vh !important;
+}
+
+/* === ヘッダー内部調整 === */
+.header-inner {
+  height: 100% !important;
+  padding: 0 1.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  max-width: 100% !important;
+  overflow: hidden !important; /* ヘッダー要素がはみ出さないように */
+}
+
+/* === モバイル対応 === */
+@media (max-width: 1023px) {
+  .sidebar-container {
+    transform: translateX(-100%) !important;
+  }
+  
+  .sidebar-container.mobile-open {
+    transform: translateX(0) !important;
+  }
+  
+  .layout-main-container {
+    margin-left: 0 !important;
+  }
+}
+
+/* === モバイルメニューボタン === */
+.mobile-menu-button {
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  border: none !important;
+  background: transparent !important;
+  color: #6b7280 !important;
+  border-radius: 0.375rem !important;
+  cursor: pointer !important;
+}
+
+.mobile-menu-button:hover {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+}
+
+@media (max-width: 1023px) {
+  .mobile-menu-button {
+    display: flex !important;
+  }
+}
+
+/* === オーバーレイ === */
+.layout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: calc(var(--z-sidebar) - 1);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.layout-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* === 開発環境デバッグ === */
+@media (min-width: 1024px) {
+  [data-env="development"] .header-container::after {
+    content: "Header Z:" attr(data-z-index, var(--z-header));
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+    background: #3b82f6;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  [data-env="development"] .sidebar-container::after {
+    content: "Sidebar Z:" attr(data-z-index, var(--z-sidebar));
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #ef4444;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+} 

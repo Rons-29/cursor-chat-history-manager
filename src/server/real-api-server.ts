@@ -1174,9 +1174,11 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/claude-dev', claudeDevRoutes)
 app.use('/api/v1', apiRoutes)
 
-// 2. より一般的な /api ルートを最後に
+// 2. 統合APIを専用パスに設定（ルート競合回避）
+app.use('/api/unified', unifiedApiRoutes)
+
+// 3. より一般的な /api ルートを最後に
 app.use('/api', enhancedSessionRoutes)
-app.use('/api', unifiedApiRoutes)
 
 // エラーハンドリング
 app.use(

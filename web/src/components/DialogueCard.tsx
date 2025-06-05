@@ -37,7 +37,7 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
     
     // キーワード抽出
     const words = cleaned
-      .split(/[\s、。！？,.\!?]+/)
+      .split(/[\s、。！？,.!?]+/)
       .filter((word: string) => word.length >= 2)
       .filter((word: string) => !['これ', 'それ', 'あれ', 'です', 'ます', 'について'].includes(word))
       .slice(0, 3)
@@ -101,7 +101,7 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
   const extractTopics = (messages: Message[]): string[] => {
     const allText = messages.map(m => m.content).join(' ')
     const words = allText
-      .split(/[\s、。！？,.\!?]+/)
+      .split(/[\s、。！？,.!?]+/)
       .filter((word: string) => word.length >= 2)
       .filter((word: string) => !['これ', 'それ', 'あれ', 'です', 'ます'].includes(word))
     

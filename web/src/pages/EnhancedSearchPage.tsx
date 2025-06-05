@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { EnhancedSearchComponent } from '../components/EnhancedSearchComponent.tsx'
 import { SearchFilters } from '../components/SearchFilters.tsx'
 import { useEnhancedSearch } from '../hooks/useEnhancedSearch.ts'
 import { apiClient } from '../api/client.js'
@@ -27,7 +26,6 @@ const EnhancedSearchPage: React.FC = () => {
     error: searchError,
     recentSearches,
     clearSearchHistory,
-    executeSearch,
     clearSearch,
     totalResults,
     searchDuration,

@@ -18,11 +18,14 @@ const Sessions: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [limit, setLimit] = useState(50)
 
-  // セッション一覧取得（API側ページネーション活用）
+  // 新規追加: 横断検索モード切り替え
+  const [isUnifiedMode, setIsUnifiedMode] = useState(false)
+
+  // 通常のセッション一覧取得（API側ページネーション活用）
   const {
     data: sessionsData,
-    isLoading,
-    error,
+    isLoading: regularLoading,
+    error: regularError,
   } = useQuery({
     queryKey: queryKeys.sessions({ 
       page: currentPage, 
@@ -39,15 +42,48 @@ const Sessions: React.FC = () => {
       }),
     refetchInterval: 60000, // 1分ごとに更新
     staleTime: 30000, // 30秒間はキャッシュ有効
+    enabled: !isUnifiedMode, // 通常モード時のみ実行
   })
+
+  // 新規追加: 横断検索統合セッション一覧取得
+  const {
+    data: unifiedSessionsData,
+    isLoading: unifiedLoading,
+    error: unifiedError,
+  } = useQuery({
+    queryKey: ['sessions-unified', { 
+      page: currentPage, 
+      limit, 
+      keyword: keyword || undefined 
+    }],
+    queryFn: () =>
+      apiClient.getAllSessions({
+        page: currentPage,
+        limit,
+        keyword: keyword || undefined,
+        includeStatistics: true,
+      }),
+    refetchInterval: 60000, // 1分ごとに更新
+    staleTime: 30000, // 30秒間はキャッシュ有効
+    enabled: isUnifiedMode, // 横断検索モード時のみ実行
+  })
+
+  // 現在のモードに応じてデータを選択
+  const currentData = isUnifiedMode ? unifiedSessionsData : sessionsData
+  const isLoading = isUnifiedMode ? unifiedLoading : regularLoading
+  const error = isUnifiedMode ? unifiedError : regularError
 
   // データ手動更新
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
+      if (isUnifiedMode) {
+        queryClient.invalidateQueries({ queryKey: ['sessions-unified'] })
+        await queryClient.refetchQueries({ queryKey: ['sessions-unified'] })
+      } else {
       queryClient.invalidateQueries({ queryKey: ['sessions'] })
-      // 強制的にデータを再取得
       await queryClient.refetchQueries({ queryKey: ['sessions'] })
+      }
     } catch (error) {
       console.error('データ更新エラー:', error)
     } finally {
@@ -60,14 +96,20 @@ const Sessions: React.FC = () => {
     navigate(`/sessions/${sessionId}`)
   }
 
+  // モード切り替え処理
+  const handleModeToggle = () => {
+    setIsUnifiedMode(!isUnifiedMode)
+    setCurrentPage(1) // ページを1にリセット
+  }
+
   // formatTime関数は使用されていないため削除
 
   // API側のページネーションデータを直接使用（効率的）
-  const sessions = sessionsData?.sessions || []
-  const totalSessions = sessionsData?.pagination?.total || 0
-  const totalPages = sessionsData?.pagination?.totalPages || 1
-  const currentLimit = sessionsData?.pagination?.limit || limit
-  const hasMore = sessionsData?.pagination?.hasMore || false
+  const sessions = currentData?.sessions || []
+  const totalSessions = currentData?.pagination?.total || 0
+  const totalPages = currentData?.pagination?.totalPages || 1
+  const currentLimit = currentData?.pagination?.limit || limit
+  const hasMore = currentData?.pagination?.hasMore || false
   
   // 表示情報の計算
   const startIndex = (currentPage - 1) * currentLimit + 1
@@ -81,7 +123,8 @@ const Sessions: React.FC = () => {
     hasMore,
     startIndex,
     endIndex,
-    sessionsCount: sessions.length
+    sessionsCount: sessions.length,
+    isUnifiedMode
   })
 
   // キーワード変更時の処理
@@ -104,8 +147,57 @@ const Sessions: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">AI対話記録一覧</h1>
           <p className="text-gray-600">
             {isLoading ? '読み込み中...' : `全 ${totalSessions} 件のAI対話記録`}
+            {isUnifiedMode && (
+              <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                全データソース統合
+              </span>
+            )}
           </p>
+          
+          {/* 新規追加: 横断検索統計表示 */}
+          {isUnifiedMode && unifiedSessionsData && (
+            <div className="mt-2 text-sm text-gray-500">
+              <div className="flex flex-wrap gap-4">
+                <span>Traditional: {unifiedSessionsData.sources.traditional}件</span>
+                <span>Incremental: {unifiedSessionsData.sources.incremental}件</span>
+                <span>SQLite: {unifiedSessionsData.sources.sqlite}件</span>
+                <span>Claude Dev: {unifiedSessionsData.sources.claudeDev}件</span>
+                <span className="text-green-600">
+                  統合総数: {unifiedSessionsData.sources.total}件
+                </span>
+              </div>
+            </div>
+          )}
         </div>
+        
+        <div className="flex space-x-2">
+          {/* 新規追加: モード切り替えボタン */}
+          <button
+            className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+              isUnifiedMode
+                ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+            onClick={handleModeToggle}
+            disabled={isLoading || isRefreshing}
+          >
+            {isUnifiedMode ? (
+              <>
+                <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                横断検索ON
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                標準表示
+              </>
+            )}
+          </button>
+          
         <button
           className="btn-primary flex items-center space-x-2"
           onClick={handleRefresh}
@@ -128,38 +220,58 @@ const Sessions: React.FC = () => {
             {isRefreshing ? '更新中...' : isLoading ? '読み込み中...' : '更新'}
           </span>
         </button>
+        </div>
       </div>
 
       {/* フィルター・検索 */}
-      <div className="card">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               キーワード検索
             </label>
             <input
               type="text"
-              placeholder="AI対話記録のタイトルやタグで検索..."
-              className="input-field"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={isUnifiedMode ? "全データソースから検索..." : "AI対話記録を検索..."}
               value={keyword}
-              onChange={e => handleKeywordChange(e.target.value)}
+              onChange={(e) => handleKeywordChange(e.target.value)}
             />
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              ソート順
+              並び順
             </label>
             <select
-              className="input-field"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={sortOrder}
-              onChange={e =>
-                handleSortChange(e.target.value as typeof sortOrder)
-              }
+              onChange={(e) => handleSortChange(e.target.value as typeof sortOrder)}
             >
-              <option value="newest">最新順</option>
+              <option value="newest">新しい順</option>
               <option value="oldest">古い順</option>
               <option value="messages">メッセージ数順</option>
             </select>
+          </div>
+          
+          <div className="flex items-end">
+            <div className="w-full">
+              <div className="text-sm text-gray-600">
+                {isUnifiedMode ? (
+                  <div>
+                    <strong className="text-green-600">横断検索モード</strong>
+                    <br />
+                    全データソースから検索
+                  </div>
+                ) : (
+                  <div>
+                    <strong>標準モード</strong>
+                    <br />
+                    メインデータベースのみ
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -79,28 +79,29 @@
 
 /* === メインサイドバー（UI_DESIGN_GOAL準拠の最適化） === */
 .sidebar-container {
+  /* ⚠️ 統合レイアウトシステムが優先 - 以下をコメントアウト
   position: fixed !important;
   inset-y: 0 !important;
   left: 0 !important;
-  z-index: 50 !important; /* ヘッダー(60)・水平ナビ(55)より下位 */
+  z-index: 50 !important;
   width: var(--sidebar-width) !important;
   background: var(--sidebar-bg) !important;
   box-shadow: var(--sidebar-shadow) !important;
   border-right: 1px solid var(--sidebar-border) !important;
   transform: var(--sidebar-transition) !important;
   transition: var(--sidebar-transition) !important;
-  
-  /* ヘッダーとの協調レイアウト - 重なり防止 */
-  padding-top: 4rem !important; /* ヘッダー分の余白追加 */
-  padding-bottom: 5rem !important; /* フッター分の余白追加 */
+  ヘッダーとの協調レイアウト - 重なり防止
+  padding-top: 4rem !important;
+  padding-bottom: 5rem !important;
   top: 0 !important;
+  コメント終了 */
 }
 
 /* === サイドバーヘッダー（ヘッダーと統合調整） === */
 .sidebar-header {
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: space-between !important; /* モバイルボタン配置のため変更 */
   height: var(--sidebar-header-height) !important;
   padding: 0 var(--sidebar-padding) !important;
   background: #f9fafb !important;
@@ -122,6 +123,41 @@
   font-weight: 500 !important;
   color: var(--sidebar-nav-item-text) !important;
   margin: 0 !important;
+  flex: 1 !important; /* フレックスアイテムとして配置 */
+}
+
+/* === モバイル閉じるボタン === */
+.mobile-close-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--sidebar-icon-color) !important;
+  border-radius: 0.375rem !important;
+  transition: var(--sidebar-nav-transition) !important;
+  cursor: pointer !important;
+}
+
+.mobile-close-button:hover {
+  background: var(--sidebar-nav-item-bg-hover) !important;
+  color: var(--sidebar-icon-color-hover) !important;
+}
+
+.mobile-close-button:focus {
+  outline: 2px solid var(--ai-dialogue-color) !important;
+  outline-offset: 2px !important;
+}
+
+.dark .mobile-close-button {
+  color: var(--sidebar-icon-color-dark) !important;
+}
+
+.dark .mobile-close-button:hover {
+  background: var(--sidebar-nav-item-bg-hover-dark) !important;
+  color: var(--sidebar-icon-color-hover-dark) !important;
 }
 
 /* === ナビゲーション === */
@@ -147,17 +183,56 @@
   display: flex !important;
   align-items: center !important;
   gap: 0.75rem !important;
-  padding: var(--sidebar-nav-item-padding) !important;
+  padding: 0.75rem !important;
   border-radius: var(--sidebar-nav-item-radius) !important;
   background: var(--sidebar-nav-item-bg) !important;
   color: var(--sidebar-nav-item-text) !important;
   text-decoration: none !important;
   transition: var(--sidebar-nav-transition) !important;
-  min-height: var(--sidebar-nav-item-height) !important;
+  min-height: auto !important;
   font-weight: 500 !important;
   font-size: 0.875rem !important;
   outline: none !important;
   position: relative !important;
+}
+
+/* === テキスト部分 === */
+.sidebar-nav-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.sidebar-nav-name {
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25 !important;
+  color: inherit !important;
+}
+
+.sidebar-nav-description {
+  font-weight: 400 !important;
+  font-size: 0.75rem !important;
+  line-height: 1.3 !important;
+  color: var(--sidebar-icon-color) !important;
+  opacity: 0.85 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* ホバー時の説明文色変更 */
+.sidebar-nav-link:hover .sidebar-nav-description {
+  color: var(--sidebar-icon-color-hover) !important;
+  opacity: 1 !important;
+}
+
+/* アクティブ時の説明文色変更 */
+.sidebar-nav-link.active .sidebar-nav-description {
+  color: var(--sidebar-icon-color-active) !important;
+  opacity: 0.9 !important;
 }
 
 .sidebar-nav-link:hover {

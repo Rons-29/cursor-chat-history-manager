@@ -42,7 +42,33 @@ export function setServices(services: {
   if (services.chatHistory) chatHistoryService = services.chatHistory
   if (services.claudeDev) claudeDevService = services.claudeDev
   if (services.integration) integrationService = services.integration
+  
+  console.log('🔧 unified-api: サービス設定完了', {
+    chatHistory: !!chatHistoryService,
+    claudeDev: !!claudeDevService,
+    integration: !!integrationService,
+  })
 }
+
+/**
+ * GET /api/test-unified
+ * デバッグ用テストエンドポイント
+ */
+router.get(
+  '/test-unified',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    res.json({
+      success: true,
+      message: 'unified-api router is working!',
+      timestamp: new Date().toISOString(),
+      services: {
+        chatHistory: !!chatHistoryService,
+        claudeDev: !!claudeDevService,
+        integration: !!integrationService,
+      }
+    })
+  })
+)
 
 /**
  * GET /api/health
@@ -243,78 +269,14 @@ router.get(
 )
 
 /**
- * GET /api/sessions/:id
- * 統合セッション詳細取得
- */
-router.get(
-  '/sessions/:id',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const sessionId = req.params.id
-    let session: any = null
-
-    // まずClaude Devから検索
-    if (claudeDevService) {
-      try {
-        session = await claudeDevService.getClaudeDevSession(sessionId)
-        if (session) {
-          session.metadata = { ...session.metadata, source: 'claude-dev' }
-        }
-      } catch (error) {
-        // Claude Devで見つからない場合は通常検索へ
-      }
-    }
-
-    // Claude Devで見つからない場合、通常のチャット履歴から検索
-    if (!session && chatHistoryService) {
-      try {
-        const chatSession = await chatHistoryService.getSession(sessionId)
-        if (chatSession) {
-          session = {
-            id: chatSession.id,
-            title: chatSession.title,
-            startTime: chatSession.createdAt.toISOString(),
-            endTime: chatSession.updatedAt.toISOString(),
-            metadata: {
-              totalMessages: chatSession.messages.length,
-              tags: chatSession.tags || [],
-              description: chatSession.metadata?.summary || '',
-              source: chatSession.metadata?.source || 'chat',
-            },
-            messages: chatSession.messages.map(msg => ({
-              id: msg.id,
-              timestamp: msg.timestamp.toISOString(),
-              role: msg.role,
-              content: msg.content,
-              metadata: msg.metadata || {},
-            })),
-          }
-        }
-      } catch (error) {
-        // エラーログは既に各サービスで処理済み
-      }
-    }
-
-    if (!session) {
-      res.status(404).json({
-        error: 'Not Found',
-        message: 'セッションが見つかりません',
-      })
-      return
-    }
-
-    res.json(session)
-  })
-)
-
-/**
- * GET /api/sessions/all
+ * GET /api/all-sessions
  * 🔥 横断検索統合 - 全データソースから並列取得・統合
  * 
  * 問題解決: 4,017セッション(39%)のみ表示 → 10,226セッション(100%)表示
  * 効果: 2.5倍のデータ可視化、61%の隠れたデータを表示
  */
 router.get(
-  '/sessions/all',
+  '/all-sessions',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const {
       page = 1,
@@ -368,7 +330,10 @@ router.get(
       let allSessions: any[] = []
 
       // Chat History結果処理
+      console.log('🔍 Chat History Result Status:', chatHistoryResult.status)
       if (chatHistoryResult.status === 'fulfilled' && chatHistoryResult.value) {
+        console.log('📊 Chat History Sessions Count:', chatHistoryResult.value.sessions.length)
+        console.log('📊 Chat History Total Count:', chatHistoryResult.value.totalCount)
         const chatSessions = chatHistoryResult.value.sessions.map((session: any) => ({
           id: session.id,
           title: session.title,
@@ -391,6 +356,7 @@ router.get(
         }))
         
         allSessions.push(...chatSessions)
+        console.log('📊 Chat Sessions Added:', chatSessions.length)
         
         // データソース別カウント
         chatSessions.forEach((session: any) => {
@@ -403,7 +369,9 @@ router.get(
       }
 
       // Claude Dev結果処理
+      console.log('🔍 Claude Dev Result Status:', claudeDevSessions.status)
       if (claudeDevSessions.status === 'fulfilled' && claudeDevSessions.value) {
+        console.log('📊 Claude Dev Sessions Count:', claudeDevSessions.value.length)
         const claudeSessions = claudeDevSessions.value.map((session: any) => ({
           id: session.id,
           title: session.title || session.description || `Claude Dev Task`,
@@ -423,8 +391,10 @@ router.get(
         sources.claudeDev = claudeSessions.length
       }
 
-      // 🔄 重複除去（ID基準 + タイトル類似度）
+      // 🔄 重複除去
+      console.log('📊 All Sessions Before Dedup:', allSessions.length)
       const uniqueSessions = removeDuplicateSessions(allSessions)
+      console.log('📊 Unique Sessions After Dedup:', uniqueSessions.length)
 
       // 🔍 キーワードフィルタリング（統合後）
       let filteredSessions = uniqueSessions
@@ -500,32 +470,86 @@ router.get(
 )
 
 /**
+ * GET /api/sessions/:id
+ * 統合セッション詳細取得
+ */
+router.get(
+  '/sessions/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const sessionId = req.params.id
+    let session: any = null
+
+    // まずClaude Devから検索
+    if (claudeDevService) {
+      try {
+        session = await claudeDevService.getClaudeDevSession(sessionId)
+        if (session) {
+          session.metadata = { ...session.metadata, source: 'claude-dev' }
+        }
+      } catch (error) {
+        // Claude Devで見つからない場合は通常検索へ
+      }
+    }
+
+    // Claude Devで見つからない場合、通常のチャット履歴から検索
+    if (!session && chatHistoryService) {
+      try {
+        const chatSession = await chatHistoryService.getSession(sessionId)
+        if (chatSession) {
+          session = {
+            id: chatSession.id,
+            title: chatSession.title,
+            startTime: chatSession.createdAt.toISOString(),
+            endTime: chatSession.updatedAt.toISOString(),
+            metadata: {
+              totalMessages: chatSession.messages.length,
+              tags: chatSession.tags || [],
+              description: chatSession.metadata?.summary || '',
+              source: chatSession.metadata?.source || 'chat',
+            },
+            messages: chatSession.messages.map(msg => ({
+              id: msg.id,
+              timestamp: msg.timestamp.toISOString(),
+              role: msg.role,
+              content: msg.content,
+              metadata: msg.metadata || {},
+            })),
+          }
+        }
+      } catch (error) {
+        // エラーログは既に各サービスで処理済み
+      }
+    }
+
+    if (!session) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'セッションが見つかりません',
+      })
+      return
+    }
+
+    res.json(session)
+  })
+)
+
+/**
  * 重複セッション除去関数
- * ID重複 + タイトル類似度による重複判定
+ * ID重複のみで判定（タイトル類似度は削除）
  */
 function removeDuplicateSessions(sessions: any[]): any[] {
   const uniqueMap = new Map<string, any>()
-  const titleMap = new Map<string, any>()
 
   sessions.forEach(session => {
-    // ID重複チェック
+    // ID重複チェックのみ
     if (uniqueMap.has(session.id)) {
-      return // 既存IDはスキップ
-    }
-
-    // タイトル類似度チェック
-    const normalizedTitle = session.title.toLowerCase().trim()
-    const existingSession = titleMap.get(normalizedTitle)
-    
-    if (existingSession) {
-      // より詳細な情報を持つセッションを保持
-      if (session.metadata.totalMessages > existingSession.metadata.totalMessages) {
-        uniqueMap.set(existingSession.id, session)
-        titleMap.set(normalizedTitle, session)
+      // 既存IDがある場合、より詳細な情報を持つセッションを保持
+      const existing = uniqueMap.get(session.id)
+      if (session.metadata.totalMessages > existing.metadata.totalMessages) {
+        uniqueMap.set(session.id, session)
       }
     } else {
       uniqueMap.set(session.id, session)
-      titleMap.set(normalizedTitle, session)
     }
   })
 

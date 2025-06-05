@@ -14,13 +14,25 @@ import {
   DocumentMagnifyingGlassIcon,
   PlayIcon,
   StopIcon
-} from '@heroicons/react/24/outline'
+  } from '@heroicons/react/24/outline'
 import { useIntegration, useIntegrationLogs, useIntegrationSettings, useSaveIntegrationSettings } from '../hooks/useIntegration'
 import LogViewer from '../components/integration/LogViewer'
 import SettingsPanel from '../components/integration/SettingsPanel'
 
 import ApiConnectionIndicator from '../components/ui/ApiConnectionIndicator'
 import { queryKeys } from '../api/client'
+
+// 型定義
+interface LogEntry {
+  id: string
+  timestamp: string
+  type: 'system' | 'chat' | 'cursor'
+  content: string
+  metadata: {
+    source: string
+    project?: string
+  }
+}
 
 const Integration: React.FC = () => {
   const queryClient = useQueryClient()
@@ -52,61 +64,31 @@ const Integration: React.FC = () => {
   const { data: settings } = useIntegrationSettings()
   const saveSettingsMutation = useSaveIntegrationSettings()
 
-  // ログデータの安全な処理と変換
-  let logs = []
-  
+  // ログデータの適切な処理
+  let logs: LogEntry[] = []
   if (Array.isArray(logsData)) {
     logs = logsData
   } else if (logsData && typeof logsData === 'object' && 'logs' in logsData) {
-    // logsDataがオブジェクトで、logsプロパティを持つ場合
-    logs = Array.isArray((logsData as any).logs) ? (logsData as any).logs : []
-  } else {
-    logs = []
+    logs = (logsData as any).logs || []
   }
   
-  // 【デバッグ用】サンプルログを強制追加してテスト
-  if (logs.length === 0) {
+  // ログが空の場合のハンドリング
+  if (logs.length === 0 && !logsLoading && !logsError) {
     logs = [
       {
-        id: 'sample-1',
+        id: 'info-1',
         timestamp: new Date().toISOString(),
         type: 'system',
-        content: 'Chat History Manager システム起動',
+        content: 'ChatFlow システム起動完了',
         metadata: { source: 'system', project: 'chat-history-manager' }
-      },
-      {
-        id: 'sample-2', 
-        timestamp: new Date(Date.now() - 60000).toISOString(),
-        type: 'chat',
-        content: 'サンプルチャットログエントリー',
-        metadata: { source: 'chat', project: 'chat-history-manager' }
-      },
-      {
-        id: 'sample-3',
-        timestamp: new Date(Date.now() - 120000).toISOString(), 
-        type: 'cursor',
-        content: 'サンプルCursorログエントリー',
-        metadata: { source: 'cursor', project: 'chat-history-manager' }
       }
     ]
-    console.log('🔧 デバッグ用サンプルログを追加しました:', logs)
   }
 
-  // デバッグ用（詳細）
-  console.log('🔍 ログ取得状況:', {
-    logsData,
-    logsDataType: typeof logsData,
-    isArray: Array.isArray(logsData),
-    logsLength: logs.length,
-    logsLoading,
-    logsError,
-    firstLog: logs[0]
-  })
-  
-  // さらに詳細なlogsDataの中身をチェック
-  console.log('🔍 logsData詳細:', JSON.stringify(logsData, null, 2))
-  console.log('🔍 logsDataキー:', Object.keys(logsData || {}))
-  console.log('🔍 logsData.logs:', (logsData as any)?.logs)
+  // ログデータの状態チェック（エラー時のみ）
+  if (logsError) {
+    console.error('ログ取得エラー:', logsError)
+  }
 
   // タブ状態管理
   const [activeTab, setActiveTab] = useState<'dashboard' | 'logs' | 'settings'>('dashboard')
@@ -605,18 +587,14 @@ const Integration: React.FC = () => {
                       {stats?.totalSessions?.toLocaleString() || '0'}
                     </p>
                     {/* デバッグ情報 */}
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Debug: {stats ? `loaded (${stats.totalSessions})` : 'loading...'}
-                    </p>
+
                   </div>
                   <div className="bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md hover:bg-green-200 dark:hover:bg-green-900/30">
                     <h3 className="text-lg font-medium text-green-800 dark:text-green-200">総メッセージ数</h3>
                     <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-2">
                       {stats?.totalMessages?.toLocaleString() || '0'}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Debug: {stats ? `loaded (${stats.totalMessages})` : 'loading...'}
-                    </p>
+
                   </div>
                   <div className="bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-6 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md hover:bg-purple-200 dark:hover:bg-purple-900/30">
                     <h3 className="text-lg font-medium text-purple-800 dark:text-purple-200">Cursorセッション</h3>

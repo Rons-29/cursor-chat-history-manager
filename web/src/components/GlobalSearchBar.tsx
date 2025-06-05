@@ -166,19 +166,19 @@ const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center space-x-2">
                       <span className="text-gray-500 dark:text-gray-400">•</span>
-                      <span className="text-gray-700 dark:text-gray-300">"React エラー"</span>
+                      <span className="text-gray-700 dark:text-gray-300">&quot;React エラー&quot;</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-gray-500 dark:text-gray-400">•</span>
-                      <span className="text-gray-700 dark:text-gray-300">"TypeScript 型"</span>
+                      <span className="text-gray-700 dark:text-gray-300">&quot;TypeScript 型&quot;</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-gray-500 dark:text-gray-400">•</span>
-                      <span className="text-gray-700 dark:text-gray-300">"cursor-import"</span>
+                      <span className="text-gray-700 dark:text-gray-300">&quot;cursor-import&quot;</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-gray-500 dark:text-gray-400">•</span>
-                      <span className="text-gray-700 dark:text-gray-300">"API 最適化"</span>
+                      <span className="text-gray-700 dark:text-gray-300">&quot;API 最適化&quot;</span>
                     </div>
                   </div>
                 </div>

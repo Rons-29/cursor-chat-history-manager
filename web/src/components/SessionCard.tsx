@@ -2,7 +2,16 @@ import React from 'react'
 import { Session, Message } from '../types/Session'
 
 interface DialogueCardProps {
-  readonly dialogue: Session // session → dialogue (AI対話)
+  readonly dialogue?: Session // session → dialogue (AI対話) - オプショナル
+  readonly session?: Session // 互換性のため既存のsessionプロパティも受け入れ
+  readonly onSelect: (id: string) => void
+  readonly showPreview?: boolean
+  readonly compact?: boolean
+}
+
+// 互換性のためのエクスポート
+export interface SessionCardProps {
+  readonly session: Session
   readonly onSelect: (id: string) => void
   readonly showPreview?: boolean
   readonly compact?: boolean
@@ -18,17 +27,24 @@ interface DialogueCardProps {
  */
 export const DialogueCard: React.FC<DialogueCardProps> = ({ 
   dialogue, 
+  session,
   onSelect, 
   showPreview = true,
   compact = false
 }) => {
+  // どちらのプロパティからでもセッションデータを取得
+  const currentSession = dialogue || session
+  if (!currentSession) {
+    throw new Error('DialogueCard requires either dialogue or session prop')
+  }
+
   // タイトル生成（簡易版）
-  const generateTitle = (dialogue: Session): string => {
-    if (dialogue.title && dialogue.title !== 'Cursor Prompt') {
-      return dialogue.title
+  const generateTitle = (session: Session): string => {
+    if (session.title && session.title !== 'Cursor Prompt') {
+      return session.title
     }
 
-    const firstExchange = dialogue.messages?.[0]?.content || ''
+    const firstExchange = session.messages?.[0]?.content || ''
     if (!firstExchange) return 'AI対話'
 
     // 基本クリーニング
@@ -36,7 +52,7 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
     
     // キーワード抽出
     const words = cleaned
-      .split(/[\s、。！？,.\!?]+/)
+      .split(/[\s、。！？,.!?]+/)
       .filter((word: string) => word.length >= 2)
       .filter((word: string) => !['これ', 'それ', 'あれ', 'です', 'ます', 'について'].includes(word))
       .slice(0, 3)
@@ -72,11 +88,11 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
   }
 
   // 要約生成
-  const generateSummary = (dialogue: Session): string => {
-    const exchangeCount = dialogue.messages?.length || 0
+  const generateSummary = (session: Session): string => {
+    const exchangeCount = session.messages?.length || 0
     if (exchangeCount === 0) return '空のAI対話'
     
-    const firstExchange = dialogue.messages?.[0]?.content || ''
+    const firstExchange = session.messages?.[0]?.content || ''
     if (exchangeCount === 1) {
       return firstExchange.length > 100 
         ? firstExchange.substring(0, 100) + '...'
@@ -84,7 +100,7 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
     }
 
     // 複数やりとりの場合
-    const topics = extractTopics(dialogue.messages || [])
+    const topics = extractTopics(session.messages || [])
     if (topics.length === 0) {
       return `${exchangeCount}回のやりとりを含む対話`
     }
@@ -100,7 +116,7 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
   const extractTopics = (messages: Message[]): string[] => {
     const allText = messages.map(m => m.content).join(' ')
     const words = allText
-      .split(/[\s、。！？,.\!?]+/)
+      .split(/[\s、。！？,.!?]+/)
       .filter((word: string) => word.length >= 2)
       .filter((word: string) => !['これ', 'それ', 'あれ', 'です', 'ます'].includes(word))
     
@@ -134,22 +150,22 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
     return '20分以上'
   }
 
-  const title = generateTitle(dialogue)
-  const summary = generateSummary(dialogue)
-  const exchangeCount = dialogue.messages?.length || 0
+  const title = generateTitle(currentSession)
+  const summary = generateSummary(currentSession)
+  const exchangeCount = currentSession.messages?.length || 0
   const categoryIcon = getCategoryIcon(title)
   const duration = getEstimatedDuration(exchangeCount)
-  const lastActivity = dialogue.timestamp ? new Date(dialogue.timestamp) : new Date()
+  const lastActivity = currentSession.timestamp ? new Date(currentSession.timestamp) : new Date()
 
   // コンパクトモード
   if (compact) {
     return (
       <div 
         className="dialogue-card-compact"
-        onClick={() => onSelect(dialogue.id)}
+        onClick={() => onSelect(currentSession.id)}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && onSelect(dialogue.id)}
+        onKeyDown={(e) => e.key === 'Enter' && onSelect(currentSession.id)}
         aria-label={`AI対話「${title}」を開く`}
       >
         <div className="flex items-center justify-between">
@@ -182,10 +198,10 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
   return (
     <div 
       className="dialogue-card"
-      onClick={() => onSelect(dialogue.id)}
+      onClick={() => onSelect(currentSession.id)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onSelect(dialogue.id)}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect(currentSession.id)}
       aria-label={`AI対話「${title}」を開く`}
     >
       {/* ヘッダー */}
@@ -234,9 +250,9 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
       </div>
 
       {/* タグ（将来的な拡張） */}
-      {dialogue.metadata?.tags && dialogue.metadata.tags.length > 0 && (
+      {currentSession.metadata?.tags && currentSession.metadata.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {dialogue.metadata.tags.slice(0, 3).map((tag: string, index: number) => (
+          {currentSession.metadata.tags.slice(0, 3).map((tag: string, index: number) => (
             <span 
               key={index}
               className="tag-item"
@@ -250,5 +266,21 @@ export const DialogueCard: React.FC<DialogueCardProps> = ({
   )
 }
 
-// 旧名前でのエクスポート（後方互換性のため段階的移行）
-export const SessionCard = DialogueCard
+// 既存コードとの互換性のためのSessionCardコンポーネント
+export const SessionCard: React.FC<SessionCardProps> = ({ 
+  session, 
+  onSelect, 
+  showPreview = true,
+  compact = false 
+}) => {
+  return (
+    <DialogueCard 
+      session={session}
+      onSelect={onSelect}
+      showPreview={showPreview}
+      compact={compact}
+    />
+  )
+}
+
+export default DialogueCard

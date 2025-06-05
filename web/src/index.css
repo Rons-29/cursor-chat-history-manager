@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* === 専用コンポーネントCSS === */
+@import './styles/sidebar.css';
+
 /* TailwindCSS v4 テーマ設定 */
 @theme {
   /* Cursor風カラーシステム - 青紫系 */

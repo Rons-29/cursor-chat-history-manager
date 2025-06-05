@@ -200,7 +200,7 @@ export class CursorChatImportService {
     skipped: number
     errors: string[]
   }> {
-    const results = {
+    const result = {
       imported: 0,
       skipped: 0,
       errors: [] as string[]
@@ -209,16 +209,16 @@ export class CursorChatImportService {
     try {
       const imported = await this.importSingleFile(filePath)
       if (imported) {
-        results.imported++
+        result.imported = 1
       } else {
-        results.skipped++
+        result.skipped = 1
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      results.errors.push(`${path.basename(filePath)}: ${errorMessage}`)
+      result.errors.push(`${path.basename(filePath)}: ${errorMessage}`)
     }
 
-    return results
+    return result
   }
 
   /**

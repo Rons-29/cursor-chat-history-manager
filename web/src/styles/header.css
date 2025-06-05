@@ -57,6 +57,8 @@
 
 /* === Header Base Styles === */
 .header-container {
+  /* ⚠️ 統合レイアウトシステムが優先 - 以下をコメントアウト */
+  /*
   background: var(--header-bg);
   border-bottom: 1px solid var(--header-border);
   box-shadow: var(--header-shadow);
@@ -64,11 +66,12 @@
   top: 0;
   z-index: var(--header-z-index);
   transition: var(--header-transition);
+  */
 }
 
+/* ダークモード対応も無効化 */
 .header-container.dark {
-  background: var(--header-bg-dark);
-  border-bottom-color: var(--header-border-dark);
+  /* 統合レイアウトが制御 */
 }
 
 .header-inner {
@@ -158,7 +161,13 @@
 .header-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--header-button-space);
+}
+
+/* === Actions Container === */
+.header-actions-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* 16px の間隔 */
 }
 
 /* === Action Buttons === */
@@ -292,24 +301,25 @@
   /* テーマ切り替えボタン専用スタイル */
   position: relative;
   overflow: hidden;
+  flex-shrink: 0; /* テーマ設定部分の縮小を防ぐ */
 }
 
-.header-theme-toggle::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: var(--header-button-bg-hover);
-  border-radius: 50%;
-  transition: var(--header-button-transition);
-  transform: translate(-50%, -50%);
+/* === Responsive Layout === */
+@media (max-width: 768px) {
+  .header-actions-container {
+    gap: 0.5rem; /* モバイルでは間隔を狭く */
+  }
+  
+  /* モバイルではテーマカラー選択の文字を非表示 */
+  .header-theme-toggle .hidden.sm\\:block {
+    display: none !important;
+  }
 }
 
-.header-theme-toggle:hover::before {
-  width: 100%;
-  height: 100%;
+@media (max-width: 480px) {
+  .header-actions-container {
+    gap: 0.25rem; /* 極小画面では最小限の間隔 */
+  }
 }
 
 /* === Skip Link (Accessibility) === */

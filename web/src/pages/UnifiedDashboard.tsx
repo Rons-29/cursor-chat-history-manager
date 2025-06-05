@@ -5,6 +5,8 @@ import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outl
 import { apiClient, queryKeys } from '../api/client'
 import { BadgeGrid, AnimatedNumber, EnhancedProgressBar } from '../components/ui'
 import { useBadgeSystem } from '../hooks/useBadgeSystem'
+import CrossDataSourceSearch from '../components/CrossDataSourceSearch'
+import TaskCompletionReport from '../components/ui/TaskCompletionReport'
 
 /**
  * 🏠 統合ダッシュボード
@@ -68,43 +70,26 @@ const UnifiedDashboard: React.FC = () => {
     nextBadges
   } = useBadgeSystem()
 
-  // 手動更新機能（強化版）
+  // 手動更新機能（最適化版）
   const handleManualRefresh = async () => {
-    console.log('🔄 統合ダッシュボード更新開始:', new Date().toLocaleTimeString())
     setIsRefreshing(true)
     try {
-      console.log('📊 統計データ更新開始')
-      const statsResult = await refetchStats()
-      console.log('📊 統計データ更新完了:', statsResult.data)
+      await Promise.all([
+        refetchStats(),
+        refetchSessions(),
+        refetchHealth()
+      ])
       
-      console.log('💾 セッションデータ更新開始')
-      const sessionsResult = await refetchSessions()
-      console.log('💾 セッションデータ更新完了:', sessionsResult.data?.pagination?.total)
-      
-      console.log('🏥 ヘルスチェック更新開始')
-      const healthResult = await refetchHealth()
-      console.log('🏥 ヘルスチェック更新完了:', healthResult.data?.status)
-      
-      console.log('🗑️ React Queryキャッシュ無効化実行')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['sessions'] }),
         queryClient.invalidateQueries({ queryKey: ['health'] }),
         queryClient.invalidateQueries({ queryKey: ['stats'] })
       ])
       
-      console.log('✅ 統合ダッシュボード更新完了:', new Date().toLocaleTimeString())
-      
     } catch (error) {
       console.error('❌ 統合ダッシュボード更新エラー:', error)
-      if (error instanceof Error) {
-        console.error('❌ エラー詳細:', {
-          message: error.message,
-          stack: error.stack
-        })
-      }
     } finally {
       setIsRefreshing(false)
-      console.log('🏁 統合ダッシュボード更新処理終了:', new Date().toLocaleTimeString())
     }
   }
 
@@ -186,25 +171,9 @@ const UnifiedDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* レンダリングテスト */}
-      <div className="fixed top-0 right-0 z-50 bg-green-500 text-white p-2 text-xs">
-        ✅ 統合ダッシュボード: {new Date().toLocaleTimeString()}
-      </div>
+      {/* === 不要要素を削除：デバッグ表示・重複テーマボタン === */}
       
-      {/* テーマ切り替えボタン */}
-      <div className="fixed top-0 left-0 z-50 p-4">
-        <button
-          onClick={() => window.toggleTheme?.()}
-          className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-2 shadow-sm hover:shadow-md transition-all"
-          title="テーマ切り替え"
-        >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        </button>
-      </div>
-      
-      <div className="max-w-full px-3 sm:px-4 lg:px-6 py-2">
+      <div className="max-w-full px-3 sm:px-4 lg:px-6 py-6">
         {/* 統合ヘッダー */}
         <div className="mb-6 flex justify-between items-center">
           <div>
@@ -216,8 +185,8 @@ const UnifiedDashboard: React.FC = () => {
             </p>
           </div>
           
-          {/* 統合更新ボタン */}
-          <div className="flex flex-col items-end">
+          {/* 統合更新ボタン - デバッグ情報削除版 */}
+          <div className="flex-shrink-0">
             <button
               onClick={handleManualRefresh}
               disabled={isRefreshing}
@@ -226,7 +195,7 @@ const UnifiedDashboard: React.FC = () => {
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'
               }`}
-              title={isRefreshing ? '更新中... (コンソールで進行状況確認)' : 'データを手動で更新'}
+              title={isRefreshing ? '更新中...' : 'データを手動で更新'}
             >
               <ArrowPathIcon 
                 className={`w-4 h-4 mr-2 transition-transform duration-200 ${
@@ -235,19 +204,20 @@ const UnifiedDashboard: React.FC = () => {
               />
               {isRefreshing ? '更新中...' : '統合更新'}
             </button>
-            
-            {/* デバッグ情報表示 */}
-            {(process.env.NODE_ENV === 'development' || true) && (
-              <div className="text-xs text-gray-500 mt-1 text-right">
-                最終更新: {new Date().toLocaleTimeString()}
-                {isRefreshing && (
-                  <div className="text-blue-600 font-medium">
-                    📊 統合更新中... コンソールで詳細確認
-                  </div>
-                )}
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* 🎉 タスク完了レポート */}
+        <TaskCompletionReport />
+
+        {/* 🔍 統合検索セクション */}
+        <div className="mb-8">
+          <CrossDataSourceSearch 
+            onSessionSelect={(session: any) => {
+              console.log('統合ダッシュボード: セッション選択', session)
+              // TODO: セッション詳細画面への遷移実装
+            }}
+          />
         </div>
 
         {/* 基本統計カード（6つ統合） */}
@@ -443,7 +413,7 @@ const UnifiedDashboard: React.FC = () => {
                       <span className="text-2xl mr-3">{badge.icon}</span>
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900 dark:text-white text-sm">
-                          {badge.name}
+                          {badge.title}
                         </h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {badge.description}
@@ -451,10 +421,11 @@ const UnifiedDashboard: React.FC = () => {
                       </div>
                     </div>
                     <EnhancedProgressBar 
-                      progress={badge.progress} 
+                      value={badge.progress || 0} 
+                      max={badge.maxProgress || 100}
                       className="h-2"
-                      showLabel={true}
-                      label={`${Math.round(badge.progress)}%`}
+                      showPercentage={true}
+                      label={`${Math.round(((badge.progress || 0) / (badge.maxProgress || 100)) * 100)}%`}
                     />
                   </div>
                 ))}
@@ -483,9 +454,9 @@ const UnifiedDashboard: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             ⚡ クイックアクション
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <Link
-              to="/search"
+              to="/sessions"
               className="block p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
             >
               <div className="flex items-center">
@@ -498,27 +469,40 @@ const UnifiedDashboard: React.FC = () => {
             </Link>
             
             <Link
-              to="/integrations"
+              to="/unified-sessions"
               className="block p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
             >
               <div className="flex items-center">
-                <span className="text-2xl mr-3">🔧</span>
+                <span className="text-2xl mr-3">🌐</span>
                 <div>
-                  <h3 className="font-medium text-green-900 dark:text-green-100">統合連携管理</h3>
-                  <p className="text-sm text-green-600 dark:text-green-300">Cursor・Claude Dev</p>
+                  <h3 className="font-medium text-green-900 dark:text-green-100">全データ統合</h3>
+                  <p className="text-sm text-green-600 dark:text-green-300">横断検索・統合表示</p>
                 </div>
               </div>
             </Link>
             
             <Link
-              to="/settings"
+              to="/unified-integrations"
               className="block p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
             >
               <div className="flex items-center">
-                <span className="text-2xl mr-3">⚙️</span>
+                <span className="text-2xl mr-3">🔧</span>
                 <div>
-                  <h3 className="font-medium text-purple-900 dark:text-purple-100">設定・管理</h3>
-                  <p className="text-sm text-purple-600 dark:text-purple-300">システム設定</p>
+                  <h3 className="font-medium text-purple-900 dark:text-purple-100">統合連携管理</h3>
+                  <p className="text-sm text-purple-600 dark:text-purple-300">Cursor・Claude Dev</p>
+                </div>
+              </div>
+            </Link>
+            
+            <Link
+              to="/unified-search"
+              className="block p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors"
+            >
+              <div className="flex items-center">
+                <span className="text-2xl mr-3">🔍</span>
+                <div>
+                  <h3 className="font-medium text-orange-900 dark:text-orange-100">統合検索</h3>
+                  <p className="text-sm text-orange-600 dark:text-orange-300">高度検索機能</p>
                 </div>
               </div>
             </Link>
@@ -526,15 +510,15 @@ const UnifiedDashboard: React.FC = () => {
             <button
               onClick={handleManualRefresh}
               disabled={isRefreshing}
-              className="block p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors disabled:opacity-50"
+              className="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
               <div className="flex items-center">
                 <span className="text-2xl mr-3">🔄</span>
                 <div className="text-left">
-                  <h3 className="font-medium text-orange-900 dark:text-orange-100">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
                     {isRefreshing ? '更新中...' : '統合更新'}
                   </h3>
-                  <p className="text-sm text-orange-600 dark:text-orange-300">全データ再取得</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">全データ再取得</p>
                 </div>
               </div>
             </button>

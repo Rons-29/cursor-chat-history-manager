@@ -1,17 +1,32 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { NavLink } from 'react-router-dom'
+import '../styles/sidebar.css'
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+/**
+ * 🎨 ChatFlow Sidebar Component
+ * 
+ * 統合レイアウトシステム対応サイドバー
+ * - モバイル対応
+ * - アクセシビリティ強化
+ * - 統一ナビゲーション
+ */
+const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const location = useLocation()
 
+  // UI_DESIGN_GOAL準拠：4つの主要機能に統合
   const navigationItems = [
     {
-      name: '🏠 ホーム',
+      name: '🏠 ダッシュボード',
       href: '/',
+      description: '統合コマンドセンター・クイックアクセス',
       icon: (
         <svg
-          className="w-5 h-5"
+          className="sidebar-nav-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -26,11 +41,32 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: 'AI対話一覧',
-      href: '/sessions',
+      name: '🔍 統合検索',
+      href: '/unified-search',
+      description: 'AI開発者特化の高度検索体験',
       icon: (
         <svg
-          className="w-5 h-5"
+          className="sidebar-nav-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      ),
+    },
+    {
+      name: '💬 対話管理',
+      href: '/sessions',
+      description: '基本+AI強化表示の統合管理',
+      icon: (
+        <svg
+          className="sidebar-nav-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -45,11 +81,12 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: '🚀 詳細AI対話',
-      href: '/enhanced-sessions',
+      name: '🌐 全データ統合',
+      href: '/unified-sessions',
+      description: '横断検索統合・全データソース表示',
       icon: (
         <svg
-          className="w-5 h-5"
+          className="sidebar-nav-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -64,36 +101,12 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: '🔍 横断検索',
-      href: '/unified-search',
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1}
-            d="M8 16l4-4 4 4"
-          />
-        </svg>
-      ),
-    },
-    {
-      name: '🔗 統合連携',
+      name: '🔧 プラットフォーム統合',
       href: '/unified-integrations',
+      description: '全統合機能の管理ハブ',
       icon: (
         <svg
-          className="w-5 h-5"
+          className="sidebar-nav-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -108,49 +121,12 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: 'Cursor連携',
-      href: '/integration',
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-          />
-        </svg>
-      ),
-    },
-    {
-      name: 'Claude Dev連携',
-      href: '/claude-dev',
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-          />
-        </svg>
-      ),
-    },
-    {
-      name: '📁 手動インポート',
+      name: '📂 手動インポート',
       href: '/manual-import',
+      description: 'AI対話ファイルの手動アップロード',
       icon: (
         <svg
-          className="w-5 h-5"
+          className="sidebar-nav-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -164,50 +140,6 @@ const Sidebar: React.FC = () => {
         </svg>
       ),
     },
-    {
-      name: '進捗UI デモ',
-      href: '/progress-demo',
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      name: '設定',
-      href: '/settings',
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      ),
-    },
   ]
 
   const isActive = (path: string) => {
@@ -216,73 +148,91 @@ const Sidebar: React.FC = () => {
     return false
   }
 
+  // キーボードナビゲーション処理
+  const handleKeyNavigation = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Escape') && onClose) {
+      onClose()
+    }
+  }
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 shadow-lg border-r border-gray-200 dark:border-slate-600 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <aside 
+      className={`sidebar-container ${isOpen ? 'mobile-open' : ''}`}
+      id="sidebar-navigation"
+      role="navigation"
+      aria-label="メインナビゲーション"
+      onKeyDown={handleKeyNavigation}
+    >
+      {/* スキップリンク */}
+      <a href="#main-content" className="skip-to-main">
+        メインコンテンツにスキップ
+      </a>
+
       {/* サイドバーヘッダー */}
-      <div className="flex items-center justify-center h-16 px-4 bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-slate-100">ナビゲーション</h2>
+      <div className="sidebar-header">
+        <h2 className="sidebar-header-title">🌊 ChatFlow</h2>
+        
+        {/* モバイル閉じるボタン */}
+        {onClose && (
+          <button
+            className="mobile-close-button lg:hidden"
+            onClick={onClose}
+            aria-label="サイドバーを閉じる"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* ナビゲーションメニュー */}
-      <nav className="mt-8 px-4">
-        <ul className="space-y-2">
+      <nav className="sidebar-nav" role="navigation" aria-label="メインナビゲーション">
+        <ul className="sidebar-nav-list">
           {navigationItems.map(item => (
-            <li key={item.name}>
+            <li key={item.name} className="sidebar-nav-item">
               <Link
                 to={item.href}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
-                  isActive(item.href)
-                    ? 'bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-600'
-                    : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-100'
-                }`}
-              >
-                <span
-                  className={
-                    isActive(item.href) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                className={`sidebar-nav-link ${isActive(item.href) ? 'active' : ''}`}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+                title={item.description}
+                onClick={() => {
+                  // モバイル時はリンククリックでサイドバーを閉じる
+                  if (onClose && window.innerWidth < 1024) {
+                    onClose()
                   }
-                >
+                }}
+              >
+                <span aria-hidden="true">
                   {item.icon}
                 </span>
-                <span className="font-medium">{item.name}</span>
+                <div className="sidebar-nav-text">
+                  <span className="sidebar-nav-name">{item.name}</span>
+                  <span className="sidebar-nav-description">{item.description}</span>
+                </div>
               </Link>
             </li>
           ))}
-          <li>
-            <NavLink to="/enhanced-sessions" className={({ isActive }) => 
-              `block px-4 py-2 text-sm rounded-md transition-colors ${
-                isActive 
-                  ? 'bg-blue-100 text-blue-700 font-medium' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`
-            }>
-              🚀 強化版セッション
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/cursor-chat-import" className={({ isActive }) => 
-              `block px-4 py-2 text-sm rounded-md transition-colors ${
-                isActive 
-                  ? 'bg-blue-100 text-blue-700 font-medium' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`
-            }>
-              📤 Cursor Chat インポート
-            </NavLink>
-          </li>
         </ul>
       </nav>
 
       {/* サイドバーフッター */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">CH</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">
-              Chat History
-            </p>
-            <p className="text-xs text-gray-500 dark:text-slate-400">v1.0.0</p>
+      <div className="sidebar-footer">
+        <div className="sidebar-footer-content">
+          <div className="sidebar-app-icon">🌊</div>
+          <div className="sidebar-app-info">
+            <p className="sidebar-app-name">ChatFlow</p>
+            <p className="sidebar-app-version">AI対話プラットフォーム v1.0</p>
           </div>
         </div>
       </div>

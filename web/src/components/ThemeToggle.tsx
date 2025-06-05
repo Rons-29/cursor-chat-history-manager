@@ -88,12 +88,12 @@ const ThemeToggle: React.FC = () => {
   }
 
   return (
-    <div className="flex items-center space-x-3">
+    <div className="flex items-center space-x-2">
       {/* カスタムテーマカラー選択 */}
       <ThemeColorPicker />
       
-      {/* 現在のテーマ表示 */}
-      <div className="hidden sm:block">
+      {/* 現在のテーマ表示（タブレット以上） */}
+      <div className="hidden md:block">
         {getStatusBadge()}
       </div>
       

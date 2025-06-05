@@ -7,6 +7,9 @@ import { ThemeProvider } from './contexts/ThemeContext.tsx'
 import App from './App.tsx'
 import './index.css'
 
+// 🎨 統合レイアウトシステムCSSを読み込み
+import './styles/layout-integration.css'
+
 // React Query クライアント設定
 const queryClient = new QueryClient({
   defaultOptions: {

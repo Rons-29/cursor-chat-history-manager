@@ -37,6 +37,17 @@ const Dashboard: React.FC = () => {
     refetchInterval: 30000, // 30秒ごとに更新
   })
 
+  // 統合統計データ取得（正確なセッション数のため）
+  const {
+    data: unifiedStatsData,
+    isLoading: unifiedStatsLoading,
+    refetch: refetchUnifiedStats,
+  } = useQuery({
+    queryKey: ['unified-stats'],
+    queryFn: () => fetch('http://localhost:3001/api/unified/all-sessions?page=1&pageSize=1').then(res => res.json()),
+    refetchInterval: 60000, // 1分ごとに更新
+  })
+
   // 統計データ取得（セッション数確保のため）
   const {
     data: statsData,
@@ -57,9 +68,11 @@ const Dashboard: React.FC = () => {
         refetchSessions(),
         refetchHealth(),
         refetchStats(),
+        refetchUnifiedStats(),
         queryClient.invalidateQueries({ queryKey: ['sessions'] }),
         queryClient.invalidateQueries({ queryKey: ['health'] }),
-        queryClient.invalidateQueries({ queryKey: ['stats'] })
+        queryClient.invalidateQueries({ queryKey: ['stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['unified-stats'] })
       ])
     } catch (error) {
       console.error('Manual refresh error:', error)
@@ -70,7 +83,6 @@ const Dashboard: React.FC = () => {
 
   // エラーハンドリング
   useEffect(() => {
-    console.log('🚀 Dashboard error handler setup')
     const handleError = (error: ErrorEvent) => {
       console.error('⚠️ Dashboard Global Error:', error)
       setHasError(true)
@@ -79,19 +91,6 @@ const Dashboard: React.FC = () => {
     window.addEventListener('error', handleError)
     return () => window.removeEventListener('error', handleError)
   }, [])
-
-  // デバッグ情報をコンソールに出力
-  useEffect(() => {
-    console.log('📊 Dashboard Debug Info:', {
-      sessionsData,
-      'sessionsData?.pagination': sessionsData?.pagination,
-      'sessionsData?.pagination?.total': sessionsData?.pagination?.total,
-      sessionsLoading,
-      sessionsError,
-      healthData,
-      healthLoading
-    })
-  }, [sessionsData, sessionsLoading, sessionsError, healthData, healthLoading])
 
   // エラー時のフォールバック表示
   if (hasError) {
@@ -121,12 +120,12 @@ const Dashboard: React.FC = () => {
     )
   }
 
-  // セッション数計算 - 複数ソースから最も信頼できる値を取得
+  // セッション数計算 - 統合APIからの正確な値を優先
   const totalSessions = (() => {
-    // 1. 統計APIからの値を優先（より確実）
-    if (statsData?.totalSessions && !statsLoading) {
-      console.log('📊 Using stats API for total sessions:', statsData.totalSessions)
-      return statsData.totalSessions
+    // 1. 統合APIからの値を最優先（最も正確）
+    if (unifiedStatsData?.pagination?.total && !unifiedStatsLoading) {
+      console.log('📊 Using unified API for total sessions:', unifiedStatsData.pagination.total)
+      return unifiedStatsData.pagination.total
     }
     
     // 2. セッションAPIのpaginationから取得
@@ -135,13 +134,19 @@ const Dashboard: React.FC = () => {
       return sessionsData.pagination.total
     }
     
-    // 3. ローディング中の場合
-    if (sessionsLoading || statsLoading) {
+    // 3. 統計APIからの値（フォールバック）
+    if (statsData?.totalSessions && !statsLoading) {
+      console.log('📊 Using stats API for total sessions (fallback):', statsData.totalSessions)
+      return statsData.totalSessions
+    }
+    
+    // 4. ローディング中の場合
+    if (unifiedStatsLoading || sessionsLoading || statsLoading) {
       console.log('📊 Loading sessions data...')
       return '...'
     }
     
-    // 4. フォールバック
+    // 5. フォールバック
     console.warn('📊 No session count available, falling back to 0')
     return 0
   })()
@@ -150,58 +155,45 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 🧪 レンダリングテスト */}
-      <div className="fixed top-0 right-0 z-50 bg-green-500 text-white p-2 text-xs">
-        ✅ Dashboard Loaded: {new Date().toLocaleTimeString()}
-      </div>
+      {/* === クリーンアップ済みレイアウト === */}
       
-      {/* テーマ切り替えボタン */}
-      <div className="fixed top-0 left-0 z-50 p-4">
-        <button
-          onClick={() => window.toggleTheme?.()}
-          className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-2 shadow-sm hover:shadow-md transition-all"
-          title="テーマ切り替え"
-        >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        </button>
-      </div>
-      
-      <div className="max-w-full px-3 sm:px-4 lg:px-6 py-2">
+      {/* メインコンテンツ */}
+      <div className="max-w-full px-3 sm:px-4 lg:px-6 pt-6 pb-8">
         {/* ヘッダー */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               ChatFlow Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
               AI開発支援プラットフォーム - データ統合管理
             </p>
           </div>
           
-          {/* 手動更新ボタン */}
-          <button
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-all duration-200 ${
-              isRefreshing 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'
-            }`}
-            title="データを手動で更新"
-          >
-            <ArrowPathIcon 
-              className={`w-4 h-4 mr-2 transition-transform duration-200 ${
-                isRefreshing ? 'animate-spin' : ''
-              }`} 
-            />
-            {isRefreshing ? '更新中...' : '更新'}
-          </button>
+          {/* 手動更新ボタン - レスポンシブ対応 */}
+          <div className="flex-shrink-0">
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-all duration-200 ${
+                isRefreshing 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95'
+              }`}
+              title="データを手動で更新"
+            >
+              <ArrowPathIcon 
+                className={`w-4 h-4 mr-2 transition-transform duration-200 ${
+                  isRefreshing ? 'animate-spin' : ''
+                }`} 
+              />
+              {isRefreshing ? '更新中...' : '更新'}
+            </button>
+          </div>
         </div>
 
-        {/* 統計カード - 2×2グリッド */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* 統計カード - レスポンシブグリッド */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               総AI対話記録数
@@ -212,7 +204,7 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               AI開発支援記録
             </p>
-            {/* デバッグ情報 */}
+            {/* エラー表示は重要なので残す */}
             {sessionsError && (
               <p className="text-xs text-red-500 dark:text-red-400 mt-1">
                 エラー: {sessionsError.message}

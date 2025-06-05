@@ -40,6 +40,53 @@ export interface ApiSessionsResponse {
   }
 }
 
+// 新規追加: 横断検索統合レスポンス型（実際のAPIレスポンス形式）
+export interface CrossDataSourceSessionsResponse {
+  success: boolean
+  sessions: ApiSession[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasMore?: boolean
+  }
+  sources: {
+    traditional: number
+    incremental: number
+    sqlite: number
+    claudeDev: number
+    total: number
+  }
+  metadata: {
+    timestamp: string
+    processingTime: number
+    dataSourcesActive: string[]
+  }
+}
+
+// 新規追加: 横断検索レスポンス型
+export interface CrossDataSourceSearchResponse {
+  results: Array<{
+    session: ApiSession
+    score: number
+    source: string
+    highlights?: string[]
+  }>
+  stats: {
+    totalResults: number
+    searchTime: number
+    sourcesSearched: string[]
+    keyword: string
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
 export interface ApiStats {
   totalSessions: number
   totalMessages: number
@@ -196,6 +243,77 @@ export const apiClient = {
     const endpoint = `/sessions${query ? `?${query}` : ''}`
 
     return request<ApiSessionsResponse>(endpoint)
+  },
+
+  // 新規追加: 横断検索統合セッション一覧取得
+  getAllSessions: async (
+    params: {
+      page?: number
+      limit?: number
+      keyword?: string
+      includeStatistics?: boolean
+    } = {}
+  ): Promise<CrossDataSourceSessionsResponse> => {
+    const searchParams = new URLSearchParams()
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        searchParams.append(key, String(value))
+      }
+    })
+
+    const query = searchParams.toString()
+    const endpoint = `/unified/all-sessions${query ? `?${query}` : ''}`
+
+    console.log('🌐 getAllSessions: 横断検索統合API呼び出し', `${API_BASE_URL}${endpoint}`)
+    
+    try {
+      const result = await request<CrossDataSourceSessionsResponse>(endpoint)
+      console.log('🌐 getAllSessions: 横断検索統合API成功', {
+        totalSessions: result.sources.total,
+        sources: Object.keys(result.sources),
+        metadata: result.metadata
+      })
+      return result
+    } catch (error) {
+      console.error('🌐 getAllSessions: 横断検索統合API失敗', error)
+      throw error
+    }
+  },
+
+  // 新規追加: 横断検索実行
+  searchAllSources: async (
+    keyword: string,
+    params: {
+      page?: number
+      limit?: number
+      includeHighlights?: boolean
+    } = {}
+  ): Promise<CrossDataSourceSearchResponse> => {
+    const requestBody = {
+      keyword,
+      ...params
+    }
+
+    console.log('🔍 searchAllSources: 横断検索API呼び出し', requestBody)
+    
+    try {
+      const result = await request<CrossDataSourceSearchResponse>('/unified/search/all', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      })
+      
+      console.log('🔍 searchAllSources: 横断検索API成功', {
+        totalResults: result.stats.totalResults,
+        searchTime: result.stats.searchTime,
+        sourcesSearched: result.stats.sourcesSearched
+      })
+      
+      return result
+    } catch (error) {
+      console.error('🔍 searchAllSources: 横断検索API失敗', error)
+      throw error
+    }
   },
 
   // 特定セッション取得
@@ -517,7 +635,7 @@ if (import.meta.env.DEV) {
   
   // グローバルデバッグ登録（即座に確認可能）
   if (typeof window !== 'undefined') {
-    ;(window as any).debugApiClient = apiClient
+    (window as any).debugApiClient = apiClient
     ;(window as any).testApiCall = async () => {
       try {
         console.log('🧪 直接API呼び出しテスト開始...')

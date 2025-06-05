@@ -50,8 +50,9 @@ const ThemeColorPicker: React.FC = () => {
       {/* カラー選択ボタン */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="group flex items-center space-x-2 p-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-600 transition-all duration-300"
+        className="group flex items-center space-x-2 p-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-600 transition-all duration-200 min-h-[2.5rem]"
         title={`テーマカラー: ${currentOption?.label}`}
+        aria-label={`テーマカラー選択: ${currentOption?.label}`}
       >
         {/* カラーサークル */}
         <div
@@ -61,8 +62,8 @@ const ThemeColorPicker: React.FC = () => {
           }}
         />
         
-        {/* ラベル（スマホでは非表示） */}
-        <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {/* ラベル（タブレット以上で表示） */}
+        <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">
           {currentOption?.label}
         </span>
         

@@ -192,6 +192,36 @@ export class CursorChatImportService {
   }
 
   /**
+   * 単一ファイルの処理（public メソッド）
+   * manual-import APIから呼び出されるメソッド
+   */
+  async processSingleFile(filePath: string, format: 'json' | 'markdown' | 'text'): Promise<{
+    imported: number
+    skipped: number
+    errors: string[]
+  }> {
+    const results = {
+      imported: 0,
+      skipped: 0,
+      errors: [] as string[]
+    }
+
+    try {
+      const imported = await this.importSingleFile(filePath)
+      if (imported) {
+        results.imported++
+      } else {
+        results.skipped++
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      results.errors.push(`${path.basename(filePath)}: ${errorMessage}`)
+    }
+
+    return results
+  }
+
+  /**
    * セッション重複判定（詳細比較）
    */
   private async isDuplicateSession(

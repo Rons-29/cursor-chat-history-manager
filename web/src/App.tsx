@@ -1,10 +1,14 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout.tsx'
 import Dashboard from './pages/Dashboard'
+import UnifiedDashboard from './pages/UnifiedDashboard.tsx'
 import Sessions from './pages/Sessions'
 import EnhancedSessions from './pages/EnhancedSessions'
 import SessionDetail from './pages/SessionDetail'
 import Search from './pages/Search.tsx'
+import UnifiedSearch from './pages/UnifiedSearch.tsx'
+import UnifiedIntegrations from './pages/UnifiedIntegrations.tsx'
+import ManualImport from './pages/ManualImport.tsx'
 import Settings from './pages/Settings.tsx'
 import Integration from './pages/Integration'
 import ClaudeDevIntegration from './pages/ClaudeDevIntegration.tsx'
@@ -21,12 +25,16 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<UnifiedDashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/test" element={<TestPage />} />
         <Route path="/sessions" element={<Sessions />} />
         <Route path="/enhanced-sessions" element={<EnhancedSessions />} />
         <Route path="/sessions/:id" element={<SessionDetail />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/unified-search" element={<UnifiedSearch />} />
+        <Route path="/unified-integrations" element={<UnifiedIntegrations />} />
+        <Route path="/manual-import" element={<ManualImport />} />
         <Route path="/integration" element={<Integration />} />
         <Route path="/claude-dev" element={<ClaudeDevIntegration />} />
         <Route path="/claude-dev/session/:id" element={<ClaudeDevSessionDetail />} />

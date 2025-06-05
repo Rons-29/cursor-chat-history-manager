@@ -7,7 +7,7 @@ const Sidebar: React.FC = () => {
 
   const navigationItems = [
     {
-      name: 'ダッシュボード',
+      name: '🏠 ホーム',
       href: '/',
       icon: (
         <svg
@@ -20,19 +20,13 @@ const Sidebar: React.FC = () => {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 5a2 2 0 012-2h4a2 2 0 012 2v0M8 5a2 2 0 01-2 2v0H5a2 2 0 00-2 2v0"
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
           />
         </svg>
       ),
     },
     {
-      name: 'セッション一覧',
+      name: 'AI対話一覧',
       href: '/sessions',
       icon: (
         <svg
@@ -51,7 +45,7 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: '🚀 強化版セッション',
+      name: '🚀 詳細AI対話',
       href: '/enhanced-sessions',
       icon: (
         <svg
@@ -70,8 +64,8 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: '🔍 統合検索',
-      href: '/search',
+      name: '🔍 横断検索',
+      href: '/unified-search',
       icon: (
         <svg
           className="w-5 h-5"
@@ -89,13 +83,32 @@ const Sidebar: React.FC = () => {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={1}
-            d="M3 7l4 4m0 0l4-4m-4 4V3"
+            d="M8 16l4-4 4 4"
           />
         </svg>
       ),
     },
     {
-      name: 'Cursor統合',
+      name: '🔗 統合連携',
+      href: '/unified-integrations',
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+          />
+        </svg>
+      ),
+    },
+    {
+      name: 'Cursor連携',
       href: '/integration',
       icon: (
         <svg
@@ -114,7 +127,7 @@ const Sidebar: React.FC = () => {
       ),
     },
     {
-      name: 'Claude Dev統合',
+      name: 'Claude Dev連携',
       href: '/claude-dev',
       icon: (
         <svg
@@ -128,6 +141,25 @@ const Sidebar: React.FC = () => {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+          />
+        </svg>
+      ),
+    },
+    {
+      name: '📁 手動インポート',
+      href: '/manual-import',
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
           />
         </svg>
       ),

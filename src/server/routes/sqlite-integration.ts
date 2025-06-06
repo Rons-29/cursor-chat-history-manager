@@ -1,58 +1,65 @@
 /**
  * 🗄️ SQLite統合API - Phase 3高速検索エンドポイント
- * 
- * 機能:
- * - FTS5高速全文検索 (50-200ms目標)
- * - 増分インデックス更新
- * - 検索統計・メトリクス
- * - データマイグレーション
+ * 既存パターンに合わせた安全な実装
  */
 
-import { Router } from 'express'
-import { SqliteIndexService } from '../../services/SqliteIndexService'
-import { ChatHistoryService } from '../../services/ChatHistoryService'
-import { logger } from '../../utils/logger'
-import type { SearchFilters, SearchResponse } from '../../types/ChatHistory'
+import { Router, Request, Response } from 'express'
+import path from 'path'
+import { SqliteIndexService } from '../../services/SqliteIndexService.js'
+import { ChatHistoryService } from '../../services/ChatHistoryService.js'
+import { Logger } from '../utils/Logger.js'
 
 const router = Router()
-let sqliteService: SqliteIndexService | null = null
-let historyService: ChatHistoryService | null = null
+const logger = new Logger('info')
+
+// Phase 3: 新規サービスインスタンス（既存サービスと分離）
+let phase3SqliteService: SqliteIndexService | null = null
+let chatHistoryService: ChatHistoryService | null = null
 
 /**
- * SQLiteサービス初期化
+ * Phase 3サービス初期化
  */
-async function initializeSqliteService(): Promise<void> {
-  if (!sqliteService) {
-    sqliteService = new SqliteIndexService()
-    await sqliteService.initialize()
+async function initializePhase3Services(): Promise<void> {
+  if (!phase3SqliteService) {
+    // Phase 3専用のSqliteIndexService初期化
+    phase3SqliteService = new SqliteIndexService(
+      path.join(process.cwd(), 'data', 'chat-history'),
+      path.join(process.cwd(), 'data', 'phase3-search.db'), // 既存DBと分離
+      logger
+    )
+    await phase3SqliteService.initialize()
     
-    historyService = new ChatHistoryService()
-    await historyService.initialize()
+    // ChatHistoryService初期化
+    chatHistoryService = new ChatHistoryService({
+      storageType: 'file',
+      storagePath: path.join(process.cwd(), 'data', 'chat-history'),
+      maxSessions: 10000,
+      maxMessagesPerSession: 500,
+      autoCleanup: true,
+      cleanupDays: 30,
+      enableSearch: true,
+      enableBackup: false,
+      backupInterval: 24
+    })
+    await chatHistoryService.initialize()
     
-    logger.info('🗄️ SQLite統合サービス初期化完了')
+    logger.info('🗄️ Phase 3 SQLite統合サービス初期化完了')
   }
 }
 
 /**
- * 🔍 高速全文検索API
- * GET /api/sqlite/search?q={query}&limit={limit}&offset={offset}
+ * 🔍 Phase 3高速検索テストAPI
+ * GET /api/sqlite/fast-search?q={query}
  */
-router.get('/search', async (req, res) => {
+router.get('/fast-search', async (req: Request, res: Response) => {
   try {
-    await initializeSqliteService()
+    await initializePhase3Services()
     
-    const {
-      q: query,
-      limit = '50',
-      offset = '0',
-      orderBy = 'relevance',
-      startDate,
-      endDate,
-      platforms,
-      minLength
-    } = req.query
+    const query = req.query.q as string
+    const limit = parseInt(req.query.limit as string) || 50
+    const offset = parseInt(req.query.offset as string) || 0
 
-    if (!query || typeof query !== 'string') {
+    if (!query) {
       return res.status(400).json({
         success: false,
         error: '検索クエリが必要です'
@@ -61,180 +68,133 @@ router.get('/search', async (req, res) => {
 
     const startTime = Date.now()
 
-    // 検索オプション構築
-    const searchOptions = {
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
-      orderBy: orderBy as 'relevance' | 'timestamp' | 'title',
-      filters: {} as any
-    }
+    // Phase 3高速検索実行
+    const results = await phase3SqliteService!.fastSearch(query, {
+      limit,
+      offset,
+      orderBy: 'relevance'
+    })
 
-    // フィルター適用
-    if (startDate && endDate) {
-      searchOptions.filters.dateRange = {
-        start: new Date(startDate as string),
-        end: new Date(endDate as string)
-      }
-    }
-
-    if (platforms) {
-      searchOptions.filters.platform = Array.isArray(platforms) 
-        ? platforms 
-        : [platforms]
-    }
-
-    if (minLength) {
-      searchOptions.filters.minLength = parseInt(minLength as string)
-    }
-
-    // 高速検索実行
-    const results = await sqliteService!.search(query, searchOptions)
     const queryTime = Date.now() - startTime
 
-    const response: SearchResponse = {
-      results,
-      metrics: {
-        queryTime,
-        resultCount: results.length,
-        totalMatches: results.length,
-        searchMethod: 'fts5'
-      },
-      hasMore: results.length === searchOptions.limit,
-      totalCount: results.length
-    }
-
-    logger.info(`🔍 SQLite検索実行: ${queryTime}ms, 結果: ${results.length}件`)
+    logger.info(`🔍 Phase 3検索実行: ${queryTime}ms, 結果: ${results.length}件`)
 
     res.json({
       success: true,
-      data: response
+      data: {
+        results,
+        metrics: {
+          queryTime,
+          resultCount: results.length,
+          searchMethod: 'phase3-fts5'
+        },
+        query,
+        timestamp: new Date().toISOString()
+      }
     })
 
   } catch (error) {
-    logger.error('❌ SQLite検索エラー:', error)
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    logger.error('❌ Phase 3検索エラー:', error)
     res.status(500).json({
       success: false,
-      error: `検索エラー: ${error.message}`
+      error: `検索エラー: ${errorMessage}`
     })
   }
 })
 
 /**
- * 📚 データマイグレーション API
- * POST /api/sqlite/migrate
+ * 📚 Phase 3データマイグレーション API
+ * POST /api/sqlite/phase3-migrate
  */
-router.post('/migrate', async (req, res) => {
+router.post('/phase3-migrate', async (req: Request, res: Response) => {
   try {
-    await initializeSqliteService()
+    await initializePhase3Services()
     
-    logger.info('📚 SQLiteデータマイグレーション開始')
+    logger.info('📚 Phase 3データマイグレーション開始')
     const startTime = Date.now()
 
     // 既存セッション取得
-    const sessions = await historyService!.getAllSessions()
+    const sessions = await chatHistoryService!.getAllSessions()
     logger.info(`📊 移行対象: ${sessions.length}セッション`)
 
-    // SQLiteインデックス作成
-    await sqliteService!.indexSessions(sessions)
+    // Phase 3形式でマイグレーション
+    for (const session of sessions) {
+      await phase3SqliteService!.upsertSession(session)
+    }
 
     const migrationTime = Date.now() - startTime
-    const stats = await sqliteService!.getIndexStats()
+    const stats = await phase3SqliteService!.getStats()
 
-    logger.info(`✅ SQLiteマイグレーション完了: ${migrationTime}ms`)
+    logger.info(`✅ Phase 3マイグレーション完了: ${migrationTime}ms`)
 
     res.json({
       success: true,
       data: {
         migratedSessions: sessions.length,
         migrationTime,
-        indexStats: stats
+        stats,
+        method: 'phase3'
       }
     })
 
   } catch (error) {
-    logger.error('❌ SQLiteマイグレーションエラー:', error)
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    logger.error('❌ Phase 3マイグレーションエラー:', error)
     res.status(500).json({
       success: false,
-      error: `マイグレーションエラー: ${error.message}`
+      error: `マイグレーションエラー: ${errorMessage}`
     })
   }
 })
 
 /**
- * 📊 インデックス統計API
- * GET /api/sqlite/stats
+ * 📊 Phase 3検索性能統計API
+ * GET /api/sqlite/phase3-metrics
  */
-router.get('/stats', async (req, res) => {
+router.get('/phase3-metrics', async (req: Request, res: Response) => {
   try {
-    await initializeSqliteService()
+    await initializePhase3Services()
     
-    const stats = await sqliteService!.getIndexStats()
-
-    res.json({
-      success: true,
-      data: stats
-    })
-
-  } catch (error) {
-    logger.error('❌ SQLite統計取得エラー:', error)
-    res.status(500).json({
-      success: false,
-      error: `統計取得エラー: ${error.message}`
-    })
-  }
-})
-
-/**
- * 🔧 インデックス最適化API
- * POST /api/sqlite/optimize
- */
-router.post('/optimize', async (req, res) => {
-  try {
-    await initializeSqliteService()
-    
-    logger.info('🔧 SQLiteインデックス最適化開始')
-    const startTime = Date.now()
-
-    await sqliteService!.optimizeIndex()
-
-    const optimizeTime = Date.now() - startTime
-    const stats = await sqliteService!.getIndexStats()
-
-    logger.info(`✅ SQLiteインデックス最適化完了: ${optimizeTime}ms`)
+    const searchMetrics = phase3SqliteService!.getSearchMetrics()
+    const dbStats = await phase3SqliteService!.getStats()
 
     res.json({
       success: true,
       data: {
-        optimizeTime,
-        indexStats: stats
+        searchPerformance: searchMetrics,
+        databaseStats: dbStats,
+        timestamp: new Date().toISOString(),
+        version: 'phase3'
       }
     })
 
   } catch (error) {
-    logger.error('❌ SQLite最適化エラー:', error)
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    logger.error('❌ Phase 3統計取得エラー:', error)
     res.status(500).json({
       success: false,
-      error: `最適化エラー: ${error.message}`
+      error: `統計取得エラー: ${errorMessage}`
     })
   }
 })
 
 /**
- * 🎯 検索パフォーマンステストAPI
- * POST /api/sqlite/performance-test
+ * 🎯 Phase 3性能ベンチマークAPI
+ * POST /api/sqlite/phase3-benchmark
  */
-router.post('/performance-test', async (req, res) => {
+router.post('/phase3-benchmark', async (req: Request, res: Response) => {
   try {
-    await initializeSqliteService()
+    await initializePhase3Services()
     
-    const { queries = ['cursor', 'claude', 'ai', 'search', 'test'] } = req.body
+    const testQueries = req.body.queries || ['cursor', 'claude', 'ai', 'search', 'test']
     const results = []
 
-    logger.info('⚡ SQLite性能テスト開始')
+    logger.info('⚡ Phase 3性能ベンチマーク開始')
 
-    for (const query of queries) {
+    for (const query of testQueries) {
       const startTime = Date.now()
-      const searchResults = await sqliteService!.search(query, { limit: 10 })
+      const searchResults = await phase3SqliteService!.fastSearch(query, { limit: 10 })
       const queryTime = Date.now() - startTime
 
       results.push({
@@ -246,13 +206,13 @@ router.post('/performance-test', async (req, res) => {
           : 0
       })
 
-      logger.info(`📊 性能テスト: "${query}" - ${queryTime}ms, ${searchResults.length}件`)
+      logger.info(`📊 ベンチマーク: "${query}" - ${queryTime}ms, ${searchResults.length}件`)
     }
 
     const avgQueryTime = results.reduce((sum, r) => sum + r.queryTime, 0) / results.length
     const totalResults = results.reduce((sum, r) => sum + r.resultCount, 0)
 
-    logger.info(`✅ SQLite性能テスト完了: 平均${avgQueryTime.toFixed(1)}ms`)
+    logger.info(`✅ Phase 3ベンチマーク完了: 平均${avgQueryTime.toFixed(1)}ms`)
 
     res.json({
       success: true,
@@ -260,77 +220,102 @@ router.post('/performance-test', async (req, res) => {
         testResults: results,
         summary: {
           avgQueryTime,
-          totalQueries: queries.length,
+          totalQueries: testQueries.length,
           totalResults,
-          performance: avgQueryTime < 200 ? 'excellent' : avgQueryTime < 500 ? 'good' : 'needs-improvement'
-        }
+          performance: avgQueryTime < 200 ? 'excellent' : avgQueryTime < 500 ? 'good' : 'needs-improvement',
+          targetAchieved: avgQueryTime <= 200 // 50-200ms目標
+        },
+        version: 'phase3'
       }
     })
 
   } catch (error) {
-    logger.error('❌ SQLite性能テストエラー:', error)
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    logger.error('❌ Phase 3ベンチマークエラー:', error)
     res.status(500).json({
       success: false,
-      error: `性能テストエラー: ${error.message}`
+      error: `ベンチマークエラー: ${errorMessage}`
     })
   }
 })
 
 /**
- * 🔄 増分インデックス更新API
- * POST /api/sqlite/incremental-update
+ * 🔧 Phase 3最適化API
+ * POST /api/sqlite/phase3-optimize
  */
-router.post('/incremental-update', async (req, res) => {
+router.post('/phase3-optimize', async (req: Request, res: Response) => {
   try {
-    await initializeSqliteService()
+    await initializePhase3Services()
     
-    const { sessionIds } = req.body
-
-    if (!sessionIds || !Array.isArray(sessionIds)) {
-      return res.status(400).json({
-        success: false,
-        error: 'セッションIDリストが必要です'
-      })
-    }
-
-    logger.info(`🔄 増分インデックス更新開始: ${sessionIds.length}セッション`)
+    logger.info('🔧 Phase 3インデックス最適化開始')
     const startTime = Date.now()
 
-    // 指定セッションを再取得・更新
-    const updatedSessions = []
-    for (const sessionId of sessionIds) {
-      try {
-        const session = await historyService!.getSession(sessionId)
-        if (session) {
-          updatedSessions.push(session)
-        }
-      } catch (error) {
-        logger.warn(`⚠️ セッション取得エラー: ${sessionId}`, error)
-      }
-    }
+    await phase3SqliteService!.optimize()
 
-    // インデックス更新
-    if (updatedSessions.length > 0) {
-      await sqliteService!.indexSessions(updatedSessions)
-    }
+    const optimizeTime = Date.now() - startTime
+    const stats = await phase3SqliteService!.getStats()
 
-    const updateTime = Date.now() - startTime
-    logger.info(`✅ 増分インデックス更新完了: ${updateTime}ms, ${updatedSessions.length}セッション`)
+    logger.info(`✅ Phase 3最適化完了: ${optimizeTime}ms`)
 
     res.json({
       success: true,
       data: {
-        requestedSessions: sessionIds.length,
-        updatedSessions: updatedSessions.length,
-        updateTime
+        optimizeTime,
+        stats,
+        version: 'phase3'
       }
     })
 
   } catch (error) {
-    logger.error('❌ 増分インデックス更新エラー:', error)
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    logger.error('❌ Phase 3最適化エラー:', error)
     res.status(500).json({
       success: false,
-      error: `増分更新エラー: ${error.message}`
+      error: `最適化エラー: ${errorMessage}`
+    })
+  }
+})
+
+/**
+ * 🚀 Phase 3ステータス確認API
+ * GET /api/sqlite/phase3-status
+ */
+router.get('/phase3-status', async (req: Request, res: Response) => {
+  try {
+    const isInitialized = phase3SqliteService?.isInitialized() || false
+    
+    if (isInitialized) {
+      const stats = await phase3SqliteService!.getStats()
+      const metrics = phase3SqliteService!.getSearchMetrics()
+      
+      res.json({
+        success: true,
+        data: {
+          initialized: true,
+          stats,
+          searchMetrics: metrics,
+          dbPath: 'data/phase3-search.db',
+          version: 'phase3',
+          timestamp: new Date().toISOString()
+        }
+      })
+    } else {
+      res.json({
+        success: true,
+        data: {
+          initialized: false,
+          message: 'Phase 3サービスは未初期化です',
+          version: 'phase3'
+        }
+      })
+    }
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    logger.error('❌ Phase 3ステータス確認エラー:', error)
+    res.status(500).json({
+      success: false,
+      error: `ステータス確認エラー: ${errorMessage}`
     })
   }
 })

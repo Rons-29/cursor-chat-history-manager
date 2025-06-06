@@ -8,6 +8,7 @@ import { useBadgeSystem } from '../hooks/useBadgeSystem'
 import AchievementNotificationManager from '../components/AchievementNotificationManager'
 import CrossDataSourceSearch from '../components/CrossDataSourceSearch'
 import TaskCompletionReport from '../components/ui/TaskCompletionReport'
+import BackupDataVisualization from '../components/BackupDataVisualization'
 
 
 /**
@@ -413,6 +414,11 @@ const UnifiedDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Phase 2 バックアップ統合可視化 */}
+        <div className="mb-8">
+          <BackupDataVisualization />
         </div>
 
         {/* バッジプレビューセクション */}

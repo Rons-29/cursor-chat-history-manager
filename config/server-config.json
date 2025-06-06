@@ -1,0 +1,33 @@
+{
+  "ports": {
+    "api": 3001,
+    "web": 5173,
+    "backup": {
+      "api": 3002,
+      "web": 5174
+    }
+  },
+  "servers": {
+    "api": {
+      "name": "Real API Server",
+      "port": 3001,
+      "command": ["npm", "run", "server"],
+      "healthEndpoint": "/api/health",
+      "pidFile": "data/.api-server.pid"
+    },
+    "web": {
+      "name": "Web UI Server", 
+      "port": 5173,
+      "command": ["npm", "run", "web"],
+      "healthEndpoint": "/",
+      "pidFile": "data/.web-server.pid"
+    }
+  },
+  "development": {
+    "autoRestart": true,
+    "singleInstance": true,
+    "healthCheckInterval": 5000,
+    "maxStartupTime": 30000,
+    "gracefulShutdownTime": 5000
+  }
+} 

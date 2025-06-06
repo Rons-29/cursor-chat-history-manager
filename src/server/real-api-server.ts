@@ -19,6 +19,7 @@ import claudeDevRoutes, { setClaudeDevService } from './routes/claude-dev.js'
 import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
 import enhancedSessionRoutes from './routes/enhanced-sessions.js'
 import cursorChatImportRoutes from './routes/cursor-chat-import.js'
+import sqliteIntegrationRoutes from './routes/sqlite-integration.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -1169,6 +1170,7 @@ app.get('/api/enhanced-sessions', async (req, res) => {
 // ルート設定（順序重要：最も具体的なルートから先に設定）
 // 1. 最も具体的なパスを最初に
 app.use('/api/cursor-chat-import', cursorChatImportRoutes)
+app.use('/api/sqlite', sqliteIntegrationRoutes)
 app.use('/api/integration', integrationRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/claude-dev', claudeDevRoutes)

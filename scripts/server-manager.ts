@@ -41,7 +41,7 @@ interface ServerConfig {
  * サーバー管理クラス
  */
 class ServerManager {
-  private config: ServerConfig
+  private config!: ServerConfig
   private processes: Map<string, ChildProcess> = new Map()
 
   constructor() {

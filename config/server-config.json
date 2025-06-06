@@ -11,17 +11,16 @@
     "api": {
       "name": "Real API Server",
       "port": 3001,
-      "path": "dist/server/real-api-server.js",
+      "command": ["npm", "run", "server"],
       "healthEndpoint": "/api/health",
-      "pidFile": "data/.server.pid"
+      "pidFile": "data/.api-server.pid"
     },
     "web": {
       "name": "Web UI Server", 
       "port": 5173,
-      "path": "web",
-      "command": "npm run dev",
+      "command": ["npm", "run", "web"],
       "healthEndpoint": "/",
-      "pidFile": "data/.web.pid"
+      "pidFile": "data/.web-server.pid"
     }
   },
   "development": {

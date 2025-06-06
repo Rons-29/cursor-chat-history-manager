@@ -1413,6 +1413,154 @@ class ChatHistoryService {
       throw new StorageError('インデックス再構築', error as Error)
     }
   }
+
+  /**
+   * バックアップディレクトリからセッションをスキャンする
+   * Phase 2: バックアップデータ統合の中核機能
+   */
+  async scanBackupDirectories(): Promise<ChatSession[]> {
+    if (!this.isInitialized) {
+      throw new Error('Service not initialized')
+    }
+
+    const backupPaths = [
+      'data/chat-history.backup/sessions/',
+      'data/sessions/'
+    ]
+    
+    const allSessions: ChatSession[] = []
+    
+    for (const backupPath of backupPaths) {
+      try {
+        const sessions = await this.loadSessionsFromDirectory(backupPath)
+        allSessions.push(...sessions)
+        await this.logger.info(`バックアップディレクトリスキャン完了`, {
+          path: backupPath,
+          sessionCount: sessions.length
+        })
+      } catch (error) {
+        await this.logger.warn(`バックアップディレクトリスキャンエラー`, {
+          path: backupPath,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+    
+    await this.logger.info(`全バックアップディレクトリスキャン完了`, {
+      totalSessions: allSessions.length,
+      scannedPaths: backupPaths.length
+    })
+    
+    return allSessions
+  }
+
+  /**
+   * 指定されたディレクトリからセッションファイルを読み込む
+   * バッチ処理とエラーハンドリングを含む
+   */
+  private async loadSessionsFromDirectory(dirPath: string): Promise<ChatSession[]> {
+    const sessions: ChatSession[] = []
+    
+    // 絶対パスに変換
+    const absolutePath = path.isAbsolute(dirPath) 
+      ? dirPath 
+      : path.resolve(process.cwd(), dirPath)
+    
+    try {
+      // ディレクトリの存在確認
+      if (!(await fs.pathExists(absolutePath))) {
+        await this.logger.debug(`ディレクトリが存在しません`, { path: absolutePath })
+        return sessions
+      }
+      
+      // JSONファイル一覧取得
+      const files = await fs.readdir(absolutePath)
+      const jsonFiles = files.filter(file => file.endsWith('.json'))
+      
+      if (jsonFiles.length === 0) {
+        await this.logger.debug(`JSONファイルが見つかりません`, { path: absolutePath })
+        return sessions
+      }
+      
+      // バッチ処理で読み込み（メモリ効率化）
+      const batchSize = 500
+      for (let i = 0; i < jsonFiles.length; i += batchSize) {
+        const batch = jsonFiles.slice(i, i + batchSize)
+        
+        const batchPromises = batch.map(async (file) => {
+          try {
+            const filePath = path.join(absolutePath, file)
+            const data = await fs.readJson(filePath)
+            
+            // データ形式の基本検証
+            if (!this.validateSessionData(data)) {
+              await this.logger.warn(`無効なセッションデータ`, { 
+                file: filePath,
+                id: data?.id || 'ID不明'
+              })
+              return null
+            }
+            
+            // データ正規化
+            const normalizedSession: ChatSession = {
+              ...data,
+              createdAt: new Date(data.createdAt),
+              updatedAt: new Date(data.updatedAt),
+              messages: data.messages?.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp),
+              })) || [],
+              // バックアップソースであることを明示
+              tags: [...(data.tags || []), 'backup-import'],
+              metadata: {
+                ...data.metadata,
+                source: 'backup',
+                originalPath: dirPath
+              }
+            }
+            
+            return normalizedSession
+          } catch (error) {
+            await this.logger.warn(`ファイル読み込みエラー`, {
+              file: path.join(absolutePath, file),
+              error: error instanceof Error ? error.message : String(error)
+            })
+            return null
+          }
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        const validSessions = batchResults.filter((session): session is ChatSession => session !== null)
+        sessions.push(...validSessions)
+        
+        // プログレス表示
+        if (jsonFiles.length > 1000) {
+          await this.logger.info(`バッチ処理進捗`, {
+            processed: i + batch.length,
+            total: jsonFiles.length,
+            validSessions: validSessions.length,
+            path: absolutePath
+          })
+        }
+      }
+      
+      await this.logger.info(`ディレクトリスキャン完了`, {
+        path: absolutePath,
+        totalFiles: jsonFiles.length,
+        loadedSessions: sessions.length,
+        skippedFiles: jsonFiles.length - sessions.length
+      })
+      
+    } catch (error) {
+      await this.logger.error(`ディレクトリスキャンエラー`, {
+        path: absolutePath,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      throw new StorageError(`ディレクトリスキャン失敗: ${absolutePath}`, error as Error)
+    }
+    
+    return sessions
+  }
 }
 
 export { ChatHistoryService }

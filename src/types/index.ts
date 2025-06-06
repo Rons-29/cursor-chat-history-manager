@@ -151,6 +151,8 @@ export interface SessionMetadata {
   originalFormat?: 'markdown' | 'text' | 'json'
   messageCount?: number
   estimatedDuration?: number
+  // Phase 2: バックアップデータ統合用プロパティ
+  originalPath?: string
 }
 
 // WebUIで使用される統計データ型

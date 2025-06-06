@@ -483,6 +483,364 @@ router.get(
 )
 
 /**
+ * GET /api/all-sessions-with-backup
+ * 🚀 Phase 2: バックアップデータ統合 - 全データソース+バックアップ統合
+ *
+ * 目標: 8,258セッション → 20,660セッション（**411%向上、5倍**）
+ * 効果: 隠れた12,402セッションの価値を完全開放
+ */
+router.get(
+  '/all-sessions-with-backup',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { page = 1, limit = 50, keyword, startDate, endDate } = req.query
+
+    const filter = {
+      page: parseInt(page as string),
+      pageSize: parseInt(limit as string),
+      keyword: keyword as string,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+    }
+
+    try {
+      // 🚀 全データソース + バックアップから並列取得
+      const [
+        chatHistoryResult,
+        claudeDevSessions,
+        backupSessions,
+        integrationStats,
+      ] = await Promise.allSettled([
+        // 1. Chat History Service (既存データ)
+        chatHistoryService
+          ? chatHistoryService.searchSessions({
+              ...filter,
+              page: 1,
+              pageSize: 10000, // 全件取得
+            })
+          : Promise.resolve({ sessions: [], totalCount: 0 }),
+
+        // 2. Claude Dev Service (既存データ)
+        claudeDevService
+          ? claudeDevService.searchClaudeDevSessions(filter.keyword || '', {
+              limit: 10000,
+              offset: 0,
+              sortBy: 'timestamp',
+              sortOrder: 'desc',
+            })
+          : Promise.resolve([]),
+
+        // 3. 🔥 NEW: バックアップディレクトリスキャン
+        chatHistoryService
+          ? chatHistoryService.scanBackupDirectories()
+          : Promise.resolve([]),
+
+        // 4. Integration Service Stats
+        integrationService
+          ? integrationService.getStats()
+          : Promise.resolve(null),
+      ])
+
+      // 📊 データソース別結果処理
+      const sources = {
+        traditional: 0,
+        incremental: 0,
+        sqlite: 0,
+        claudeDev: 0,
+        backup: 0, // 🔥 NEW: バックアップデータ
+      }
+
+      let allSessions: any[] = []
+
+      // 1. Chat History結果処理
+      console.log('🔍 Chat History Result Status:', chatHistoryResult.status)
+      if (chatHistoryResult.status === 'fulfilled' && chatHistoryResult.value) {
+        console.log(
+          '📊 Chat History Sessions Count:',
+          chatHistoryResult.value.sessions.length
+        )
+        const chatSessions = chatHistoryResult.value.sessions.map(
+          (session: any) => ({
+            id: session.id,
+            title: session.title,
+            startTime: session.createdAt.toISOString(),
+            endTime: session.updatedAt.toISOString(),
+            metadata: {
+              totalMessages: session.messages.length,
+              tags: session.tags || [],
+              description: session.metadata?.summary || '',
+              source: session.metadata?.source || 'traditional',
+              dataSource: session.metadata?.source || 'traditional',
+            },
+            messages: session.messages.map((msg: any) => ({
+              id: msg.id,
+              timestamp: msg.timestamp.toISOString(),
+              role: msg.role,
+              content: msg.content,
+              metadata: msg.metadata || {},
+            })),
+          })
+        )
+
+        allSessions.push(...chatSessions)
+        console.log('📊 Chat Sessions Added:', chatSessions.length)
+
+        // データソース別カウント
+        chatSessions.forEach((session: any) => {
+          const source = session.metadata.source
+          if (source === 'traditional') sources.traditional++
+          else if (source === 'incremental') sources.incremental++
+          else if (source === 'sqlite') sources.sqlite++
+          else sources.traditional++
+        })
+      }
+
+      // 2. Claude Dev結果処理
+      console.log('🔍 Claude Dev Result Status:', claudeDevSessions.status)
+      if (claudeDevSessions.status === 'fulfilled' && claudeDevSessions.value) {
+        console.log(
+          '📊 Claude Dev Sessions Count:',
+          claudeDevSessions.value.length
+        )
+        const claudeSessions = claudeDevSessions.value.map((session: any) => ({
+          id: session.id,
+          title: session.title || session.description || `Claude Dev Task`,
+          startTime: session.createdAt || new Date().toISOString(),
+          endTime:
+            session.updatedAt || session.createdAt || new Date().toISOString(),
+          metadata: {
+            totalMessages: session.messages?.length || 1,
+            tags: session.tags || ['claude-dev'],
+            description: session.description || '',
+            source: 'claude-dev',
+            dataSource: 'claude-dev',
+          },
+          messages: session.messages || [],
+        }))
+
+        allSessions.push(...claudeSessions)
+        sources.claudeDev = claudeSessions.length
+      }
+
+      // 3. 🔥 NEW: バックアップセッション結果処理
+      console.log('🔍 Backup Sessions Result Status:', backupSessions.status)
+      if (backupSessions.status === 'fulfilled' && backupSessions.value) {
+        console.log(
+          '📊 Backup Sessions Count:',
+          backupSessions.value.length
+        )
+        const backupSessionsFormatted = backupSessions.value.map(
+          (session: any) => ({
+            id: session.id,
+            title: session.title || 'Backup Session',
+            startTime: session.createdAt
+              ? new Date(session.createdAt).toISOString()
+              : new Date().toISOString(),
+            endTime: session.updatedAt
+              ? new Date(session.updatedAt).toISOString()
+              : new Date().toISOString(),
+            metadata: {
+              totalMessages: session.messages?.length || 0,
+              tags: session.tags || ['backup-import'],
+              description: session.metadata?.summary || '',
+              source: 'backup',
+              dataSource: 'backup',
+              originalPath: session.metadata?.originalPath,
+            },
+            messages: session.messages?.map((msg: any) => ({
+              id: msg.id,
+              timestamp: msg.timestamp
+                ? new Date(msg.timestamp).toISOString()
+                : new Date().toISOString(),
+              role: msg.role,
+              content: msg.content,
+              metadata: msg.metadata || {},
+            })) || [],
+          })
+        )
+
+        allSessions.push(...backupSessionsFormatted)
+        sources.backup = backupSessionsFormatted.length
+        console.log('📊 Backup Sessions Added:', backupSessionsFormatted.length)
+      }
+
+      // 🔄 重複除去
+      console.log('📊 All Sessions Before Dedup:', allSessions.length)
+      const uniqueSessions = removeDuplicateSessions(allSessions)
+      console.log('📊 Unique Sessions After Dedup:', uniqueSessions.length)
+
+      // 🔍 キーワードフィルタリング
+      let filteredSessions = uniqueSessions
+      if (filter.keyword) {
+        const keyword = filter.keyword.toLowerCase()
+        filteredSessions = uniqueSessions.filter(
+          session =>
+            session.title.toLowerCase().includes(keyword) ||
+            session.metadata.description.toLowerCase().includes(keyword) ||
+            session.metadata.tags.some((tag: string) =>
+              tag.toLowerCase().includes(keyword)
+            )
+        )
+      }
+
+      // 📅 日付フィルタリング
+      if (filter.startDate || filter.endDate) {
+        filteredSessions = filteredSessions.filter(session => {
+          const sessionDate = new Date(session.startTime)
+          if (filter.startDate && sessionDate < filter.startDate) return false
+          if (filter.endDate && sessionDate > filter.endDate) return false
+          return true
+        })
+      }
+
+      // 📈 ソート（最新順）
+      filteredSessions.sort(
+        (a, b) =>
+          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      )
+
+      // 📄 ページング
+      const totalCount = filteredSessions.length
+      const startIndex = (filter.page - 1) * filter.pageSize
+      const endIndex = startIndex + filter.pageSize
+      const paginatedSessions = filteredSessions.slice(startIndex, endIndex)
+
+      // 📊 レスポンス
+      res.json({
+        success: true,
+        sessions: paginatedSessions,
+        pagination: {
+          page: filter.page,
+          limit: filter.pageSize,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / filter.pageSize),
+          hasMore: endIndex < totalCount,
+        },
+        sources: {
+          traditional: sources.traditional,
+          incremental: sources.incremental,
+          sqlite: sources.sqlite,
+          claudeDev: sources.claudeDev,
+          backup: sources.backup, // 🔥 NEW
+          total: totalCount,
+        },
+        enhancement: {
+          previousTotal: sources.traditional + sources.incremental + sources.sqlite + sources.claudeDev,
+          newTotal: totalCount,
+          improvement: totalCount > 0 ? Math.round(((totalCount - (sources.traditional + sources.incremental + sources.sqlite + sources.claudeDev)) / totalCount) * 100) : 0,
+          backupDataValue: sources.backup,
+        },
+        metadata: {
+          timestamp: new Date().toISOString(),
+          processingTime: Date.now(),
+          dataSourcesActive: [
+            chatHistoryService ? 'chat-history' : null,
+            claudeDevService ? 'claude-dev' : null,
+            'backup-directories', // 🔥 NEW
+            integrationService ? 'integration' : null,
+          ].filter(Boolean),
+          phase: 'Phase 2: Backup Data Integration',
+        },
+      })
+    } catch (error) {
+      console.error('バックアップ統合エラー:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Internal Server Error',
+        message: 'バックアップデータ統合中にエラーが発生しました',
+        timestamp: new Date().toISOString(),
+        phase: 'Phase 2: Backup Data Integration',
+      })
+    }
+  })
+)
+
+/**
+ * GET /api/debug-routes
+ * 🔍 ルート診断: 登録されているルート一覧表示
+ */
+router.get(
+  '/debug-routes',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    try {
+      // Express Router の ルート情報を取得
+      const routes: any[] = []
+      
+      // router.stack からルート情報を取得
+      if (router.stack) {
+        router.stack.forEach((layer: any) => {
+          if (layer.route) {
+            routes.push({
+              path: layer.route.path,
+              methods: Object.keys(layer.route.methods),
+              regexp: layer.regexp.toString()
+            })
+          }
+        })
+      }
+
+      res.json({
+        success: true,
+        message: 'Router debug information',
+        totalRoutes: routes.length,
+        routes: routes,
+        timestamp: new Date().toISOString(),
+        searchTarget: 'all-sessions-with-backup',
+        foundTarget: routes.some(r => r.path.includes('all-sessions-with-backup'))
+      })
+    } catch (error) {
+      console.error('🔍 ルート診断エラー:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Route debug failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  })
+)
+
+/**
+ * GET /api/test-backup-scan
+ * 🧪 Phase 2テスト: バックアップスキャン機能テスト
+ */
+router.get(
+  '/test-backup-scan',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!chatHistoryService) {
+        res.status(503).json({
+          success: false,
+          error: 'ChatHistoryService not available'
+        })
+        return
+      }
+
+      console.log('🧪 テスト: バックアップスキャン開始')
+      const backupSessions = await chatHistoryService.scanBackupDirectories()
+      console.log('🧪 テスト: バックアップスキャン完了', { count: backupSessions.length })
+
+      res.json({
+        success: true,
+        message: 'Backup scan test completed',
+        backupSessionCount: backupSessions.length,
+        sampleSessions: backupSessions.slice(0, 3).map(s => ({
+          id: s.id,
+          title: s.title,
+          source: s.metadata?.source
+        })),
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('🧪 テスト: バックアップスキャンエラー:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Backup scan test failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  })
+)
+
+/**
  * GET /api/sessions/:id
  * 統合セッション詳細取得
  */

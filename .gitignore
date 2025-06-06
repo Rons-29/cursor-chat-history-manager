@@ -106,3 +106,12 @@ scripts/security-check.sh
 docs/personal/
 notes/
 .notes/
+
+# 一時作業ファイル
+*_TEMP.md
+*_WORKING.md
+*_DRAFT.md
+
+# 個別修正レポート（archivesに移動済み）
+*_FIX_REPORT.md
+*_COMPLETION_REPORT.md

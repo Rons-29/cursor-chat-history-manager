@@ -19,7 +19,8 @@ import claudeDevRoutes, { setClaudeDevService } from './routes/claude-dev.js'
 import unifiedApiRoutes, { setServices } from './routes/unified-api.js'
 import enhancedSessionRoutes from './routes/enhanced-sessions.js'
 import cursorChatImportRoutes from './routes/cursor-chat-import.js'
-import sqliteIntegrationRoutes from './routes/sqlite-integration.js'
+// Phase 3 SQLite統合ルートは段階的実装のため一時的にコメントアウト
+// import sqliteIntegrationRoutes from './routes/sqlite-integration.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -92,11 +93,7 @@ async function initializeServices() {
     await incrementalIndexService.initialize()
 
     // SQLiteインデックスサービス初期化
-    sqliteIndexService = new SqliteIndexService(
-      path.join(process.cwd(), 'data', 'chat-history'),
-      path.join(process.cwd(), 'data', 'chat-history.db'),
-      logger
-    )
+    sqliteIndexService = new SqliteIndexService('data')
     await sqliteIndexService.initialize()
 
     // Cursorログサービス初期化
@@ -246,9 +243,7 @@ app.get('/api/sessions', async (req, res) => {
       const sqliteResult = await sqliteIndexService.getSessions({
         page: filter.page,
         pageSize: filter.pageSize,
-        keyword: filter.keyword,
-        startDate: filter.startDate,
-        endDate: filter.endDate,
+        search: filter.keyword
       })
 
       // SQLite形式からChatHistoryService形式に変換
@@ -266,7 +261,7 @@ app.get('/api/sessions', async (req, res) => {
         pageSize: filter.pageSize,
         totalCount: sqliteResult.total,
         totalPages: Math.ceil(sqliteResult.total / filter.pageSize),
-        hasMore: sqliteResult.hasMore,
+        hasMore: (filter.page * filter.pageSize) < sqliteResult.total,
       }
     } else {
       // フォールバック: 従来のChatHistoryService使用
@@ -277,8 +272,8 @@ app.get('/api/sessions', async (req, res) => {
     const sessions = result.sessions.map(session => ({
       id: session.id,
       title: session.title,
-      startTime: session.createdAt.toISOString(),
-      endTime: session.updatedAt.toISOString(),
+      startTime: (session.createdAt || new Date()).toISOString(),
+      endTime: (session.updatedAt || new Date()).toISOString(),
       metadata: {
         totalMessages: session.messages.length,
         tags: session.tags || [],
@@ -897,6 +892,7 @@ app.post('/api/integration/sqlite-migrate', async (req, res) => {
             metadata: session.metadata || {},
             createdAt: session.createdAt || new Date(),
             updatedAt: session.updatedAt || new Date(),
+            timestamp: session.createdAt || new Date(),
           }
 
           // メッセージの検証
@@ -1006,11 +1002,9 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
     })
 
     const result = await sqliteIndexService.getSessions({
-      keyword: keyword || undefined, // 空文字列をundefinedに変換
+      search: keyword || undefined, // 空文字列をundefinedに変換
       page: options.page || 1,
-      pageSize: options.pageSize || 50,
-      filters, // フィルターを追加
-      filterOnly, // フィルターのみモードを追加
+      pageSize: options.pageSize || 50
     })
 
     res.json({
@@ -1019,7 +1013,7 @@ app.post('/api/integration/sqlite-search', async (req, res) => {
       performance: 'very-high',
       results: result.sessions,
       total: result.total,
-      hasMore: result.hasMore,
+      hasMore: ((options.page || 1) * (options.pageSize || 50)) < result.total,
       success: true, // フロントエンドで期待されるフィールド
       source: 'real-api-server', // 実装元を明示
     })
@@ -1170,7 +1164,8 @@ app.get('/api/enhanced-sessions', async (req, res) => {
 // ルート設定（順序重要：最も具体的なルートから先に設定）
 // 1. 最も具体的なパスを最初に
 app.use('/api/cursor-chat-import', cursorChatImportRoutes)
-app.use('/api/sqlite', sqliteIntegrationRoutes)
+// Phase 3 SQLite統合ルートは段階的実装のため一時的にコメントアウト
+// app.use('/api/sqlite', sqliteIntegrationRoutes)
 app.use('/api/integration', integrationRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/claude-dev', claudeDevRoutes)

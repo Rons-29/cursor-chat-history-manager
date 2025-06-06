@@ -16,8 +16,8 @@
 import Database from 'better-sqlite3'
 import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { Session, Message, SearchResult } from '../types/ChatHistory'
-import { logger } from '../utils/logger'
+import { Session, Message, SearchResult } from '../types/ChatHistory.js'
+import { logger } from '../utils/logger.js'
 
 interface SQLiteSchema {
   sessions: 'id TEXT PRIMARY KEY, title TEXT, content TEXT, timestamp INTEGER, metadata TEXT'
@@ -82,7 +82,7 @@ export class SqliteIndexService {
       logger.info('✅ SQLite検索エンジン初期化完了')
     } catch (error) {
       logger.error('❌ SQLite初期化エラー:', error)
-      throw new Error(`SQLite初期化に失敗しました: ${error.message}`)
+      throw new Error(`SQLite初期化に失敗しました: ${error instanceof Error ? error.message : 'unknown error'}`)
     }
   }
 
@@ -308,7 +308,7 @@ export class SqliteIndexService {
       return searchResults
     } catch (error) {
       logger.error('❌ 検索エラー:', error)
-      throw new Error(`検索に失敗しました: ${error.message}`)
+      throw new Error(`検索に失敗しました: ${error instanceof Error ? error.message : 'unknown error'}`)
     }
   }
 
@@ -447,8 +447,190 @@ export class SqliteIndexService {
       logger.info('✅ インデックス最適化完了')
     } catch (error) {
       logger.error('❌ インデックス最適化エラー:', error)
-      throw new Error(`インデックス最適化に失敗しました: ${error.message}`)
+      throw new Error(`インデックス最適化に失敗しました: ${error instanceof Error ? error.message : 'unknown error'}`)
     }
+  }
+
+  /**
+   * 既存システム互換メソッド群
+   * 注意: Phase 3移行期間中の互換性保持のため実装
+   */
+
+  /**
+   * 初期化状態確認
+   */
+  isInitialized(): boolean {
+    return this.initialized
+  }
+
+  /**
+   * データベースインスタンス取得
+   */
+  getDatabase(): Database.Database | null {
+    return this.db
+  }
+
+  /**
+   * セッション一覧取得 (既存API互換)
+   */
+  async getSessions(options: {
+    page?: number
+    pageSize?: number
+    search?: string
+  } = {}): Promise<{
+    sessions: Session[]
+    total: number
+    page: number
+    pageSize: number
+  }> {
+    if (!this.initialized || !this.db) {
+      throw new Error('SQLite検索エンジンが初期化されていません')
+    }
+
+    const page = options.page || 1
+    const pageSize = options.pageSize || 50
+    const offset = (page - 1) * pageSize
+
+    let sql = `
+      SELECT s.*, 
+             COUNT(m.id) as message_count
+      FROM sessions s
+      LEFT JOIN messages m ON s.id = m.session_id
+    `
+    let countSql = 'SELECT COUNT(*) as total FROM sessions s'
+    let params: any[] = []
+
+    if (options.search) {
+      sql += ' WHERE s.title LIKE ? OR s.content LIKE ?'
+      countSql += ' WHERE s.title LIKE ? OR s.content LIKE ?'
+      const searchPattern = `%${options.search}%`
+      params.push(searchPattern, searchPattern)
+    }
+
+    sql += ' GROUP BY s.id ORDER BY s.timestamp DESC LIMIT ? OFFSET ?'
+    
+    const countResult = this.db.prepare(countSql).get(...params) as { total: number }
+    const sessionRows = this.db.prepare(sql).all(...params, pageSize, offset) as any[]
+
+    // メッセージ取得
+    const sessions: Session[] = []
+    for (const row of sessionRows) {
+      const messages = this.db.prepare(`
+        SELECT * FROM messages 
+        WHERE session_id = ? 
+        ORDER BY timestamp ASC
+      `).all(row.id) as any[]
+
+      sessions.push({
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        timestamp: new Date(row.timestamp),
+        metadata: JSON.parse(row.metadata || '{}'),
+        messages: messages.map(m => ({
+          id: m.id,
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+          role: m.role as 'user' | 'assistant' | 'system'
+        }))
+      })
+    }
+
+    return {
+      sessions,
+      total: countResult.total,
+      page,
+      pageSize
+    }
+  }
+
+  /**
+   * 統計情報取得 (既存API互換)
+   */
+  async getStats(): Promise<{
+    totalSessions: number
+    totalMessages: number
+    averageSessionLength: number
+    oldestSession?: Date
+    newestSession?: Date
+  }> {
+    if (!this.initialized || !this.db) {
+      throw new Error('SQLite検索エンジンが初期化されていません')
+    }
+
+    const sessionStats = this.db.prepare(`
+      SELECT 
+        COUNT(*) as total_sessions,
+        AVG(message_count) as avg_length,
+        MIN(timestamp) as oldest,
+        MAX(timestamp) as newest
+      FROM sessions
+    `).get() as any
+
+    const messageStats = this.db.prepare(`
+      SELECT COUNT(*) as total_messages FROM messages
+    `).get() as any
+
+    return {
+      totalSessions: sessionStats.total_sessions || 0,
+      totalMessages: messageStats.total_messages || 0,
+      averageSessionLength: Math.round(sessionStats.avg_length || 0),
+      oldestSession: sessionStats.oldest ? new Date(sessionStats.oldest) : undefined,
+      newestSession: sessionStats.newest ? new Date(sessionStats.newest) : undefined
+    }
+  }
+
+  /**
+   * セッション更新/挿入 (既存API互換)
+   */
+  async upsertSession(session: Session): Promise<void> {
+    if (!this.initialized || !this.db) {
+      throw new Error('SQLite検索エンジンが初期化されていません')
+    }
+
+    const insertSession = this.db.prepare(`
+      INSERT OR REPLACE INTO sessions 
+      (id, title, content, timestamp, metadata, platform, message_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+
+    const deleteMessages = this.db.prepare('DELETE FROM messages WHERE session_id = ?')
+    const insertMessage = this.db.prepare(`
+      INSERT INTO messages (id, session_id, content, timestamp, role)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+
+    const transaction = this.db.transaction(() => {
+      // セッション更新
+      insertSession.run(
+        session.id,
+        session.title,
+        session.content || '',
+        session.timestamp.getTime(),
+        JSON.stringify(session.metadata || {}),
+        session.metadata?.platform || 'unknown',
+        session.messages?.length || 0
+      )
+
+      // 既存メッセージ削除
+      deleteMessages.run(session.id)
+
+      // 新しいメッセージ挿入
+      if (session.messages) {
+        for (const message of session.messages) {
+          insertMessage.run(
+            message.id,
+            session.id,
+            message.content,
+            message.timestamp.getTime(),
+            message.role
+          )
+        }
+      }
+    })
+
+    transaction()
+    logger.info(`📝 セッション更新完了: ${session.id}`)
   }
 
   /**

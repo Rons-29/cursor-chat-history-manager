@@ -2,6 +2,27 @@
  * 🔍 Phase 3 高速検索結果型定義
  * SQLite FTS5による高度な検索結果
  */
+
+// 基本型定義（互換性維持）
+export interface Message {
+  readonly id: string
+  readonly content: string
+  readonly timestamp: Date
+  readonly role: 'user' | 'assistant' | 'system'
+  readonly metadata?: Record<string, any>
+}
+
+export interface Session {
+  readonly id: string
+  readonly title: string
+  readonly content?: string
+  readonly timestamp: Date
+  readonly createdAt?: Date
+  readonly updatedAt?: Date
+  readonly metadata?: Record<string, any>
+  readonly messages?: Message[]
+  readonly tags?: string[]
+}
 export interface SearchResult {
   readonly id: string
   readonly title: string
